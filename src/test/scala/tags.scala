@@ -15,6 +15,8 @@ package test.scala {
   object MultiThreaded extends Tag("MultiThreaded")
   object PythonTest extends Tag("PythonTest")
 
+  object MakeDocsLatex extends Tag("MakeDocsLatex")
+
   object Lib1 extends Tag("Lib1")
   object Lib1Array extends Tag("Lib1Array")
   object Lib1Bytes extends Tag("Lib1Bytes")

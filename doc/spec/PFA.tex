@@ -1,10 +1,14 @@
 \documentclass{article}
 \usepackage{fullpage}
 \usepackage{hyperref}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
 
 \title{PFA: Portable Format for Analytics}
 \author{Jim Pivarski}
 \date{Sometime in 2014}
+
+\input{libfcns}
 
 \setlength{\parskip}{0.15 cm}
 \begin{document}
@@ -23,17 +27,7 @@ PFA is similar to the Predictive Model Markup Language (PMML), an XML-based spec
 {\large \bf Status of this document}
 \vspace{0.25 cm}
 
-{\it This section describes the status of this document at the time of the current draft.  Other documents may supersede this document.  The latest status of this document series is maintained by the PFA Working Group of the Data Mining Group (DMG).}
-
-This document is the XXX 2014 Recommendation of the PFA 1.0 specification.  The PFA working group does not believe that PFA 1.0 has been widely reviewed by the community, developers, and other DMG groups.  The list of changes in this version of the document does not exist, as it is a first draft.
-
-Public comments on this Recommendation are welcome.  Please send them to \href{http://FIXME}{xxx@dmg.org}: the public email list for issues related to PFA scoring engines.  This list is \href{http://FIXME}{archived} and senders must agree to have their message publicly archived from their first posting.  To subscribe send an email to xxx@dmg.org with the word ``subscribe'' in the subject line.
-
-The DMG PFA Working Group have not yet released a \href{http://FIXME}{test suite} for PFA 1.0 along with an \href{http://FIXME}{implementation report}.
-
-The latest information regarding \href{http://FIXME}{patent disclosures} related to this document is not yet available on the Web.  As of this publication, the PFA Working Group are not aware of any royalty-bearing patents they believe to be essential to PFA.
-
-A list of current DMG Recommendations and other technical documents can be found at \url{http://www.dmg.org/}.  DMG publications may be updated, replaced, or obsoleted by other documents at any time.
+{\it This section describes the status of this document at the time of the current draft.  Other documents may supersede this document.}
 
 \tableofcontents
 
@@ -201,6 +195,157 @@ Special forms and ordinary function calls
 
 \section{Core Library and Basic Data Manipulation}
 
+\libfcn{s.translate}
+\libfcn{a.countPredicate}
+\libfcn{a.argminN}
+\libfcn{a.geomean}
+\libfcn{s.lower}
+\libfcn{model.tree.simpleWalk}
+\libfcn{a.fold}
+\libfcn{a.insert}
+\libfcn{a.flatmap}
+\libfcn{a.filtermap}
+\libfcn{m.cos}
+\libfcn{cmp}
+\libfcn{a.append}
+\libfcn{m.ln}
+\libfcn{a.argminLT}
+\libfcn{s.upper}
+\libfcn{m.expm1}
+\libfcn{*}
+\libfcn{<=}
+\libfcn{m.log}
+\libfcn{a.shuffle}
+\libfcn{a.endswith}
+\libfcn{\%}
+\libfcn{a.rindex}
+\libfcn{m.log10}
+\libfcn{s.replaceall}
+\libfcn{a.intersect}
+\libfcn{a.max}
+\libfcn{impute.errorOnNull}
+\libfcn{m.abs}
+\libfcn{a.minNLT}
+\libfcn{s.repeat}
+\libfcn{m.atan2}
+\libfcn{stat.sample.updateMean}
+\libfcn{s.substr}
+\libfcn{a.concat}
+\libfcn{a.reduce}
+\libfcn{s.len}
+\libfcn{a.subset}
+\libfcn{a.diff}
+\libfcn{m.exp}
+\libfcn{a.argminNLT}
+\libfcn{a.index}
+\libfcn{a.maxN}
+\libfcn{a.distinct}
+\libfcn{a.sum}
+\libfcn{a.reduceright}
+\libfcn{a.any}
+\libfcn{s.substrto}
+\libfcn{a.argmin}
+\libfcn{impute.defaultOnNull}
+\libfcn{a.permutations}
+\libfcn{s.join}
+\libfcn{a.slidingWindow}
+\libfcn{<}
+\libfcn{a.seteq}
+\libfcn{s.split}
+\libfcn{a.all}
+\libfcn{\&}
+\libfcn{a.mode}
+\libfcn{s.lstrip}
+\libfcn{a.min}
+\libfcn{>=}
+\libfcn{a.combinations}
+\libfcn{a.reverse}
+\libfcn{m.atan}
+\libfcn{min}
+\libfcn{s.replacefirst}
+\libfcn{m.copysign}
+\libfcn{m.sin}
+\libfcn{|}
+\libfcn{m.cosh}
+\libfcn{m.pi}
+\libfcn{or}
+\libfcn{a.len}
+\libfcn{s.contains}
+\libfcn{a.lnsum}
+\libfcn{s.startswith}
+\libfcn{a.maxLT}
+\libfcn{a.argmaxNLT}
+\libfcn{-}
+\libfcn{a.takeWhile}
+\libfcn{m.tanh}
+\libfcn{m.signum}
+\libfcn{m.hypot}
+\libfcn{s.concat}
+\libfcn{max}
+\libfcn{a.replace}
+\libfcn{m.tan}
+\libfcn{a.remove}
+\libfcn{a.groupby}
+\libfcn{a.contains}
+\libfcn{**}
+\libfcn{==}
+\libfcn{s.index}
+\libfcn{xor}
+\libfcn{a.subseq}
+\libfcn{u-}
+\libfcn{a.corresponds}
+\libfcn{not}
+\libfcn{a.minLT}
+\libfcn{m.round}
+\libfcn{a.sort}
+\libfcn{a.mean}
+\libfcn{a.count}
+\libfcn{a.median}
+\libfcn{m.ceil}
+\libfcn{m.e}
+\libfcn{a.filter}
+\libfcn{m.asin}
+\libfcn{s.rindex}
+\libfcn{a.union}
+\libfcn{m.sqrt}
+\libfcn{m.rint}
+\libfcn{//}
+\libfcn{a.map}
+\libfcn{+}
+\libfcn{!=}
+\libfcn{stat.sample.mean}
+\libfcn{s.replacelast}
+\libfcn{a.argmax}
+\libfcn{m.ln1p}
+\libfcn{a.argmaxN}
+\libfcn{m.acos}
+\libfcn{s.endswith}
+\libfcn{m.floor}
+\libfcn{a.startswith}
+\libfcn{a.argmaxLT}
+\libfcn{s.rstrip}
+\libfcn{m.sinh}
+\libfcn{TILDE}
+\libfcn{a.disjoint}
+\libfcn{a.product}
+\libfcn{a.minN}
+\libfcn{a.foldright}
+\libfcn{s.strip}
+\libfcn{\^{}}
+\libfcn{a.subseqto}
+\libfcn{a.flatten}
+\libfcn{and}
+\libfcn{/}
+\libfcn{>}
+\libfcn{a.maxNLT}
+\libfcn{\%\%}
+\libfcn{a.symdiff}
+\libfcn{model.tree.predicateWalk}
+\libfcn{s.count}
+\libfcn{a.sortLT}
+\libfcn{a.dropWhile}
+
+
 \subsection{Basic Arithmetic, Logical, and Bitwise Operators}
 
 \subsection{Universal Comparison Operators}
@@ -254,9 +399,3 @@ accumulated mean, median(?)
 \subsection{Support Vector Machines}
 
 \end{document}
-
-
-
-
-
-
