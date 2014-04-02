@@ -44,12 +44,20 @@ class MakeDocsSuite extends FlatSpec with Matchers {
       val asname = sanitized.replace("~", "TILDE")
       val quoted = "\"" + sanitized.replace("~", "\\textasciitilde{}") + "\""
 
-      outputFile.print(s"    {${asname}}{")
+      outputFile.print(s"    {${asname}}{\\noindent")
+
+      var where = Seq[String]()
 
       f.sig match {
         case Sig(params, ret) => {
           val names = params map {case (n, p) => n} mkString(", ")
           outputFile.print(s"\\mbox{\\tt \\{${quoted}:\\ [${names}]\\}")
+
+          for ((n, p) <- params) {
+            val pp = p.toString.replace("_", "\\_")
+            where = where :+ s" & \\tt ${n} \\rm & ${pp} \\\\"
+          }
+          where = where :+ s" & & $$\\to$$ ${ret} \\\\"
         }
         case Sigs(sigs) => {
           outputFile.print(s"\\mbox{\\tt")
@@ -62,10 +70,25 @@ class MakeDocsSuite extends FlatSpec with Matchers {
             }
 
           outputFile.print(possibilities.distinct.mkString(" \\rm or \\tt "))
+
+          val newwhere =
+            (for (Sig(params, ret) <- sigs) yield {
+              (for ((n, p) <- params) yield {
+                val pp = p.toString.replace("_", "\\_")
+                s" & \\tt ${n} \\rm & ${pp} \\\\"
+              }).mkString(" ") + s" & & $$\\to$$ ${ret} \\\\"
+            }).mkString(" \\end{tabular} \\\\ or \\\\ \\begin{tabular}{p{0.01\\linewidth} l p{0.8\\linewidth}}")
+          where = where :+ newwhere
         }
       }
 
-      outputFile.println("}}%")
+      outputFile.print("} \\\\");
+
+      if (!where.isEmpty) {
+        outputFile.print("\\rm \\begin{tabular}{p{0.01\\linewidth} l p{0.8\\linewidth}}" + where.mkString(" ") + " \\end{tabular}")
+      }
+
+      outputFile.println("}%");
     }
 
     outputFile.println("""    }[{\bf FIXME: LaTeX error: wrong libfcn name!}]%
