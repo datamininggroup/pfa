@@ -1,0 +1,104 @@
+2014-01-10:   Start new project, set up Clojure, ClojureScript, and ClojurePy
+2014-01-11:   Ensure same behavior of plus, minus, etc. across platforms
+2014-01-12:   Gave up on ClojureScript
+2014-01-13:   Integrate Avro into Clojure (research tests only)
+2014-01-14:   Avro type wrappers
+2014-01-15:   Generate Clojure forms outside of Clojure, compile and run (research tests only)
+2014-01-16:
+2014-01-17:
+2014-01-18:
+2014-01-19:
+2014-01-20:
+2014-01-21:   Order-independent Avro schema parser
+2014-01-22:   Implement concurrency model for shared data (read any time, lock for writes)
+2014-01-23:   YAML-to-JSON, sketched JSON parser
+2014-01-24:   All AST-to-JSON and now-defunct error handling for JSON parser
+2014-01-25:   Part of JSON parser
+2014-01-26:
+2014-01-27:
+2014-01-28:   FunctionRef
+2014-01-29:   Finished JSON-to-AST parser (and removed the complicated error handling)
+2014-01-30:   JSON <--> AST complete with tests
+2014-01-31:   Random JSON <--> AST tests
+2014-02-01:
+2014-02-02:   Gave up on Clojure and ClojurePy; set up dummy Python testing environment
+2014-02-03:   Separation of concerns for type-check/static code analysis and the backend code-generation
+2014-02-04:   Add Janino dynamic compliler to replace Clojure; set up testing environment
+2014-02-05:   Type-checking and code-generation for simple forms
+2014-02-06:   Testing
+2014-02-07:   Implemented code-generation for almost all forms
+2014-02-08:   Implemented code-generation for cast/uncast, FunctionDef
+2014-02-09:   Wasted effort trying to reimplement Avro types as self-contained units; reverted them to wrappers
+2014-02-10:   Function signature pattern match with wildcards and Avro polymorphism
+2014-02-11:   Use new function signature in all functions, organized dynamically generated class
+2014-02-12:
+2014-02-13:   Code generation for Engine class (untested)
+2014-02-14:
+2014-02-15:   Engine class, outer program interface (map, emit, fold), code generation for it
+2014-02-16:   Load Avro into appropriate data structures
+2014-02-17:   Design and use immutable record
+2014-02-18:   New-record (leave new-map, new-array for future extensions of for, foreach, forkeyval comprehensions)
+2014-02-19:
+2014-02-20:
+2014-02-21:
+2014-02-22:   cell-get, cell-set, pool-get for private and public
+2014-02-23:   pool-set; options framework; timeouts; traverse all functions, accumulating static information
+2014-02-24:   deadlock tests, track function use, symbol and function name safety, u. for user functions, literal ints; automated signature documentation
+2014-02-25:   pushed type information to the javaRef function (needed for comparisons)
+2014-02-26:   finished core, started writing its tests
+2014-02-27:   wrote an Avro schema resolution checker (Avro's per-instance checker has bugs (AVRO-1442 and 1467) and per-schema checker enforces names to match)
+2014-02-28:
+2014-03-01:   stubs for all basic libraries and finished the string and math libraries (modules and tests), started impute
+2014-03-02:   completely revamped the pattern-matching code and propagated out all the consequences; replaced my schema-compatibility check with Avro's
+2014-03-03:
+2014-03-04:   added "attr" and "attr-to" to manipulate records, maps, and arrays; modified "new" to create records, maps, and arrays; extended distinctTypes to produce unions when there's no match
+2014-03-05:
+2014-03-06:
+2014-03-07:   Started work on array functions (compiles).
+2014-03-08:   Finished work on array functions (tested).
+2014-03-09:
+2014-03-10:   Started work on Python JSON <--> AST.
+2014-03-11:
+2014-03-12:   Finished work on Python JSON <--> AST.
+2014-03-13:
+2014-03-14:
+2014-03-15:   Type checking tests, up to but not including pattern matching.
+2014-03-16:   Tested up through pattern matching.
+2014-03-17:   Wrote but haven't tested all of the walk() methods; set up testing framework for that and transcoded all function signatures from Scala to Python
+2014-03-18:
+2014-03-19:
+2014-03-20:
+2014-03-21:
+2014-03-22:   Finished all type inference tests (Python and Scala) except the function call patterns; added return type for cast-case; wrote SAX-based parser for PMML.
+2014-03-23:   Interpreting PMML and converting it to PFA; a few simple examples done; added return type for uncast (now named upcast).
+2014-03-24:
+2014-03-25:   Converted all transformations that are convertable in the near-term.  Only tested a few key cases.  Implemented (but did not test) a.mean, a.geomean, a.median, a.mode.
+2014-03-26:   Implemented a simple tree; had to scale back reusability (make predicate and walk separate) and type safety (ensure correct datum field names, operator names).  Also added predicate tree to demonstrate how to generalize.
+2014-03-27:
+2014-03-28:
+2014-03-29:   Wrote abstract and motivation for specification document.
+2014-03-30:
+2014-03-31:
+2014-04-01:   PMML trees --> PFA trees, added tree model signatures and fromType/toType for Fixed/Enum/Record.
+
+
+
+Tomorrow:     Documentation (auto-generated and hand-made)
+And then:     Map, bytes, enums, fixed, record (conversions, mostly)
+And then:     Linear algebra: find a good library, matricies with named rows and columns
+And then:     Regular expressions: find a good library for PCRE
+And then:     Clustering
+And then:     Regression
+
+
+
+Documentation:
+    GAE website on http://pfa.scoringengine.org
+    Auto-generate reference from the code
+    Live scoring engine running on 120,000 stars (http://astronexus.com/node/34) and/or 1,000 planets (http://exoplanet.eu/)
+
+Embedding:
+    (big projects)
+
+Model production:
+    (big projects)

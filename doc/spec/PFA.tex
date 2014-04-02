@@ -1,0 +1,262 @@
+\documentclass{article}
+\usepackage{fullpage}
+\usepackage{hyperref}
+
+\title{PFA: Portable Format for Analytics}
+\author{Jim Pivarski}
+\date{Sometime in 2014}
+
+\setlength{\parskip}{0.15 cm}
+\begin{document}
+\maketitle
+
+{\large \bf Abstract}
+\vspace{0.25 cm}
+
+This specification defines the syntax and semantics of the Portable Format for Analytics (PFA).
+
+PFA is a mini-language for mathematical calculations that is usually generated programmatically, rather than by hand.  A PFA document is a string of JSON-formatted text that describes an executable called a scoring engine.  Each engine has a well-defined input, a well-defined output, and functions for combining inputs to construct the output in an expression-centric syntax tree.  In addition, it has centralized facilities for maintaining state, with well-defined semantics for sharing state among scoring engines in a thread-safe way.  The specification defines a suite of mathematical and statistical functions for transforming data, but it does not define any means of communication with an operating system, file system, or network.  A PFA engine must be embedded in a larger system that has these capabilities, and thus an analytic workflow is decoupled into a part that manages data pipelines (such as Hadoop or Storm), and a part that describes the algorithm to be performed on data (PFA).  
+
+PFA is similar to the Predictive Model Markup Language (PMML), an XML-based specification for statistical models, but whereas PMML's focus is on statistical models in the abstract, PFA's focus is on the scoring procedure itself.  The same input given to two PFA-enabled systems must yield the same output, regardless of platform (e.g.\ a JVM in Hadoop, a client's web browser, a GPU kernel function, or even an IP core directly embedded in an integrated circuit).  Unlike PMML, the PFA specification defines the exact bit-for-bit behavior of any well-formed document, the semantics of data types and data structures, including behavior in concurrent systems, and all cases in which an exception should be thrown.  Like PMML, PFA is a specification, not an implementation, it defines a suite of statistical algorithms for analyzing data, and it is usually generated programmatically, as the output of a machine learning algorithm, for instance.
+
+\vspace{0.5 cm}
+{\large \bf Status of this document}
+\vspace{0.25 cm}
+
+{\it This section describes the status of this document at the time of the current draft.  Other documents may supersede this document.  The latest status of this document series is maintained by the PFA Working Group of the Data Mining Group (DMG).}
+
+This document is the XXX 2014 Recommendation of the PFA 1.0 specification.  The PFA working group does not believe that PFA 1.0 has been widely reviewed by the community, developers, and other DMG groups.  The list of changes in this version of the document does not exist, as it is a first draft.
+
+Public comments on this Recommendation are welcome.  Please send them to \href{http://FIXME}{xxx@dmg.org}: the public email list for issues related to PFA scoring engines.  This list is \href{http://FIXME}{archived} and senders must agree to have their message publicly archived from their first posting.  To subscribe send an email to xxx@dmg.org with the word ``subscribe'' in the subject line.
+
+The DMG PFA Working Group have not yet released a \href{http://FIXME}{test suite} for PFA 1.0 along with an \href{http://FIXME}{implementation report}.
+
+The latest information regarding \href{http://FIXME}{patent disclosures} related to this document is not yet available on the Web.  As of this publication, the PFA Working Group are not aware of any royalty-bearing patents they believe to be essential to PFA.
+
+A list of current DMG Recommendations and other technical documents can be found at \url{http://www.dmg.org/}.  DMG publications may be updated, replaced, or obsoleted by other documents at any time.
+
+\tableofcontents
+
+\pagebreak
+
+\section{Introduction}
+
+\subsection{Motivation for PFA}
+
+The Portable Format for Analytics (PFA) is a mini-language for mathematical calculations.  It differs from most programming languages in that it is optimized for automatic code generation, rather than writing programs by hand.  The primary use-case is to represent the output of machine learning algorithms, such that they can be freely moved between systems.  Traditionally, this field has been dominated by special-purpose file formats, each representing only one type of statistical model.  The Predictive Model Markup Language (PMML) provides a means of unifing the most common model types into one file format.  However, PMML can only express a fixed set of pre-defined model types; new model types must be agreed upon by the Data Mining Group (DMG) and integrated into a new version of PMML, then that new version must be adopted by the community before it is widely usable.
+
+PFA represents models and analytic procedures more generally by providing generic programming constructs, such as conditionals, loops, persistent state, and callback functions, in addition to a basic suite of statistical tools.  Conventional models like regression, decision trees, and clustering are expressed by referencing the appropriate library function, just as in PMML, but new models can be expressed by composing library functions or passing user-defined callbacks.  Most new statistical techniques are variants of old techniques, so a small number of functions with the appropriate hooks for inserting user code can represent a wide variety of methods, many of which have not been discovered yet.
+
+Given this need for flexibility, one might consider using a general purpose programming language, such as C, Java, Python, or especially R, which is specifically designed for statistics.  While this is often the easiest method for small problems that are explored, formulated, and solved on the analyst's computer, it is difficult to scale up to network-sized solutions or to deploy on production systems that need to be more carefully controlled than a personal laptop.  The special-purpose code may depend on libraries that cannot be deployed, or may even be hard to identify exhaustively.  In some cases, the custom code might be regarded as a stability or security threat that must be thoroughly reviewed before deployment.  If the analytic algorithm needs to be deployed multiple times before it is satisfactory and each deployment is reviewed for reasons unrelated to its analytic content, development would be delayed unnecessarily.  This problem is solved by decoupling the analytic workflow into a part that deals exclusively with mathematics (the PFA scoring engine) and the rest of the infrastructure (the PFA host).  A mathematical algorithm implemented in PFA can be updated frequently with minimal review, since PFA is incapable of raising most stability or security issues, due to its limited access.
+
+PFA is restricted to the following operations: mathematical functions on numbers, strings, raw bytes, homogeneous lists, homogeneous maps (also known as hash-tables, associative arrays, or dictionaries), heterogeneous records, and unions of the above, where mathematical functions include basic operations, special functions, data sturcture manipulations, missing data handling, descriptive statistics, and common model types such as regression, decision trees, and clustering, parameterized for flexibility.  PFA does not include any means of accessing the operating system, the file system, or the network, so a rouge PFA engine cannot expose or manipulate data other than that which is intentionally funneled into it by the host system.  The full PFA specification allows recursion and unterminated loops, but execution time is limited by a timeout.  PFA documents may need to be reviewed for mathematical correctness, but they do not need to be reviewed for safety.
+
+Another reason to use PFA as an intermediate model representation is for simplicity of code generation.  A machine learning algorithm generates an executable procedure, usually a simple, parameterized decider algorithm that either categorizes or makes predictions based on new data.  Although the parameters might be encoded in a static file, some component must be executable.  A PFA document bundles the executable with its parameters, simplifying version control.
+
+The syntax of PFA is better suited to automatic code generation than most programming languages.  Many languages have complex syntax to accomodate the way people think while programming, including infix operators, a distinction between statements and expressions, and in some cases even meaningful whitespace.  Though useful when writing programs by hand, these features only complicate automatic code generation.  A PFA document is an expression tree rendered in JSON, and trees are easy to programmatically compose into larger trees without introducing syntax errors in the generated code.  This is well-known in the Lisp community, since the ease of writing code-modifying macros in Lisp is often credited to its exclusive use of expression trees, rendered as parenthesized lists (known as S-expressions).  PFA uses JSON, rather than S-expressions, because libraries for manipulating JSON objects are more widely available and JSON provides a convenient syntax for maps, but the transliteration between JSON and S-expressions is straight-forward.
+
+Another benefit of PFA's simplicity relative to general programming languages is that it is more amenable to static analysis.  A PFA host can more thoroughly examine an incoming PFA document for undesirable features.  Although PFA makes use of callback functions to tweak behavior, functions are not first-class objects in the language, meaning that they cannot be dynamically assigned to variables.  The identity of every function call can be determined without running the engine, which makes it possible to statically generate a graph of function calls and identify recursive loops.  In very limited runtime environments, such as some GPUs, the compiler implicitly inlines all function calls, so recursion is not possible.  In cases like these, static analysis of the PFA document is a necessary step in generating the executable.
+
+A PFA document can also be statically type-checked.  This allows for faster execution times, since types do not need to be checked at run-time, but it also provides additional safety to the PFA host.
+
+PFA uses Apache Avro schemae as type annotations.  Avro is an open-source serialization protocol, widely used in Hadoop and related projects, whose type schemae are expressed as JSON objects and whose data structures can be expressed as JSON objects.  Therefore, PFA control structures, Avro type annotations, and data structure literals are all expressed as a single nested JSON object.  Avro additionally has well-defined rules to resolve different but possibly compatible schemae, which PFA reinterprets as type promotion (allowing integers to be passed to a function that expects floating-point numbers, for instance).  When interpreted this way, Avro also has a type-safe null, which PFA uses to ensure that missing data are always explicitly handled.  Finally, the input and output of every PFA engine can always be readily (de)serialized into Avro's binary format or JSON representation, since Avro libraries are available for a wide variety of platforms.
+
+\subsection{Terminology used in this Specification}
+
+Within this specification, the key words ``MUST'', ``MUST NOT'', ``REQUIRED'', ``SHALL'', ``SHALL NOT'', ``SHOULD'', ``SHOULD NOT'', ``RECOMMENDED'', ``MAY'', and ``OPTIONAL'' are to be interpreted as described in RFC 2119 (see [\href{http://www.ietf.org/rfc/rfc2119.txt}{RFC2119}]).  However, for readability, these words do not appear in all uppercase letters in this specification.
+
+At times, this specification provides hints and suggestions for implementation.  These suggestions are not normative and conformance with this specification does not depend on their realization.  These hints contain the expression ``We suggest\ldots'' or similar wording.
+
+This specification uses the terms ``JSON object'', ``JSON object member name'', ``JSON object member value'', ``JSON array'', ``JSON array value'', ``number'', ``integer'', and ``string'' as defined in the JSON specification (\href{http://tools.ietf.org/html/rfc4627}{RFC-4627}), sections 2.2 through 2.5.  It also references and quotes sections of the Avro 1.7.6 specification (\url{http://avro.apache.org/docs/1.7.6/spec.html}).
+
+\subsection{PFA MIME Type and File Name Extension}
+
+The MIME type for PFA is ``application/pfa+json''.  The registration of this MIME type is in progress.
+
+It is recommended that PFA files have the extension ``.pfa'' (all lowercase) on all platforms.  It is recommended that gzip-compressed PFA files have the extension ``.pfaz'' (all lowercase) on all platforms.
+
+\subsection{Levels of PFA Conformance and PFA Subsets}
+
+%% \pagebreak
+%% \section{Execution Control}
+%% \subsection{Suitability for Static Analysis}
+%% type safety, type-safe null, type-safe casting
+%% limited environments (purely inline GPUs?)
+%% callbacks yet no first-class functions: all non-recursive functions can be compiled inline
+%% \subsection{Call Graph: Recursion Tests, PFA Subsets}
+%% \subsection{Timeouts}
+%% better than rejecting or limiting recursion
+%% \subsection{Exception Funneling}
+%% exception graph: you know what exceptions are possible before running
+
+\pagebreak
+
+\section{PFA Document Structure}
+
+\subsection{Input and Output Type Specification}
+
+\subsection{Scoring Method: Map, Emit, and Fold}
+
+\subsection{Execution Phases: Begin, Action, and End}
+
+some applications would only have a begin and action, but no end
+
+\subsection{Specification of Persistent and Shared State}
+
+type specification
+
+initialization
+
+\subsection{Engine Options}
+
+randseed
+
+overridable options
+
+\subsection{Engine Name, Documentation, and Metadata}
+
+\pagebreak
+
+\section{Type System}
+
+\subsection{Avro Types}
+
+Type-safe null
+
+\subsection{Type Inference}
+
+\subsection{Type Resolution, Promotion, and Covariance}
+
+\subsection{Function Parameter Patterns}
+
+\pagebreak
+
+\section{Symbols, Scope, and Data Structures}
+
+\subsection{Immutable Data, Reassignable Symbols}
+
+\subsection{Expression-Level Scope and Mutation Restrictions}
+
+\subsection{Data Structure Limitations}
+
+No circular references
+
+String-only map keys
+
+\pagebreak
+
+\section{User-defined Functions}
+
+\subsection{Syntax and Scope}
+
+\subsection{Anonymous Callbacks and Function References}
+
+\pagebreak
+
+\section{Persistent and Shared State}
+
+\subsection{Cells and Pools}
+
+cells and pools (specification only: link to extraction and manipulation)
+
+\subsection{Concurrent Access and Manipulation of Shared State}
+
+\pagebreak
+
+\section{Expressions}
+
+Special forms and ordinary function calls
+
+\subsection{Function Calls}
+
+\subsection{Symbol References}
+
+\subsection{Literal Values}
+
+\subsection{Creating Arrays, Maps, and Records}
+
+\subsection{Symbol Assignment and Reassignment}
+
+\subsection{Extracting from and Updating Arrays, Maps, and Records}
+
+\subsection{Extracting from and Updating Cells and Pools}
+
+\subsection{Do blocks}
+
+\subsection{Conditionals: if and cond}
+
+\subsection{While loops: Pretest and Posttest}
+
+\subsection{For loops: by Index, Array Element, and Key-Value}
+
+\subsection{Type-Safe Casting}
+
+\subsection{Inline Documentation}
+
+\subsection{User-Defined Exceptions}
+
+\subsection{Log Messages}
+
+\pagebreak
+
+\section{Core Library and Basic Data Manipulation}
+
+\subsection{Basic Arithmetic, Logical, and Bitwise Operators}
+
+\subsection{Universal Comparison Operators}
+
+\subsection{Basic Math Library}
+
+\subsection{Linear Algebra}
+
+including named row/col matrices
+
+\subsection{String Manipulation}
+
+\subsection{Regular Expressions}
+
+and stemming
+
+\subsection{Array Manipulation}
+
+\subsection{Map, Record, Enum, and Fixed Manipulation}
+
+\subsection{Missing Data Handling}
+
+\subsection{Aggregation}
+
+SQL-like functions
+
+group-by tables
+
+CUSUM
+
+\pagebreak
+
+\section{Descriptive Statistics Libraries}
+
+\subsection{Sample Statistics}
+
+accumulated mean, median(?)
+
+\pagebreak
+
+\section{Data Mining Models}
+
+\subsection{Decision and Regression Trees}
+
+\subsection{Cluster Models}
+
+\subsection{Regression}
+
+\subsection{Neural Networks}
+
+\subsection{Support Vector Machines}
+
+\end{document}
+
+
+
+
+
+
