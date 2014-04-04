@@ -372,66 +372,51 @@ package signature {
       case P.Wildcard(label, _) => assignments(label).asInstanceOf[AvroType]
       case P.WildRecord(label, _) => assignments(label).asInstanceOf[AvroType]
     }
-
-  // object prettyPrint extends Function2[Type, Boolean, String] {
-  //   def apply(tpe: Type, html: Boolean): String = apply(tpe, html, mutable.Set[String]())
-
-  //   private def apply(tpe: Type, html: Boolean, alreadyLabeled: mutable.Set[String]): String = tpe match {
-  //     case _: AvroNull => "null"
-  //     case _: AvroBoolean => "boolean"
-  //     case _: AvroInt => "int"
-  //     case _: AvroLong => "long"
-  //     case _: AvroFloat => "float"
-  //     case _: AvroDouble => "double"
-  //     case _: AvroBytes => "bytes"
-  //     case AvroFixed(size, _, _, _, _) => "fixed(%d)".format(size)
-  //     case _: AvroString => "string"
-  //     case AvroEnum(symbols, _, _, _, _) => "enum(%s)".format(symbols.mkString(" "))
-  //     case AvroArray(items) => "array of " + prettyPrint(items, html, alreadyLabeled)
-  //     case AvroMap(values) => "map of " + prettyPrint(values, html, alreadyLabeled)
-  //     case AvroRecord(fields, _, _, _, _) => "record {%s}".format(
-  //       fields map {case AvroField(name, avroType, _, _, _, _) => name + ": " + prettyPrint(avroType, html, alreadyLabeled)} mkString(", ")
-  //     )
-  //     case AvroUnion(types) => "union {%s}".format(types.map(prettyPrint(_, html, alreadyLabeled)).mkString(", "))
-  //     case FcnType(params, ret) => "function {%s} \u2192 %s".format(
-  //       params.map(prettyPrint(_, html, alreadyLabeled)).mkString(", "), prettyPrint(ret, html, alreadyLabeled)
-  //     )
-  //     case Wildcard(label, mustBe, structural) => {
-  //       if (alreadyLabeled.contains(label))
-  //         label
-  //       else {
-  //         alreadyLabeled.add(label)
-
-  //         val struct =
-  //           if (structural)
-  //             " (structural)"
-  //           else
-  //             ""
-  //         if (mustBe.size == 0)
-  //           "any " + label
-  //         else if (mustBe.size == 1)
-  //           "any %s that is a %s%s".format(label, prettyPrint(mustBe.head, html, alreadyLabeled), struct)
-  //         else
-  //           "any %s that is in {%s}%s".format(label, mustBe.map(prettyPrint(_, html, alreadyLabeled)).mkString(", "), struct)
-  //       }
-  //     }
-  //   }
-
-  //   def apply(signature: Signature, html: Boolean): String = signature match {
-  //     case x: Sig => doSig(x, html, mutable.Set[String]())
-  //     case x: Sigs => doSigs(x, html)
-  //   }
-
-  //   private def doSigs(sig: Sigs, html: Boolean): String =
-  //     sig.cases.map(doSig(_, html, mutable.Set[String]())).mkString("\n")
-
-  //   private def doSig(sig: Sig, html: Boolean, alreadyLabeled: mutable.Set[String]): String =
-  //     (sig.params map {case (n, t) => "%s: %s".format(n, prettyPrint(t, html, alreadyLabeled))} mkString(", ")) +
-  //       " \u21d2 " + prettyPrint(sig.ret, html, alreadyLabeled) + (sig.constraintsDoc match {
-  //         case Some(x) => "\n" + x.mkString("\n")
-  //         case None => ""
-  //       })
-  // }
   }
 
+  object toLaTeX extends Function1[Pattern, String] {
+    def apply(p: Pattern): String = apply(p, mutable.Set[String]())
+
+    // Note: a recursive record (possibly through a union) would make this infinite-loop.
+    // It's not smart, but nothing in the library uses recursive records, so it's not a problem yet.
+    def apply(p: Pattern, alreadyLabeled: mutable.Set[String]): String = p match {
+      case P.Null => "null"
+      case P.Boolean => "boolean"
+      case P.Int => "int"
+      case P.Long => "long"
+      case P.Float => "float"
+      case P.Double => "double"
+      case P.Bytes => "bytes"
+      case P.Fixed(size, Some(fullName)) => val name = fullName.replace("_", "\\_");  s"fixed ({\\it size:} $size, {\\it name:} $name)"
+      case P.Fixed(size, None) => s"fixed ({\\it size:} $size)"
+      case P.String => "string"
+      case P.Enum(symbols, Some(fullName)) => val name = fullName.replace("_", "\\_");  val syms = symbols map {_.replace("_", "\\_")};  s"enum ({\\it symbols:} $syms, {\\it name:} $name)"
+      case P.Enum(symbols, None) => val syms = symbols map {_.replace("_", "\\_")};  s"enum ({\\it symbols:} $syms)"
+      case P.Array(items) => "array of " + apply(items, alreadyLabeled)
+      case P.Map(values) => "map of " + apply(values, alreadyLabeled)
+      case P.Record(fields, Some(fullName)) => val name = fullName.replace("_", "\\_");  val fs = fields.map({case (n, f) => "{\\PFApf " + n.replace("_", "\\_") + ":}$\\!$ " + apply(f, alreadyLabeled)}).mkString(", ");  s"record ({\\it fields:} \\{$fs\\}, {\\it name:} $name)"
+      case P.Record(fields, None) => val fs = fields.map({case (n, f) => "{\\PFApf " + n.replace("_", "\\_") + ":}$\\!$ " + apply(f, alreadyLabeled)}).mkString(", ");  s"record ({\\it fields:} \\{$fs\\})"
+      case P.Union(types) => "union of \\{%s\\}".format(types map {apply(_, alreadyLabeled)} mkString(", "))
+      case P.Fcn(params, ret) => "function (%s) \\to %s".format(params map {apply(_, alreadyLabeled)} mkString(", "), apply(ret, alreadyLabeled))
+      case P.Wildcard(label, _) if (alreadyLabeled.contains(label)) => s"{\\PFAtp $label}"
+      case P.WildRecord(label, _) if (alreadyLabeled.contains(label)) => s"{\\PFAtp $label}"
+      case P.Wildcard(label, oneOf) if (oneOf.isEmpty) => alreadyLabeled.add(label);  s"any {\\PFAtp $label}"
+      case P.Wildcard(label, oneOf) => alreadyLabeled.add(label);  val types = oneOf.map({applyType(_)}).mkString(", ");  s"any {\\PFAtp $label} of \\{$types\\}"
+      case P.WildRecord(label, fields) => alreadyLabeled.add(label);  val fs = fields.map({case (n, f) => "{\\PFApf " + n.replace("_", "\\_") + ":}$\\!$ " + apply(f, alreadyLabeled)}).mkString(", ");  s"any record {\\PFAtp $label}" + (if (fields.isEmpty) "" else s" with \\{$fs\\}")
+    }
+
+    private def applyType(t: Type): String = t match {
+      case AvroNull() => "null"
+      case AvroBoolean() => "boolean"
+      case AvroInt() => "int"
+      case AvroLong() => "long"
+      case AvroFloat() => "float"
+      case AvroDouble() => "double"
+      case AvroBytes() => "bytes"
+      case AvroString() => "string"
+      case AvroArray(items) => "array of " + applyType(items)
+      case AvroMap(values) => "map of " + applyType(values)
+      // finish on an as-needed basis
+    }
+  }
 }

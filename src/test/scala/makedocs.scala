@@ -1,6 +1,7 @@
 package test.scala.makedocs
 
 import scala.language.postfixOps
+import scala.collection.mutable
 
 import org.junit.runner.RunWith
 
@@ -10,6 +11,7 @@ import org.scalatest.Matchers
 
 import org.scoringengine.pfa.signature.Sig
 import org.scoringengine.pfa.signature.Sigs
+import org.scoringengine.pfa.signature.toLaTeX
 import org.scoringengine.pfa.lib1
 import test.scala._
 
@@ -65,13 +67,15 @@ class MakeDocsSuite extends FlatSpec with Matchers {
       f.sig match {
         case Sig(params, ret) => {
           val names = params map {case (n, p) => n} mkString(", ")
-          outputFile.print(s"\\mbox{\\PFAc \\{$quoted:\\ [$names]\\} \\vspace{0.2 cm} \\\\")
+          outputFile.print(s"\\mbox{\\PFAc \\{$quoted:$$\\!$$ [$names]\\} \\vspace{0.2 cm} \\\\")
 
+          val alreadyLabeled = mutable.Set[String]()
           for ((n, p) <- params) {
-            val pp = p.toString.replace("_", "\\_")
+            val pp = toLaTeX(p, alreadyLabeled)
             where = where :+ s" & \\PFAc $n \\rm & $pp \\\\"
           }
-          where = where :+ s" & {\\it (returns)} & $ret \\\\"
+          val rr = toLaTeX(ret, alreadyLabeled)
+          where = where :+ s" & {\\it (returns)} & $rr \\\\"
         }
         case Sigs(sigs) => {
           outputFile.print(s"\\mbox{\\PFAc")
@@ -80,17 +84,22 @@ class MakeDocsSuite extends FlatSpec with Matchers {
             for (Sig(params, ret) <- sigs) yield {
               val names = params map {case (n, p) => n} mkString(", ")
 
-              s"\\{$quoted:\\ [$names]\\}"
+              s"\\{$quoted:$$\\!$$ [$names]\\}"
             }
 
           outputFile.print(possibilities.distinct.mkString(" \\rm or \\PFAc "))
 
           val newwhere =
             (for (Sig(params, ret) <- sigs) yield {
-              (for ((n, p) <- params) yield {
-                val pp = p.toString.replace("_", "\\_")
-                s" & \\PFAc $n \\rm & $pp \\\\"
-              }).mkString(" ") + s" & {\\it (returns)} & $ret \\\\"
+              val alreadyLabeled = mutable.Set[String]()
+              var out =
+                (for ((n, p) <- params) yield {
+                  val pp = toLaTeX(p, alreadyLabeled)
+                  s" & \\PFAc $n \\rm & $pp \\\\"
+                }).mkString(" ")
+              val rr = toLaTeX(ret, alreadyLabeled)
+              out = out + s" & {\\it (returns)} & $rr \\\\"
+              out
             }).mkString(" \\end{tabular} \\vspace{0.2 cm} \\\\ or \\vspace{0.2 cm} \\\\ \\begin{tabular}{p{0.01\\linewidth} l p{0.8\\linewidth}}")
           where = where :+ newwhere
         }

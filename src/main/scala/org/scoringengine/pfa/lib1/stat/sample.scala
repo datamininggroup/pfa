@@ -1,6 +1,7 @@
 package org.scoringengine.pfa.lib1.stat
 
 import scala.annotation.tailrec
+import scala.collection.immutable.ListMap
 
 import org.scoringengine.pfa.ast.LibFcn
 import org.scoringengine.pfa.errors.PFARuntimeException
@@ -52,7 +53,7 @@ package object sample {
   ////   updateMean (UpdateMean)
   object UpdateMean extends LibFcn {
     val name = prefix + "updateMean"
-    val sig = Sig(List("runningSum" -> P.WildRecord("A", Map("sum_w" -> P.Double, "sum_wx" -> P.Double)), "w" -> P.Double, "x" -> P.Double), P.Wildcard("A"))
+    val sig = Sig(List("runningSum" -> P.WildRecord("A", ListMap("sum_w" -> P.Double, "sum_wx" -> P.Double)), "w" -> P.Double, "x" -> P.Double), P.Wildcard("A"))
     val doc =
       <doc>
         <desc>Update a record containing running sums for computing a sample mean.</desc>
@@ -72,7 +73,7 @@ package object sample {
   ////   mean (Mean)
   object Mean extends LibFcn {
     val name = prefix + "mean"
-    val sig = Sig(List("runningSum" -> P.WildRecord("A", Map("sum_w" -> P.Double, "sum_wx" -> P.Double))), P.Double)
+    val sig = Sig(List("runningSum" -> P.WildRecord("A", ListMap("sum_w" -> P.Double, "sum_wx" -> P.Double))), P.Double)
     val doc =
       <doc>
         <desc>Compute the mean from a <p>runningSum</p> record.</desc>

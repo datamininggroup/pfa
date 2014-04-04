@@ -1,6 +1,7 @@
 package org.scoringengine.pfa.lib1.model
 
 import scala.annotation.tailrec
+import scala.collection.immutable.ListMap
 
 import org.apache.avro.AvroRuntimeException
 import org.apache.avro.SchemaCompatibility.checkReaderWriterCompatibility
@@ -59,7 +60,7 @@ package object tree {
     val name = prefix + "simpleWalk"
     val sig = Sig(List(
       "datum" -> P.WildRecord("D", Map()),
-      "treeNode" -> P.WildRecord("T", Map(
+      "treeNode" -> P.WildRecord("T", ListMap(
         "field" -> P.String,
         "operator" -> P.String,
         "value" -> P.Wildcard("V"),
