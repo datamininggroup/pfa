@@ -69,7 +69,7 @@ package object tree {
       P.Wildcard("S"))
     val doc =
       <doc>
-        <desc>Descend through a tree comparing <p>datum</p> to each branch with a simple predicate, stopping at a leaf of type <tp>S</tp>.</desc>
+        <desc>Descend through a tree comparing <p>datum</p> to each branch with a simple predicate, stopping at a leaf of type <tp>S</tp> (score).</desc>
         <param name="datum">An element of the dataset to score with the tree.</param>
         <param name="treeNode">A node of the decision or regression tree.
           <paramField name="field">Indicates the field of <p>datum</p> to test.  Fields may have any type.</paramField>
@@ -151,7 +151,7 @@ package object tree {
       P.Wildcard("S"))
     val doc =
       <doc>
-        <desc>Descend through a tree comparing <p>datum</p> to each branch with a user-defined predicate, stopping at a leaf of type <tp>S</tp>.</desc>
+        <desc>Descend through a tree comparing <p>datum</p> to each branch with a user-defined predicate, stopping at a leaf of type <tp>S</tp> (score).</desc>
         <param name="datum">An element of the dataset to score with the tree.</param>
         <param name="treeNode">A node of the decision or regression tree.
           <paramField name="pass">Branch to return if <c>{{"predicate": ["datum", "treeNode"]}}</c> yields <c>true</c>.</paramField>

@@ -64,7 +64,7 @@ package object math {
     val sig = Sig(List(), P.Double)
     val doc =
       <doc>
-        <desc>The double-precision number that is closer than any other to <m>e</m>, the base of natural logarithms (also known as Euler's number).</desc>
+        <desc>The double-precision number that is closer than any other to <m>e</m>, the base of natural logarithms.</desc>
       </doc>
     override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
       JavaCode("Math.E")
@@ -75,8 +75,8 @@ package object math {
   //////////////////////////////////////////////////////////////////// functions (alphabetical order)
 
   def domain(low: String, high: String, lowInclusive: String = "", highInclusive: String = " (inclusive)",
-    result: String = "Beyond this domain, the result is NaN, not an exception (see IEEE 754).",
-    ensureFinite: String = "Use <f>impute.ensureFinite</f> to produce errors from infinite or NaN values.") =
+    result: scala.xml.Node = <x>Beyond this domain, the result is <c>NaN</c>, not an exception (see IEEE 754).</x>.child.head,
+    ensureFinite: scala.xml.Node = <x>Use <f>impute.ensureFinite</f> to produce errors from infinite or <c>NaN</c> values."</x>.child.head) =
       <detail>The domain of this function is from {low}{lowInclusive} to {high}{highInclusive}.  {result}  {ensureFinite}</detail>
 
   def wholeLine(tpe: String = " real") = <detail>The domain of this function is the whole{tpe} line; no input is invalid.</detail>
@@ -293,7 +293,7 @@ package object math {
     val doc =
       <doc>
         <desc>Return the natural logarithm of <p>x</p>.</desc>
-        {domain("0", "infinity", "", " (exclusive)", "Given zero, the result is negative infinity, and below zero, the result is NaN, not an exception (see IEEE 754).")}
+        {domain("0", "infinity", "", " (exclusive)", <x>Given zero, the result is negative infinity, and below zero, the result is <c>NaN</c>, not an exception (see IEEE 754).</x>.child.head)}
       </doc>
     override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
       JavaCode("Math.log(%s)", args(0).toString)
@@ -308,7 +308,7 @@ package object math {
     val doc =
       <doc>
         <desc>Return the logarithm base 10 of <p>x</p>.</desc>
-        {domain("0", "infinity", "", " (exclusive)", "Given zero, the result is negative infinity, and below zero, the result is NaN, not an exception (see IEEE 754).")}
+        {domain("0", "infinity", "", " (exclusive)", <x>Given zero, the result is negative infinity, and below zero, the result is <c>NaN</c>, not an exception (see IEEE 754).</x>.child.head)}
       </doc>
     override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
       JavaCode("Math.log10(%s)", args(0).toString)
@@ -323,7 +323,7 @@ package object math {
     val doc =
       <doc>
         <desc>Return the logarithm of <p>x</p> with a given <p>base</p>.</desc>
-        {domain("0", "infinity", "", " (exclusive)", "Given zero, the result is negative infinity, and below zero, the result is NaN, not an exception (see IEEE 754).")}
+        {domain("0", "infinity", "", " (exclusive)", <x>Given zero, the result is negative infinity, and below zero, the result is <c>NaN</c>, not an exception (see IEEE 754).</x>.child.head)}
         <error>If <p>base</p> is less than or equal to zero, this function produces a "base must be positive" runtime error.</error>
       </doc>
     def apply(x: Double, base: Int): Double = {
@@ -341,7 +341,7 @@ package object math {
     val doc =
       <doc>
         <desc>Return <m>ln(x^2 + 1)</m>.</desc>{avoidsRoundoff}
-        {domain("-1", "infinity", "", " (exclusive)", "Given -1, the result is negative infinity, and below -1, the result is NaN, not an exception (see IEEE 754).")}
+        {domain("-1", "infinity", "", " (exclusive)", <x>Given -1, the result is negative infinity, and below -1, the result is <c>NaN</c>, not an exception (see IEEE 754).</x>.child.head)}
       </doc>
     override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
       JavaCode("Math.log1p(%s)", args(0).toString)

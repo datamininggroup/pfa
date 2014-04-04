@@ -44,8 +44,8 @@ package object core {
     fcns = fcns + Tuple2(libFcn.name, libFcn)
 
   val describeOverflowErrors = (
-    <error>Integer results outside of {java.lang.Integer.MIN_VALUE} and {java.lang.Integer.MAX_VALUE} (inclusive) produce an "int overflow" runtime error.</error>
-    <error>Long-integer results outside of {java.lang.Long.MIN_VALUE} and {java.lang.Long.MAX_VALUE} (inclusive) produce a "long overflow" runtime error.</error>
+    <error>Integer results above or below {java.lang.Integer.MIN_VALUE} and {java.lang.Integer.MAX_VALUE} (inclusive) produce an "int overflow" runtime error.</error>
+    <error>Long-integer results above or below {java.lang.Long.MIN_VALUE} and {java.lang.Long.MAX_VALUE} (inclusive) produce a "long overflow" runtime error.</error>
     <detail>Float and double overflows do not produce runtime errors but result in positive or negative infinity, which would be carried through any subsequent calculations (see IEEE 754).  Use <f>impute.ensureFinite</f> to produce errors from infinite or NaN values.</detail>
   )
 

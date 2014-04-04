@@ -68,83 +68,83 @@ A PFA document can also be statically type-checked.  This allows for faster exec
 
 PFA uses Apache Avro schemae as type annotations.  Avro is an open-source serialization protocol, widely used in Hadoop and related projects, whose type schemae are expressed as JSON objects and whose data structures can be expressed as JSON objects.  Therefore, PFA control structures, Avro type annotations, and data structure literals are all expressed as a single nested JSON object.  Avro additionally has well-defined rules to resolve different but possibly compatible schemae, which PFA reinterprets as type promotion (allowing integers to be passed to a function that expects floating-point numbers, for instance).  When interpreted this way, Avro also has a type-safe null, which PFA uses to ensure that missing data are always explicitly handled.  Finally, the input and output of every PFA engine can always be readily (de)serialized into Avro's binary format or JSON representation, since Avro libraries are available for a wide variety of platforms.
 
-\subsection{Terminology used in this Specification}
+\subsection{Terminology used in this specification}
 
 Within this specification, the key words ``MUST'', ``MUST NOT'', ``REQUIRED'', ``SHALL'', ``SHALL NOT'', ``SHOULD'', ``SHOULD NOT'', ``RECOMMENDED'', ``MAY'', and ``OPTIONAL'' are to be interpreted as described in RFC 2119 (see [\href{http://www.ietf.org/rfc/rfc2119.txt}{RFC2119}]).  However, for readability, these words do not appear in all uppercase letters in this specification.
 
-At times, this specification provides hints and suggestions for implementation.  These suggestions are not normative and conformance with this specification does not depend on their realization.  These hints contain the expression ``We suggest\ldots'' or similar wording.
+At times, this specification provides hints and suggestions for implementation.  These suggestions are not normative and conformance with this specification does not depend on their realization.  These hints contain the expression ``We suggest\ldots'', ``Specific implementations may\ldots'', or similar wording.
 
 This specification uses the terms ``JSON object'', ``JSON object member name'', ``JSON object member value'', ``JSON array'', ``JSON array value'', ``number'', ``integer'', and ``string'' as defined in the JSON specification (\href{http://tools.ietf.org/html/rfc4627}{RFC-4627}), sections 2.2 through 2.5.  It also references and quotes sections of the Avro 1.7.6 specification (\url{http://avro.apache.org/docs/1.7.6/spec.html}).
 
-\subsection{PFA MIME Type and File Name Extension}
+\subsection{PFA MIME type and file name extension}
 
 The MIME type for PFA is ``application/pfa+json''.  The registration of this MIME type is in progress.
 
 It is recommended that PFA files have the extension ``.pfa'' (all lowercase) on all platforms.  It is recommended that gzip-compressed PFA files have the extension ``.pfaz'' (all lowercase) on all platforms.
 
-\subsection{Levels of PFA Conformance and PFA Subsets}
+\subsection{Levels of PFA conformance and PFA subsets}
 
 %% \pagebreak
-%% \section{Execution Control}
-%% \subsection{Suitability for Static Analysis}
+%% \section{Execution control}
+%% \subsection{Suitability for static analysis}
 %% type safety, type-safe null, type-safe casting
 %% limited environments (purely inline GPUs?)
 %% callbacks yet no first-class functions: all non-recursive functions can be compiled inline
-%% \subsection{Call Graph: Recursion Tests, PFA Subsets}
+%% \subsection{Call graph: recursion tests, PFA subsets}
 %% \subsection{Timeouts}
 %% better than rejecting or limiting recursion
-%% \subsection{Exception Funneling}
+%% \subsection{Exception funneling}
 %% exception graph: you know what exceptions are possible before running
 
 \pagebreak
 
-\section{PFA Document Structure}
+\section{PFA document structure}
 
-\subsection{Input and Output Type Specification}
+\subsection{Input and output type specification}
 
-\subsection{Scoring Method: Map, Emit, and Fold}
+\subsection{Scoring method: map, emit, and fold}
 
-\subsection{Execution Phases: Begin, Action, and End}
+\subsection{Execution phases: begin, action, and end}
 
 some applications would only have a begin and action, but no end
 
-\subsection{Specification of Persistent and Shared State}
+\subsection{Specification of persistent and shared state}
 
 type specification
 
 initialization
 
-\subsection{Engine Options}
+\subsection{Engine options}
 
 randseed
 
 overridable options
 
-\subsection{Engine Name, Documentation, and Metadata}
+\subsection{Engine name, documentation, and metadata}
 
 \pagebreak
 
-\section{Type System}
+\section{Type system}
 
-\subsection{Avro Types}
+\subsection{Avro types}
 
 Type-safe null
 
-\subsection{Type Inference}
+\subsection{Type inference}
 
-\subsection{Type Resolution, Promotion, and Covariance}
+\subsection{Type resolution, promotion, and covariance}
 
-\subsection{Function Parameter Patterns}
+\subsection{Function parameter patterns}
 
 \pagebreak
 
-\section{Symbols, Scope, and Data Structures}
+\section{Symbols, scope, and data structures}
 
-\subsection{Immutable Data, Reassignable Symbols}
+\subsection{Immutable data, reassignable symbols}
 
-\subsection{Expression-Level Scope and Mutation Restrictions}
+\subsection{Expression-level scope and mutation restrictions}
 
-\subsection{Data Structure Limitations}
+\subsection{Data structure limitations}
 
 No circular references
 
@@ -152,21 +152,21 @@ String-only map keys
 
 \pagebreak
 
-\section{User-defined Functions}
+\section{User-defined functions}
 
-\subsection{Syntax and Scope}
+\subsection{Syntax and scope}
 
-\subsection{Anonymous Callbacks and Function References}
+\subsection{Anonymous callbacks and function references}
 
 \pagebreak
 
-\section{Persistent and Shared State}
+\section{Persistent and shared state}
 
-\subsection{Cells and Pools}
+\subsection{Cells and pools}
 
 cells and pools (specification only: link to extraction and manipulation)
 
-\subsection{Concurrent Access and Manipulation of Shared State}
+\subsection{Concurrent access and manipulation of shared state}
 
 \pagebreak
 
@@ -174,220 +174,564 @@ cells and pools (specification only: link to extraction and manipulation)
 
 Special forms and ordinary function calls
 
-\subsection{Function Calls}
+\subsection{Function calls}
 
-\subsection{Symbol References}
+\subsection{Symbol references}
 
-\subsection{Literal Values}
+\subsection{Literal values}
 
-\subsection{Creating Arrays, Maps, and Records}
+\subsection{Creating arrays, maps, and records}
 
-\subsection{Symbol Assignment and Reassignment}
+\subsection{Symbol assignment and reassignment}
 
-\subsection{Extracting from and Updating Arrays, Maps, and Records}
+\subsection{Extracting from and updating arrays, maps, and records}
 
-\subsection{Extracting from and Updating Cells and Pools}
+\subsection{Extracting from and updating cells and pools}
 
 \subsection{Do blocks}
 
 \subsection{Conditionals: if and cond}
 
-\subsection{While loops: Pretest and Posttest}
+\subsection{While loops: pretest and posttest}
 
-\subsection{For loops: by Index, Array Element, and Key-Value}
+\subsection{For loops: by index, array element, and key-value}
 
-\subsection{Type-Safe Casting}
+\subsection{Type-safe casting}
 
-\subsection{Inline Documentation}
+\subsection{Inline documentation}
 
-\subsection{User-Defined Exceptions}
+\subsection{User-defined exceptions}
 
-\subsection{Log Messages}
+\subsection{Log messages}
 
 \pagebreak
 
-\section{Core Library and Basic Data Manipulation}
+\section{Core library and basic data manipulation}
 
-\subsubsection{Addition}
-{\hypertarget{hey}{\noindent \mbox{\hspace{0.015\linewidth}} {\bf Signature:} \mbox{\PFAc \{"model.tree.simpleWalk":\ [datum, treeNode]\}} \vspace{0.2 cm} \\\rm \begin{tabular}{p{0.01\linewidth} l p{0.8\linewidth}} & \PFAc datum \rm & WildRecord(D,Map()) \\  & \PFAc treeNode \rm & WildRecord(T,Map(fail -> Union(List(WildRecord(T,Map()), Wildcard(S,Set()))), field -> String, operator -> String, pass -> Union(List(WildRecord(T,Map()), Wildcard(S,Set()))), value -> Wildcard(V,Set()))) \\  & {\it (returns)} & Wildcard(S,Set()) \\ \end{tabular} \vspace{0.3 cm} \\ \mbox{\hspace{0.015\linewidth}} {\bf Description:} Descend through a tree comparing {\PFAp datum} to each branch with a simple predicate, stopping at a leaf of type {\PFAtp S}. \vspace{0.2 cm} \\ \mbox{\hspace{0.015\linewidth}} {\bf Parameters:} \vspace{0.2 cm} \\ \begin{tabular}{p{0.01\linewidth} l p{0.8\linewidth}} & \PFAc datum \rm & This is an explanation of the datum. \\  & \PFAc treeNode \rm & This is an explanation of the treeNode. \begin{description*} \item[\PFAc hey] hey hey hey \item[\PFAc there] there you go \end{description*} \\ & {\it (return value)} & This is a description of the return value. \\ \end{tabular} \vspace{0.2 cm} \\ \mbox{\hspace{0.015\linewidth}} {\bf Details:} \vspace{0.2 cm} \\ \mbox{\hspace{0.045\linewidth}} \begin{minipage}{0.935\linewidth}Here's a detail. \vspace{0.1 cm} \\ And here's another. \end{minipage} \vspace{0.2 cm} \vspace{0.2 cm} \\ \mbox{\hspace{0.015\linewidth}} {\bf Runtime Errors:} \vspace{0.2 cm} \\ \mbox{\hspace{0.045\linewidth}} \begin{minipage}{0.935\linewidth}This can totally crash. \vspace{0.1 cm} \\ And take down everything with it. \end{minipage} \vspace{0.2 cm} \vspace{0.2 cm} \\}}
+\subsection{Basic arithmetic}
 
-\subsubsection{Addition 2}
-\libfcn{model.tree.simpleWalk}
+\subsubsection{Addition of two values ($+$)}
+\libfcn{+}
 
-%% \libfcn{s.translate}
-%% \libfcn{a.countPredicate}
-%% \libfcn{a.argminN}
-%% \libfcn{a.geomean}
-%% \libfcn{s.lower}
-%% \libfcn{model.tree.simpleWalk}
-%% \libfcn{a.fold}
-%% \libfcn{a.insert}
-%% \libfcn{a.flatmap}
-%% \libfcn{a.filtermap}
-%% \libfcn{m.cos}
-%% \libfcn{cmp}
-%% \libfcn{a.append}
-%% \libfcn{m.ln}
-%% \libfcn{a.argminLT}
-%% \libfcn{s.upper}
-%% \libfcn{m.expm1}
-%% \libfcn{*}
-%% \libfcn{<=}
-%% \libfcn{m.log}
-%% \libfcn{a.shuffle}
-%% \libfcn{a.endswith}
-%% \libfcn{\%}
-%% \libfcn{a.rindex}
-%% \libfcn{m.log10}
-%% \libfcn{s.replaceall}
-%% \libfcn{a.intersect}
-%% \libfcn{a.max}
-%% \libfcn{impute.errorOnNull}
-%% \libfcn{m.abs}
-%% \libfcn{a.minNLT}
-%% \libfcn{s.repeat}
-%% \libfcn{m.atan2}
-%% \libfcn{stat.sample.updateMean}
-%% \libfcn{s.substr}
-%% \libfcn{a.concat}
-%% \libfcn{a.reduce}
-%% \libfcn{s.len}
-%% \libfcn{a.subset}
-%% \libfcn{a.diff}
-%% \libfcn{m.exp}
-%% \libfcn{a.argminNLT}
-%% \libfcn{a.index}
-%% \libfcn{a.maxN}
-%% \libfcn{a.distinct}
-%% \libfcn{a.sum}
-%% \libfcn{a.reduceright}
-%% \libfcn{a.any}
-%% \libfcn{s.substrto}
-%% \libfcn{a.argmin}
-%% \libfcn{impute.defaultOnNull}
-%% \libfcn{a.permutations}
-%% \libfcn{s.join}
-%% \libfcn{a.slidingWindow}
-%% \libfcn{<}
-%% \libfcn{a.seteq}
-%% \libfcn{s.split}
-%% \libfcn{a.all}
-%% \libfcn{\&}
-%% \libfcn{a.mode}
-%% \libfcn{s.lstrip}
-%% \libfcn{a.min}
-%% \libfcn{>=}
-%% \libfcn{a.combinations}
-%% \libfcn{a.reverse}
-%% \libfcn{m.atan}
-%% \libfcn{min}
-%% \libfcn{s.replacefirst}
-%% \libfcn{m.copysign}
-%% \libfcn{m.sin}
-%% \libfcn{|}
-%% \libfcn{m.cosh}
-%% \libfcn{m.pi}
-%% \libfcn{or}
-%% \libfcn{a.len}
-%% \libfcn{s.contains}
-%% \libfcn{a.lnsum}
-%% \libfcn{s.startswith}
-%% \libfcn{a.maxLT}
-%% \libfcn{a.argmaxNLT}
-%% \libfcn{-}
-%% \libfcn{a.takeWhile}
-%% \libfcn{m.tanh}
-%% \libfcn{m.signum}
-%% \libfcn{m.hypot}
-%% \libfcn{s.concat}
-%% \libfcn{max}
-%% \libfcn{a.replace}
-%% \libfcn{m.tan}
-%% \libfcn{a.remove}
-%% \libfcn{a.groupby}
-%% \libfcn{a.contains}
-%% \libfcn{**}
-%% \libfcn{==}
-%% \libfcn{s.index}
-%% \libfcn{xor}
-%% \libfcn{a.subseq}
-%% \libfcn{u-}
-%% \libfcn{a.corresponds}
-%% \libfcn{not}
-%% \libfcn{a.minLT}
-%% \libfcn{m.round}
-%% \libfcn{a.sort}
-%% \libfcn{a.mean}
-%% \libfcn{a.count}
-%% \libfcn{a.median}
-%% \libfcn{m.ceil}
-%% \libfcn{m.e}
-%% \libfcn{a.filter}
-%% \libfcn{m.asin}
-%% \libfcn{s.rindex}
-%% \libfcn{a.union}
-%% \libfcn{m.sqrt}
-%% \libfcn{m.rint}
-%% \libfcn{//}
-%% \libfcn{a.map}
-%% \libfcn{+}
-%% \libfcn{!=}
-%% \libfcn{stat.sample.mean}
-%% \libfcn{s.replacelast}
-%% \libfcn{a.argmax}
-%% \libfcn{m.ln1p}
-%% \libfcn{a.argmaxN}
-%% \libfcn{m.acos}
-%% \libfcn{s.endswith}
-%% \libfcn{m.floor}
-%% \libfcn{a.startswith}
-%% \libfcn{a.argmaxLT}
-%% \libfcn{s.rstrip}
-%% \libfcn{m.sinh}
-%% \libfcn{TILDE}
-%% \libfcn{a.disjoint}
-%% \libfcn{a.product}
-%% \libfcn{a.minN}
-%% \libfcn{a.foldright}
-%% \libfcn{s.strip}
-%% \libfcn{\^{}}
-%% \libfcn{a.subseqto}
-%% \libfcn{a.flatten}
-%% \libfcn{and}
-%% \libfcn{/}
-%% \libfcn{>}
-%% \libfcn{a.maxNLT}
-%% \libfcn{\%\%}
-%% \libfcn{a.symdiff}
-%% \libfcn{model.tree.predicateWalk}
-%% \libfcn{s.count}
-%% \libfcn{a.sortLT}
-%% \libfcn{a.dropWhile}
+\subsubsection{Subtraction ($-$)}
+\libfcn{-}
 
+\subsubsection{Multiplication of two values (*)}
+\libfcn{*}
 
-\subsection{Basic Arithmetic, Logical, and Bitwise Operators}
+\subsubsection{Floating-point division (/)}
+\libfcn{/}
 
-\subsection{Universal Comparison Operators}
+\subsubsection{Integer division (//)}
+\libfcn{//}
 
-\subsection{Basic Math Library}
+\subsubsection{Negation (u$-$)}
+\libfcn{u-}
 
-\subsection{Linear Algebra}
+\subsubsection{Modulo (\%)}
+\libfcn{\%}
+
+\subsubsection{Remainder (\%\%)}
+\libfcn{\%\%}
+
+\subsubsection{Raising to a power (**)}
+\libfcn{**}
+
+\subsection{Comparison operators}
+
+Avro defines a \href{http://avro.apache.org/docs/1.7.6/spec.html#order}{sort order} for every pair of values with a compatible type, so any two objects of compatible type can be compared in PFA.
+
+\subsubsection{General comparision (cmp)}
+\libfcn{cmp}
+
+\subsubsection{Equality (==)}
+\libfcn{==}
+
+\subsubsection{Inequality (!=)}
+\libfcn{!=}
+
+\subsubsection{Less than (<)}
+\libfcn{<}
+
+\subsubsection{Less than or equal to (<=)}
+\libfcn{<=}
+
+\subsubsection{Greater than (>)}
+\libfcn{>}
+
+\subsubsection{Greater than or equal to (>=)}
+\libfcn{>=}
+
+\subsubsection{Maximum of two values (max)}
+\libfcn{max}
+
+\subsubsection{Minimum of two values (min)}
+\libfcn{min}
+
+\subsection{Logical operators}
+
+\subsubsection{Logical and (and)}
+\libfcn{and}
+
+\subsubsection{Logical or (or)}
+\libfcn{or}
+
+\subsubsection{Logical xor (xor)}
+\libfcn{xor}
+
+\subsubsection{Logical not (not)}
+\libfcn{not}
+
+\subsection{Bitwise arithmetic}
+
+\subsubsection{Bitwise and (\&)}
+\libfcn{\&}
+
+\subsubsection{Bitwise or (|)}
+\libfcn{|}
+
+\subsubsection{Bitwise xor (\^{})}
+\libfcn{\^{}}
+
+\subsubsection{Bitwise not (\textasciitilde{})}
+\libfcn{TILDE}
+
+\pagebreak
+
+\section{Math library}
+
+\subsection{Constants}
+
+Constants such as $\pi$ and $e$ are represented as stateless functions with no arguments.  Specific implementations may choose to replace the function call with its inline value.
+
+\subsubsection{Archimedes' constant $\pi$ (m.pi)}
+\libfcn{m.pi}
+
+\subsubsection{Euler's constant $e$ (m.e)}
+\libfcn{m.e}
+
+\subsection{Common functions}
+
+\subsubsection{Square root (m.sqrt)}
+\libfcn{m.sqrt}
+
+\subsubsection{Hypotnuse (m.hypot)}
+\libfcn{m.hypot}
+
+\subsubsection{Trigonometric sine (m.sin)}
+\libfcn{m.sin}
+
+\subsubsection{Trigonometric cosine (m.cos)}
+\libfcn{m.cos}
+
+\subsubsection{Trigonometric tangent (m.tan)}
+\libfcn{m.tan}
+
+\subsubsection{Inverse trigonometric sine (m.asin)}
+\libfcn{m.asin}
+
+\subsubsection{Inverse trigonometric cosine (m.acos)}
+\libfcn{m.acos}
+
+\subsubsection{Inverse trigonometric tangent (m.atan)}
+\libfcn{m.atan}
+
+\subsubsection{Robust inverse trigonometric tangent (m.atan2)}
+\libfcn{m.atan2}
+
+\subsubsection{Hyperbolic sine (m.sinh)}
+\libfcn{m.sinh}
+
+\subsubsection{Hyperbolic cosine (m.cosh)}
+\libfcn{m.cosh}
+
+\subsubsection{Hyperbolic tangent (m.tanh)}
+\libfcn{m.tanh}
+
+\subsubsection{Natural exponential (m.exp)}
+\libfcn{m.exp}
+
+\subsubsection{Natural exponential minus one (m.expm1)}
+\libfcn{m.expm1}
+
+\subsubsection{Natural logarithm (m.ln)}
+\libfcn{m.ln}
+
+\subsubsection{Logarithm base 10 (m.log10)}
+\libfcn{m.log10}
+
+\subsubsection{Arbitrary logarithm (m.log)}
+\libfcn{m.log}
+
+\subsubsection{Natural logarithm of one plus square (m.ln1p)}
+\libfcn{m.ln1p}
+
+\subsection{Rounding}
+
+\subsubsection{Absolute value (m.abs)}
+\libfcn{m.abs}
+
+\subsubsection{Floor (m.floor)}
+\libfcn{m.floor}
+
+\subsubsection{Ceiling (m.ceil)}
+\libfcn{m.ceil}
+
+\subsubsection{Simple rounding (m.round)}
+\libfcn{m.round}
+
+\subsubsection{Unbiased rounding (m.rint)}
+\libfcn{m.rint}
+
+\subsubsection{Threshold function (m.signum)}
+\libfcn{m.signum}
+
+\subsubsection{Copy sign (m.copysign)}
+\libfcn{m.copysign}
+
+\subsection{Linear algebra}
 
 including named row/col matrices
 
-\subsection{String Manipulation}
+\pagebreak
+
+\section{String manipulation}
+
+Strings are immutable, so none of the following functions modifies a string in-place.  Some return a modified version of the original string.
+
+\subsection{Basic access}
+
+\subsubsection{Length (s.len)}
+\libfcn{s.len}
+
+\subsubsection{Extract substring (s.substr)}
+\libfcn{s.substr}
+
+\subsubsection{Modify substring (s.substrto)}
+\libfcn{s.substrto}
+
+\subsection{Search and replace}
+
+\subsubsection{Contains (s.contains)}
+\libfcn{s.contains}
+
+\subsubsection{Count instances (s.count)}
+\libfcn{s.count}
+
+\subsubsection{Find first index (s.index)}
+\libfcn{s.index}
+
+\subsubsection{Find last index (s.rindex)}
+\libfcn{s.rindex}
+
+\subsubsection{Check start (s.startswith)}
+\libfcn{s.startswith}
+
+\subsubsection{Check end (s.endswith)}
+\libfcn{s.endswith}
+
+\subsection{Conversions to or from other types}
+
+\subsubsection{Join an array of strings (s.join)}
+\libfcn{s.join}
+
+\subsubsection{Split into an array of strings (s.split)}
+\libfcn{s.split}
+
+\subsection{Conversions to or from other strings}
+
+\subsubsection{Concatenate two strings (s.concat)}
+\libfcn{s.concat}
+
+\subsubsection{Repeat pattern (s.repeat)}
+\libfcn{s.repeat}
+
+\subsubsection{Lowercase (s.lower)}
+\libfcn{s.lower}
+
+\subsubsection{Uppercase (s.upper)}
+\libfcn{s.upper}
+
+\subsubsection{Left-strip (s.lstrip)}
+\libfcn{s.lstrip}
+
+\subsubsection{Right-strip (s.rstrip)}
+\libfcn{s.rstrip}
+
+\subsubsection{Strip both ends (s.strip)}
+\libfcn{s.strip}
+
+\subsubsection{Replace all matches (s.replaceall)}
+\libfcn{s.replaceall}
+
+\subsubsection{Replace first match (s.replacefirst)}
+\libfcn{s.replacefirst}
+
+\subsubsection{Replace last match (s.replacelast)}
+\libfcn{s.replacelast}
+
+\subsubsection{Translate characters (s.translate)}
+\libfcn{s.translate}
 
 \subsection{Regular Expressions}
 
 and stemming
 
-\subsection{Array Manipulation}
+\pagebreak
 
-\subsection{Map, Record, Enum, and Fixed Manipulation}
+\section{Array Manipulation}
 
-\subsection{Missing Data Handling}
+\subsection{Basic access}
 
-\subsection{Aggregation}
+\subsubsection{Length (a.len)}
+\libfcn{a.len}
+
+\subsubsection{Extract subsequence (a.subseq)}
+\libfcn{a.subseq}
+
+\subsubsection{Modify subsequence (a.subseqto)}
+\libfcn{a.subseqto}
+
+\subsection{Search and replace}
+
+\subsubsection{Contains (a.contains)}
+\libfcn{a.contains}
+
+\subsubsection{Count instances (a.count)}
+\libfcn{a.count}
+
+\subsubsection{Count instances by predicate (a.countPredicate)}
+libfcn{a.countPredicate}
+
+\subsubsection{Find first index (a.index)}
+\libfcn{a.index}
+
+\subsubsection{Find last index (a.rindex)}
+\libfcn{a.rindex}
+
+\subsubsection{Check start (a.startswith)}
+\libfcn{a.startswith}
+
+\subsubsection{Check end (a.endswith)}
+\libfcn{a.endswith}
+
+\subsection{Manipulation}
+
+\subsubsection{Concatenate two arrays (a.concat)}
+\libfcn{a.concat}
+
+\subsubsection{Append (a.append)}
+\libfcn{a.append}
+
+\subsubsection{Insert or prepend (a.insert)}
+\libfcn{a.insert}
+
+\subsubsection{Replace item (a.replace)}
+\libfcn{a.replace}
+
+\subsubsection{Remove item (a.remove)}
+\libfcn{a.remove}
+
+\subsection{Reordering}
+
+\subsubsection{Sort (a.sort)}
+\libfcn{a.sort}
+
+\subsubsection{Sort with a less-than function (a.sortLT)}
+\libfcn{a.sortLT}
+
+\subsubsection{Randomly shuffle array (a.shuffle)}
+\libfcn{a.shuffle}
+
+\subsubsection{Reverse order (a.reverse)}
+\libfcn{a.reverse}
+
+\subsection{Extreme values}
+
+\subsubsection{Maximum of all values (a.max)}
+\libfcn{a.max}
+
+\subsubsection{Minimum of all values (a.min)}
+\libfcn{a.min}
+
+\subsubsection{Maximum with a less-than function (a.maxLT)}
+\libfcn{a.maxLT}
+
+\subsubsection{Minimum with a less-than function (a.minLT)}
+\libfcn{a.minLT}
+
+\subsubsection{Maximum $N$ items (a.maxN)}
+\libfcn{a.maxN}
+
+\subsubsection{Minimum $N$ items (a.minN)}
+\libfcn{a.minN}
+
+\subsubsection{Maximum $N$ with a less-than function (a.maxNLT)}
+\libfcn{a.maxNLT}
+
+\subsubsection{Minimum $N$ with a less-than function (a.minNLT)}
+\libfcn{a.minNLT}
+
+\subsubsection{Argument maximum (a.argmax)}
+\libfcn{a.argmax}
+
+\subsubsection{Argument minimum (a.argmin)}
+\libfcn{a.argmin}
+
+\subsubsection{Argument maximum with a less-than function (a.argmaxLT)}
+\libfcn{a.argmaxLT}
+
+\subsubsection{Argument minimum with a less-than function (a.argminLT)}
+\libfcn{a.argminLT}
+
+\subsubsection{Maximum $N$ arguments (a.argmaxN)}
+\libfcn{a.argmaxN}
+
+\subsubsection{Minimum $N$ arguments (a.argminN)}
+\libfcn{a.argminN}
+
+\subsubsection{Maximum $N$ arguments with a less-than function (a.argmaxNLT)}
+\libfcn{a.argmaxNLT}
+
+\subsubsection{Minimum $N$ arguments with a less-than function (a.argminNLT)}
+\libfcn{a.argminNLT}
+
+\subsection{Numerical combinations}
+
+\subsubsection{Add all array values (a.sum)}
+\libfcn{a.sum}
+
+\subsubsection{Multiply all array values (a.product)}
+\libfcn{a.product}
+
+\subsubsection{Sum of logarithms (a.lnsum)}
+\libfcn{a.lnsum}
+
+\subsubsection{Arithmetic mean (a.mean)}
+\libfcn{a.mean}
+
+\subsubsection{Geometric mean (a.geomean)}
+\libfcn{a.geomean}
+
+\subsubsection{Median (a.median)}
+\libfcn{a.median}
+
+\subsubsection{Mode, or most common value (a.mode)}
+\libfcn{a.mode}
+
+\subsection{Set or set-like functions}
+
+PFA does not have a set datatype, but arrays can be interpreted as sets with the following functions.
+
+\subsubsection{Distinct items (a.distinct)}
+\libfcn{a.distinct}
+
+\subsubsection{Set equality (a.seteq)}
+\libfcn{a.seteq}
+
+\subsubsection{Union (a.union)}
+\libfcn{a.union}
+
+\subsubsection{Intersection (a.intersect)}
+\libfcn{a.intersect}
+
+\subsubsection{Set difference (a.diff)}
+\libfcn{a.diff}
+
+\subsubsection{Symmetric set difference (a.symdiff)}
+\libfcn{a.symdiff}
+
+\subsubsection{Subset check (a.subset)}
+\libfcn{a.subset}
+
+\subsubsection{Disjointness check (a.disjoint)}
+\libfcn{a.disjoint}
+
+\subsection{Functional programming}
+
+\subsubsection{Map array items with function (a.map)}
+\libfcn{a.map}
+
+\subsubsection{Filter array items with function (a.filter)}
+\libfcn{a.filter}
+
+\subsubsection{Filter and map (a.filtermap)}
+\libfcn{a.filtermap}
+
+\subsubsection{Map and flatten (a.flatmap)}
+\libfcn{a.flatmap}
+
+\subsubsection{Reduce array items to a single value (a.reduce)}
+\libfcn{a.reduce}
+
+\subsubsection{Right-to-left reduce (a.reduceright)}
+\libfcn{a.reduceright}
+
+\subsubsection{Fold array items to another type (a.fold)}
+\libfcn{a.fold}
+
+\subsubsection{Right-to-left fold (a.foldright)}
+\libfcn{a.foldright}
+
+\subsubsection{Take items until predicate is false (a.takeWhile)}
+\libfcn{a.takeWhile}
+
+\subsubsection{Drop items until predicate is true (a.dropWhile)}
+\libfcn{a.dropWhile}
+
+\subsection{Functional tests}
+
+\subsubsection{Existential check, $\exists$ (a.any)}
+\libfcn{a.any}
+
+\subsubsection{Univeral check, $\forall$ (a.all)}
+\libfcn{a.all}
+
+\subsubsection{Pairwise check of two arrays (a.corresponds)}
+\libfcn{a.corresponds}
+
+\subsection{Restructuring}
+
+\subsubsection{Sliding window (a.slidingWindow)}
+\libfcn{a.slidingWindow}
+
+\subsubsection{Unique combinations of a fixed size (a.combinations)}
+\libfcn{a.combinations}
+
+\subsubsection{Permutations (a.permutations)}
+\libfcn{a.permutations}
+
+\subsubsection{Flatten array (a.flatten)}
+\libfcn{a.flatten}
+
+\subsubsection{Group items by category (a.groupby)}
+\libfcn{a.groupby}
+
+\pagebreak
+
+\section{Manipulation of other data structures}
+
+\subsection{Map}
+
+\subsection{Record}
+
+\subsection{Enum}
+
+\subsection{Fixed}
+
+\pagebreak
+
+\section{Missing data handling}
+
+\subsubsection{Skip record (impute.errorOnNull)}
+\libfcn{impute.errorOnNull}
+
+\subsubsection{Replace with default (impute.defaultOnNull)}
+\libfcn{impute.defaultOnNull}
+
+\pagebreak
+
+\section{Aggregation}
 
 SQL-like functions
 
@@ -397,24 +741,36 @@ CUSUM
 
 \pagebreak
 
-\section{Descriptive Statistics Libraries}
+\section{Descriptive statistics libraries}
 
-\subsection{Sample Statistics}
+\subsection{Sample statistics}
+
+\subsubsection{Update aggregated mean (stat.sample.updateMean)}
+\libfcn{stat.sample.updateMean}
+
+\subsubsection{Compute aggregated mean (stat.sample.mean)}
+\libfcn{stat.sample.mean}
 
 accumulated mean, median(?)
 
 \pagebreak
 
-\section{Data Mining Models}
+\section{Data mining models}
 
-\subsection{Decision and Regression Trees}
+\subsection{Decision and regression Trees}
 
-\subsection{Cluster Models}
+\subsubsection{Tree walk with simple predicates (model.tree.simpleWalk)}
+\libfcn{model.tree.simpleWalk}
+
+\subsubsection{Tree walk with user-defined predicates (model.tree.predicateWalk)}
+\libfcn{model.tree.predicateWalk}
+
+\subsection{Cluster models}
 
 \subsection{Regression}
 
-\subsection{Neural Networks}
+\subsection{Neural networks}
 
-\subsection{Support Vector Machines}
+\subsection{Support vector machines}
 
 \end{document}

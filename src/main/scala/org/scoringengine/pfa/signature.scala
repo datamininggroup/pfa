@@ -397,7 +397,7 @@ package signature {
       case P.Record(fields, Some(fullName)) => val name = fullName.replace("_", "\\_");  val fs = fields.map({case (n, f) => "{\\PFApf " + n.replace("_", "\\_") + ":}$\\!$ " + apply(f, alreadyLabeled)}).mkString(", ");  s"record ({\\it fields:} \\{$fs\\}, {\\it name:} $name)"
       case P.Record(fields, None) => val fs = fields.map({case (n, f) => "{\\PFApf " + n.replace("_", "\\_") + ":}$\\!$ " + apply(f, alreadyLabeled)}).mkString(", ");  s"record ({\\it fields:} \\{$fs\\})"
       case P.Union(types) => "union of \\{%s\\}".format(types map {apply(_, alreadyLabeled)} mkString(", "))
-      case P.Fcn(params, ret) => "function (%s) \\to %s".format(params map {apply(_, alreadyLabeled)} mkString(", "), apply(ret, alreadyLabeled))
+      case P.Fcn(params, ret) => "function (%s) $\\to$ %s".format(params map {apply(_, alreadyLabeled)} mkString(", "), apply(ret, alreadyLabeled))
       case P.Wildcard(label, _) if (alreadyLabeled.contains(label)) => s"{\\PFAtp $label}"
       case P.WildRecord(label, _) if (alreadyLabeled.contains(label)) => s"{\\PFAtp $label}"
       case P.Wildcard(label, oneOf) if (oneOf.isEmpty) => alreadyLabeled.add(label);  s"any {\\PFAtp $label}"

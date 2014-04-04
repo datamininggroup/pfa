@@ -40,10 +40,10 @@ class MakeDocsSuite extends FlatSpec with Matchers {
     case "tp" => s"{\\PFAtp ${x.text}}"
     case "pf" => s"{\\PFApf ${x.text}}"
     case "m" => s"$$${x.text}$$"
-    case "f" => s"{\\PFAf \\hyperlink{${x.text}}${x.text}}"
+    case "f" => s"{\\PFAf \\hyperlink{${x.text}}{${x.text}}}"
     case "paramField" => ""
     case y => throw new Exception(s"Match error node = $node x = $x x.label = ${x.label} x.text = ${x.text}")
-  }).mkString("").replace("%", "\\%").replace("\n", " ").replaceAll("\"([^\"]*)\"", "``$1''")
+  }).mkString("").replace("%", "\\%").replace("\n", " ").replaceAll("\"([^\"]*)\"", "``$1''").replaceAll("([^\\\\])_", "$1\\\\_").replace("\u2264", "$\\leq$").replace("\u2265", "$\\geq$")
 
   "LaTeX generator" must "generate LaTeX" taggedAs(MakeDocsLatex) in {
     val outputFile = new java.io.PrintWriter(new java.io.File("doc/spec/libfcns.tex"))
@@ -100,7 +100,7 @@ class MakeDocsSuite extends FlatSpec with Matchers {
               val rr = toLaTeX(ret, alreadyLabeled)
               out = out + s" & {\\it (returns)} & $rr \\\\"
               out
-            }).mkString(" \\end{tabular} \\vspace{0.2 cm} \\\\ or \\vspace{0.2 cm} \\\\ \\begin{tabular}{p{0.01\\linewidth} l p{0.8\\linewidth}}")
+            }).mkString(" \\end{tabular} \\vspace{0.2 cm} \\\\ \\mbox{\\hspace{1.5 cm}}or \\vspace{0.2 cm} \\\\ \\begin{tabular}{p{0.01\\linewidth} l p{0.8\\linewidth}}")
           where = where :+ newwhere
         }
       }
