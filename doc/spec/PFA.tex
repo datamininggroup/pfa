@@ -4,6 +4,19 @@
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
 
+\newcommand{\PFAc}{\ttfamily\bfseries}
+\newcommand{\PFAp}{\ttfamily\bfseries}
+\newcommand{\PFAt}{\ttfamily\bfseries}
+\newcommand{\PFAtp}{\ttfamily\bfseries}
+\newcommand{\PFApf}{\ttfamily\bfseries}
+\newcommand{\PFAf}{\ttfamily\bfseries}
+
+\newenvironment{description*}%
+  {\vspace{-0.15 cm}\begin{description}%
+    \setlength{\itemsep}{3pt}%
+    \setlength{\parskip}{0pt}}%
+  {\vspace{-0.25 cm}\end{description}}
+
 \title{PFA: Portable Format for Analytics}
 \author{Jim Pivarski}
 \date{Sometime in 2014}
@@ -195,155 +208,161 @@ Special forms and ordinary function calls
 
 \section{Core Library and Basic Data Manipulation}
 
-\libfcn{s.translate}
-\libfcn{a.countPredicate}
-\libfcn{a.argminN}
-\libfcn{a.geomean}
-\libfcn{s.lower}
+\subsubsection{Addition}
+{\hypertarget{hey}{\noindent \mbox{\hspace{0.015\linewidth}} {\bf Signature:} \mbox{\PFAc \{"model.tree.simpleWalk":\ [datum, treeNode]\}} \vspace{0.2 cm} \\\rm \begin{tabular}{p{0.01\linewidth} l p{0.8\linewidth}} & \PFAc datum \rm & WildRecord(D,Map()) \\  & \PFAc treeNode \rm & WildRecord(T,Map(fail -> Union(List(WildRecord(T,Map()), Wildcard(S,Set()))), field -> String, operator -> String, pass -> Union(List(WildRecord(T,Map()), Wildcard(S,Set()))), value -> Wildcard(V,Set()))) \\  & {\it (returns)} & Wildcard(S,Set()) \\ \end{tabular} \vspace{0.3 cm} \\ \mbox{\hspace{0.015\linewidth}} {\bf Description:} Descend through a tree comparing {\PFAp datum} to each branch with a simple predicate, stopping at a leaf of type {\PFAtp S}. \vspace{0.2 cm} \\ \mbox{\hspace{0.015\linewidth}} {\bf Parameters:} \vspace{0.2 cm} \\ \begin{tabular}{p{0.01\linewidth} l p{0.8\linewidth}} & \PFAc datum \rm & This is an explanation of the datum. \\  & \PFAc treeNode \rm & This is an explanation of the treeNode. \begin{description*} \item[\PFAc hey] hey hey hey \item[\PFAc there] there you go \end{description*} \\ & {\it (return value)} & This is a description of the return value. \\ \end{tabular} \vspace{0.2 cm} \\ \mbox{\hspace{0.015\linewidth}} {\bf Details:} \vspace{0.2 cm} \\ \mbox{\hspace{0.045\linewidth}} \begin{minipage}{0.935\linewidth}Here's a detail. \vspace{0.1 cm} \\ And here's another. \end{minipage} \vspace{0.2 cm} \vspace{0.2 cm} \\ \mbox{\hspace{0.015\linewidth}} {\bf Runtime Errors:} \vspace{0.2 cm} \\ \mbox{\hspace{0.045\linewidth}} \begin{minipage}{0.935\linewidth}This can totally crash. \vspace{0.1 cm} \\ And take down everything with it. \end{minipage} \vspace{0.2 cm} \vspace{0.2 cm} \\}}
+
+\subsubsection{Addition 2}
 \libfcn{model.tree.simpleWalk}
-\libfcn{a.fold}
-\libfcn{a.insert}
-\libfcn{a.flatmap}
-\libfcn{a.filtermap}
-\libfcn{m.cos}
-\libfcn{cmp}
-\libfcn{a.append}
-\libfcn{m.ln}
-\libfcn{a.argminLT}
-\libfcn{s.upper}
-\libfcn{m.expm1}
-\libfcn{*}
-\libfcn{<=}
-\libfcn{m.log}
-\libfcn{a.shuffle}
-\libfcn{a.endswith}
-\libfcn{\%}
-\libfcn{a.rindex}
-\libfcn{m.log10}
-\libfcn{s.replaceall}
-\libfcn{a.intersect}
-\libfcn{a.max}
-\libfcn{impute.errorOnNull}
-\libfcn{m.abs}
-\libfcn{a.minNLT}
-\libfcn{s.repeat}
-\libfcn{m.atan2}
-\libfcn{stat.sample.updateMean}
-\libfcn{s.substr}
-\libfcn{a.concat}
-\libfcn{a.reduce}
-\libfcn{s.len}
-\libfcn{a.subset}
-\libfcn{a.diff}
-\libfcn{m.exp}
-\libfcn{a.argminNLT}
-\libfcn{a.index}
-\libfcn{a.maxN}
-\libfcn{a.distinct}
-\libfcn{a.sum}
-\libfcn{a.reduceright}
-\libfcn{a.any}
-\libfcn{s.substrto}
-\libfcn{a.argmin}
-\libfcn{impute.defaultOnNull}
-\libfcn{a.permutations}
-\libfcn{s.join}
-\libfcn{a.slidingWindow}
-\libfcn{<}
-\libfcn{a.seteq}
-\libfcn{s.split}
-\libfcn{a.all}
-\libfcn{\&}
-\libfcn{a.mode}
-\libfcn{s.lstrip}
-\libfcn{a.min}
-\libfcn{>=}
-\libfcn{a.combinations}
-\libfcn{a.reverse}
-\libfcn{m.atan}
-\libfcn{min}
-\libfcn{s.replacefirst}
-\libfcn{m.copysign}
-\libfcn{m.sin}
-\libfcn{|}
-\libfcn{m.cosh}
-\libfcn{m.pi}
-\libfcn{or}
-\libfcn{a.len}
-\libfcn{s.contains}
-\libfcn{a.lnsum}
-\libfcn{s.startswith}
-\libfcn{a.maxLT}
-\libfcn{a.argmaxNLT}
-\libfcn{-}
-\libfcn{a.takeWhile}
-\libfcn{m.tanh}
-\libfcn{m.signum}
-\libfcn{m.hypot}
-\libfcn{s.concat}
-\libfcn{max}
-\libfcn{a.replace}
-\libfcn{m.tan}
-\libfcn{a.remove}
-\libfcn{a.groupby}
-\libfcn{a.contains}
-\libfcn{**}
-\libfcn{==}
-\libfcn{s.index}
-\libfcn{xor}
-\libfcn{a.subseq}
-\libfcn{u-}
-\libfcn{a.corresponds}
-\libfcn{not}
-\libfcn{a.minLT}
-\libfcn{m.round}
-\libfcn{a.sort}
-\libfcn{a.mean}
-\libfcn{a.count}
-\libfcn{a.median}
-\libfcn{m.ceil}
-\libfcn{m.e}
-\libfcn{a.filter}
-\libfcn{m.asin}
-\libfcn{s.rindex}
-\libfcn{a.union}
-\libfcn{m.sqrt}
-\libfcn{m.rint}
-\libfcn{//}
-\libfcn{a.map}
-\libfcn{+}
-\libfcn{!=}
-\libfcn{stat.sample.mean}
-\libfcn{s.replacelast}
-\libfcn{a.argmax}
-\libfcn{m.ln1p}
-\libfcn{a.argmaxN}
-\libfcn{m.acos}
-\libfcn{s.endswith}
-\libfcn{m.floor}
-\libfcn{a.startswith}
-\libfcn{a.argmaxLT}
-\libfcn{s.rstrip}
-\libfcn{m.sinh}
-\libfcn{TILDE}
-\libfcn{a.disjoint}
-\libfcn{a.product}
-\libfcn{a.minN}
-\libfcn{a.foldright}
-\libfcn{s.strip}
-\libfcn{\^{}}
-\libfcn{a.subseqto}
-\libfcn{a.flatten}
-\libfcn{and}
-\libfcn{/}
-\libfcn{>}
-\libfcn{a.maxNLT}
-\libfcn{\%\%}
-\libfcn{a.symdiff}
-\libfcn{model.tree.predicateWalk}
-\libfcn{s.count}
-\libfcn{a.sortLT}
-\libfcn{a.dropWhile}
+
+%% \libfcn{s.translate}
+%% \libfcn{a.countPredicate}
+%% \libfcn{a.argminN}
+%% \libfcn{a.geomean}
+%% \libfcn{s.lower}
+%% \libfcn{model.tree.simpleWalk}
+%% \libfcn{a.fold}
+%% \libfcn{a.insert}
+%% \libfcn{a.flatmap}
+%% \libfcn{a.filtermap}
+%% \libfcn{m.cos}
+%% \libfcn{cmp}
+%% \libfcn{a.append}
+%% \libfcn{m.ln}
+%% \libfcn{a.argminLT}
+%% \libfcn{s.upper}
+%% \libfcn{m.expm1}
+%% \libfcn{*}
+%% \libfcn{<=}
+%% \libfcn{m.log}
+%% \libfcn{a.shuffle}
+%% \libfcn{a.endswith}
+%% \libfcn{\%}
+%% \libfcn{a.rindex}
+%% \libfcn{m.log10}
+%% \libfcn{s.replaceall}
+%% \libfcn{a.intersect}
+%% \libfcn{a.max}
+%% \libfcn{impute.errorOnNull}
+%% \libfcn{m.abs}
+%% \libfcn{a.minNLT}
+%% \libfcn{s.repeat}
+%% \libfcn{m.atan2}
+%% \libfcn{stat.sample.updateMean}
+%% \libfcn{s.substr}
+%% \libfcn{a.concat}
+%% \libfcn{a.reduce}
+%% \libfcn{s.len}
+%% \libfcn{a.subset}
+%% \libfcn{a.diff}
+%% \libfcn{m.exp}
+%% \libfcn{a.argminNLT}
+%% \libfcn{a.index}
+%% \libfcn{a.maxN}
+%% \libfcn{a.distinct}
+%% \libfcn{a.sum}
+%% \libfcn{a.reduceright}
+%% \libfcn{a.any}
+%% \libfcn{s.substrto}
+%% \libfcn{a.argmin}
+%% \libfcn{impute.defaultOnNull}
+%% \libfcn{a.permutations}
+%% \libfcn{s.join}
+%% \libfcn{a.slidingWindow}
+%% \libfcn{<}
+%% \libfcn{a.seteq}
+%% \libfcn{s.split}
+%% \libfcn{a.all}
+%% \libfcn{\&}
+%% \libfcn{a.mode}
+%% \libfcn{s.lstrip}
+%% \libfcn{a.min}
+%% \libfcn{>=}
+%% \libfcn{a.combinations}
+%% \libfcn{a.reverse}
+%% \libfcn{m.atan}
+%% \libfcn{min}
+%% \libfcn{s.replacefirst}
+%% \libfcn{m.copysign}
+%% \libfcn{m.sin}
+%% \libfcn{|}
+%% \libfcn{m.cosh}
+%% \libfcn{m.pi}
+%% \libfcn{or}
+%% \libfcn{a.len}
+%% \libfcn{s.contains}
+%% \libfcn{a.lnsum}
+%% \libfcn{s.startswith}
+%% \libfcn{a.maxLT}
+%% \libfcn{a.argmaxNLT}
+%% \libfcn{-}
+%% \libfcn{a.takeWhile}
+%% \libfcn{m.tanh}
+%% \libfcn{m.signum}
+%% \libfcn{m.hypot}
+%% \libfcn{s.concat}
+%% \libfcn{max}
+%% \libfcn{a.replace}
+%% \libfcn{m.tan}
+%% \libfcn{a.remove}
+%% \libfcn{a.groupby}
+%% \libfcn{a.contains}
+%% \libfcn{**}
+%% \libfcn{==}
+%% \libfcn{s.index}
+%% \libfcn{xor}
+%% \libfcn{a.subseq}
+%% \libfcn{u-}
+%% \libfcn{a.corresponds}
+%% \libfcn{not}
+%% \libfcn{a.minLT}
+%% \libfcn{m.round}
+%% \libfcn{a.sort}
+%% \libfcn{a.mean}
+%% \libfcn{a.count}
+%% \libfcn{a.median}
+%% \libfcn{m.ceil}
+%% \libfcn{m.e}
+%% \libfcn{a.filter}
+%% \libfcn{m.asin}
+%% \libfcn{s.rindex}
+%% \libfcn{a.union}
+%% \libfcn{m.sqrt}
+%% \libfcn{m.rint}
+%% \libfcn{//}
+%% \libfcn{a.map}
+%% \libfcn{+}
+%% \libfcn{!=}
+%% \libfcn{stat.sample.mean}
+%% \libfcn{s.replacelast}
+%% \libfcn{a.argmax}
+%% \libfcn{m.ln1p}
+%% \libfcn{a.argmaxN}
+%% \libfcn{m.acos}
+%% \libfcn{s.endswith}
+%% \libfcn{m.floor}
+%% \libfcn{a.startswith}
+%% \libfcn{a.argmaxLT}
+%% \libfcn{s.rstrip}
+%% \libfcn{m.sinh}
+%% \libfcn{TILDE}
+%% \libfcn{a.disjoint}
+%% \libfcn{a.product}
+%% \libfcn{a.minN}
+%% \libfcn{a.foldright}
+%% \libfcn{s.strip}
+%% \libfcn{\^{}}
+%% \libfcn{a.subseqto}
+%% \libfcn{a.flatten}
+%% \libfcn{and}
+%% \libfcn{/}
+%% \libfcn{>}
+%% \libfcn{a.maxNLT}
+%% \libfcn{\%\%}
+%% \libfcn{a.symdiff}
+%% \libfcn{model.tree.predicateWalk}
+%% \libfcn{s.count}
+%% \libfcn{a.sortLT}
+%% \libfcn{a.dropWhile}
 
 
 \subsection{Basic Arithmetic, Logical, and Bitwise Operators}

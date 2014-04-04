@@ -29,6 +29,20 @@ class MakeDocsSuite extends FlatSpec with Matchers {
     lib1.stat.sample.provides ++
     lib1.model.tree.provides
 
+  def xmlToLaTeX(node: scala.xml.Node): String = node.child.map(x => x.label match {
+    case "#PCDATA" => x.text
+    case "#ENTITY" => x.text
+    case "p" => s"{\\PFAp ${x.text}}"
+    case "c" => s"{\\PFAc ${x.text}}"
+    case "t" => s"{\\PFAt ${x.text}}"
+    case "tp" => s"{\\PFAtp ${x.text}}"
+    case "pf" => s"{\\PFApf ${x.text}}"
+    case "m" => s"$$${x.text}$$"
+    case "f" => s"{\\PFAf \\hyperlink{${x.text}}${x.text}}"
+    case "paramField" => ""
+    case y => throw new Exception(s"Match error node = $node x = $x x.label = ${x.label} x.text = ${x.text}")
+  }).mkString("").replace("%", "\\%").replace("\n", " ").replaceAll("\"([^\"]*)\"", "``$1''")
+
   "LaTeX generator" must "generate LaTeX" taggedAs(MakeDocsLatex) in {
     val outputFile = new java.io.PrintWriter(new java.io.File("doc/spec/libfcns.tex"))
 
@@ -44,51 +58,97 @@ class MakeDocsSuite extends FlatSpec with Matchers {
       val asname = sanitized.replace("~", "TILDE")
       val quoted = "\"" + sanitized.replace("~", "\\textasciitilde{}") + "\""
 
-      outputFile.print(s"    {${asname}}{\\noindent")
+      outputFile.print(s"    {$asname}{\\hypertarget{$asname}{\\noindent \\mbox{\\hspace{0.015\\linewidth}} {\\bf Signature:} ")
 
       var where = Seq[String]()
 
       f.sig match {
         case Sig(params, ret) => {
           val names = params map {case (n, p) => n} mkString(", ")
-          outputFile.print(s"\\mbox{\\tt \\{${quoted}:\\ [${names}]\\}")
+          outputFile.print(s"\\mbox{\\PFAc \\{$quoted:\\ [$names]\\} \\vspace{0.2 cm} \\\\")
 
           for ((n, p) <- params) {
             val pp = p.toString.replace("_", "\\_")
-            where = where :+ s" & \\tt ${n} \\rm & ${pp} \\\\"
+            where = where :+ s" & \\PFAc $n \\rm & $pp \\\\"
           }
-          where = where :+ s" & & $$\\to$$ ${ret} \\\\"
+          where = where :+ s" & {\\it (returns)} & $ret \\\\"
         }
         case Sigs(sigs) => {
-          outputFile.print(s"\\mbox{\\tt")
+          outputFile.print(s"\\mbox{\\PFAc")
 
           val possibilities =
             for (Sig(params, ret) <- sigs) yield {
               val names = params map {case (n, p) => n} mkString(", ")
 
-              s"\\{${quoted}:\\ [${names}]\\}"
+              s"\\{$quoted:\\ [$names]\\}"
             }
 
-          outputFile.print(possibilities.distinct.mkString(" \\rm or \\tt "))
+          outputFile.print(possibilities.distinct.mkString(" \\rm or \\PFAc "))
 
           val newwhere =
             (for (Sig(params, ret) <- sigs) yield {
               (for ((n, p) <- params) yield {
                 val pp = p.toString.replace("_", "\\_")
-                s" & \\tt ${n} \\rm & ${pp} \\\\"
-              }).mkString(" ") + s" & & $$\\to$$ ${ret} \\\\"
-            }).mkString(" \\end{tabular} \\\\ or \\\\ \\begin{tabular}{p{0.01\\linewidth} l p{0.8\\linewidth}}")
+                s" & \\PFAc $n \\rm & $pp \\\\"
+              }).mkString(" ") + s" & {\\it (returns)} & $ret \\\\"
+            }).mkString(" \\end{tabular} \\vspace{0.2 cm} \\\\ or \\vspace{0.2 cm} \\\\ \\begin{tabular}{p{0.01\\linewidth} l p{0.8\\linewidth}}")
           where = where :+ newwhere
         }
       }
 
-      outputFile.print("} \\\\");
+      outputFile.print("} \\vspace{0.2 cm} \\\\ ")
 
       if (!where.isEmpty) {
-        outputFile.print("\\rm \\begin{tabular}{p{0.01\\linewidth} l p{0.8\\linewidth}}" + where.mkString(" ") + " \\end{tabular}")
+        outputFile.print("\\rm \\begin{tabular}{p{0.01\\linewidth} l p{0.8\\linewidth}}" + where.mkString(" ") + " \\end{tabular} \\vspace{0.3 cm} \\\\ ")
       }
 
-      outputFile.println("}%");
+      val desc = xmlToLaTeX(f.doc \ "desc" head)
+      outputFile.print(s"\\mbox{\\hspace{0.015\\linewidth}} {\\bf Description:} $desc \\vspace{0.2 cm} \\\\ ")
+
+      val params = f.doc \ "param"
+      val rets = f.doc \ "ret"
+      if (!params.isEmpty || !rets.isEmpty) {
+        outputFile.print(s"\\mbox{\\hspace{0.015\\linewidth}} {\\bf Parameters:} \\vspace{0.2 cm} \\\\ \\begin{tabular}{p{0.01\\linewidth} l p{0.8\\linewidth}} ")
+
+        for (param <- params) {
+          val name = param \ "@name"
+
+          var fields = ""
+          val paramFields = param \ "paramField"
+          if (!paramFields.isEmpty) {
+            fields = fields + "\\begin{description*}"
+            for (field <- paramFields) {
+              val fieldName = field \ "@name"
+              fields = fields + s"\\item[\\PFAc $fieldName:] ${xmlToLaTeX(field)} "
+            }
+            fields = fields + "\\end{description*}"
+          }
+
+          outputFile.print(s" & \\PFAc $name \\rm & ${xmlToLaTeX(param)} $fields \\\\ ")
+        }
+
+        for (ret <- rets) {
+          outputFile.print(s" & {\\it (return value)} \\rm & ${xmlToLaTeX(ret)} \\\\ ")
+        }
+
+        outputFile.print("\\end{tabular} \\vspace{0.2 cm} \\\\ ")
+      }
+
+      val details = f.doc \ "detail"
+      if (!details.isEmpty) {
+        outputFile.print("\\mbox{\\hspace{0.015\\linewidth}} {\\bf Details:} \\vspace{0.2 cm} \\\\ \\mbox{\\hspace{0.045\\linewidth}} \\begin{minipage}{0.935\\linewidth}")
+        outputFile.print(details.map(xmlToLaTeX).mkString(" \\vspace{0.1 cm} \\\\ "))
+        outputFile.print("\\end{minipage} \\vspace{0.2 cm} \\vspace{0.2 cm} \\\\ ")
+      }
+
+      val errors = f.doc \ "error"
+      if (!errors.isEmpty) {
+        outputFile.print("\\mbox{\\hspace{0.015\\linewidth}} {\\bf Runtime Errors:} \\vspace{0.2 cm} \\\\ \\mbox{\\hspace{0.045\\linewidth}} \\begin{minipage}{0.935\\linewidth}")
+        outputFile.print(errors.map(xmlToLaTeX).mkString(" \\vspace{0.1 cm} \\\\ "))
+        outputFile.print("\\end{minipage} \\vspace{0.2 cm} \\vspace{0.2 cm} \\\\ ")
+      }
+
+      outputFile.println("}}%")
     }
 
     outputFile.println("""    }[{\bf FIXME: LaTeX error: wrong libfcn name!}]%
