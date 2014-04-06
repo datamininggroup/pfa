@@ -85,6 +85,7 @@
 2014-04-04:   Implemented and bug-fixed all of the auto-generated documentation.
 2014-04-05:
 2014-04-06:   Wrote conformance and document structure sections.
+2014-04-07:   Wrote execution phases section.
 
 
 Tomorrow:     Documentation (auto-generated and hand-made)

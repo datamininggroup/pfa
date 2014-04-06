@@ -49,7 +49,7 @@
 
 This specification defines the syntax and semantics of the Portable Format for Analytics (PFA).
 
-PFA is a mini-language for mathematical calculations that is usually generated programmatically, rather than by hand.  A PFA document is a string of JSON-formatted text that describes an executable called a scoring engine.  Each engine has a well-defined input, a well-defined output, and functions for combining inputs to construct the output in an expression-centric syntax tree.  In addition, it has centralized facilities for maintaining state, with well-defined semantics for sharing state among scoring engines in a thread-safe way.  The specification defines a suite of mathematical and statistical functions for transforming data, but it does not define any means of communication with an operating system, file system, or network.  A PFA engine must be embedded in a larger system that has these capabilities, and thus an analytic workflow is decoupled into a part that manages data pipelines (such as Hadoop or Storm), and a part that describes the algorithm to be performed on data (PFA).  
+PFA is a mini-language for mathematical calculations that is usually generated programmatically, rather than by hand.  A PFA document is a string of JSON-formatted text that describes an executable called a scoring engine.  Each engine has a well-defined input, a well-defined output, and functions for combining inputs to construct the output in an expression-centric syntax tree.  In addition, it has centralized facilities for maintaining state, with well-defined semantics for sharing state among scoring engines in a thread-safe way.  The specification defines a suite of mathematical and statistical functions for transforming data, but it does not define any means of communication with an operating system, file system, or network.  A PFA engine must be embedded in a larger system that has these capabilities, and thus an analytic workflow is decoupled into a part that manages data pipelines (such as Hadoop, Storm, or Akka), and a part that describes the algorithm to be performed on data (PFA).  
 
 PFA is similar to the Predictive Model Markup Language (PMML), an XML-based specification for statistical models, but whereas PMML's focus is on statistical models in the abstract, PFA's focus is on the scoring procedure itself.  The same input given to two PFA-enabled systems must yield the same output, regardless of platform (e.g.\ a JVM in Hadoop, a client's web browser, a GPU kernel function, or even an IP core directly embedded in an integrated circuit).  Unlike PMML, the PFA specification defines the exact bit-for-bit behavior of any well-formed document, the semantics of data types and data structures, including behavior in concurrent systems, and all cases in which an exception should be thrown.  Like PMML, PFA is a specification, not an implementation, it defines a suite of statistical algorithms for analyzing data, and it is usually generated programmatically, as the output of a machine learning algorithm, for instance.
 
@@ -143,7 +143,7 @@ A PFA document is a serialized JSON object representing an executable scoring en
 \item[\PFAc action:] An \hyperlink{hsec:expressions}{expression} or JSON array of \hyperlink{hsec:expressions}{expressions} that are executed for each input datum in the active phase of the scoring engine's run (\hyperlink{hsec:phases}{see Sec.~\ref{sec:phases}}).
 \item[\PFAc end:] An \hyperlink{hsec:expressions}{expression} or JSON array of \hyperlink{hsec:expressions}{expressions} that are executed in the end phase of the scoring engine's run (\hyperlink{hsec:phases}{see Sec.~\ref{sec:phases}}).
 \item[\PFAc fcns:] A JSON object whose member values are \hyperlink{hsec:fcndef}{function definitions}, defining routines that may be called by expressions in {\PFAc begin}, {\PFAc action}, {\PFAc end}, or by expressions in other functions.
-\item[\PFAc zero:] Embedded JSON data whose type must match the {\PFAc output} type of the engine.  This is only used by the ``fold'' method to initialize the fold aggregation.
+\item[\PFAc zero:] Embedded JSON data whose type must match the {\PFAc output} type of the engine.  This is only used by the ``fold'' method to initialize the fold aggregation.  If {\PFAc method} is ``map'' or ``emit'', this field is ignored.
 \item[\PFAc cells:] A JSON object whose member values specify statically allocated, named, typed units of persistent state or embedded data (\hyperlink{hsec:state}{see Sec.~\ref{sec:state}}).  The format of this JSON object is restricted: \hyperlink{hsec:cells-pools}{see Sec.~\ref{sec:cells-pools}}.
 \item[\PFAc pools:] A JSON object whose member values specify dynamically allocated namespaces of typed persistent state (\hyperlink{hsec:state}{see Sec.~\ref{sec:state}}).  The format of this JSON object is restricted: \hyperlink{hsec:cells-pools}{see Sec.~\ref{sec:cells-pools}}.
 \item[\PFAc randseed:] An integer which, if present, sets the seed for pseudorandom number generation (\hyperlink{hsec:method}{see Sec.~\ref{sec:random}}).
@@ -152,12 +152,14 @@ A PFA document is a serialized JSON object representing an executable scoring en
 \item[\PFAc options:] A JSON object of JSON objects, arrays, strings, numbers, booleans, or nulls used to control execution.  The format of this JSON object is restricted: see \hyperlink{hsec:options}{see Sec.~\ref{sec:options}}.
 \end{allowedfields}
 
+\noindent \begin{minipage}{\linewidth}
 \begin{example}
 This is the simplest possible PFA document.  It only reads {\PFAc null} values, returns {\PFAc null} values, and performs no calculations.
 \begin{json}
 {"input": "null", "output": "null", "action": null}
 \end{json}
 \end{example}
+\end{minipage}
 
 \begin{example}
 This is a simple yet non-degenerate PFA document.  It increments numerical input by 1.
@@ -167,7 +169,7 @@ This is a simple yet non-degenerate PFA document.  It increments numerical input
 \end{example}
 
 \begin{example}
-This example implements a simple decision tree.  Input data are records with three fields: ``one'' (integer), ``two'' (double), and ``three'' (string).  The decision tree is stored in a cell named ``tree'' with type ``TreeNode''.  The tree has three binary splits (four leaves).  The scoring engine walks from the root to a leaf for each input datum, choosing a path based on values found in the input data, and returns the string it finds at the leaf.  (See the function definition of \hyperlink{model.tree.simpleWalk}{model.tree.simpleWalk} for a complete explanation.)
+This example implements a small decision tree.  Input data are records with three fields: ``one'' (integer), ``two'' (double), and ``three'' (string).  The decision tree is stored in a cell named ``tree'' with type ``TreeNode''.  The tree has three binary splits (four leaves).  The scoring engine walks from the root to a leaf for each input datum, choosing a path based on values found in the record's fields, and returns the string it finds at the tree's leaf.  (See the definition of the \hyperlink{model.tree.simpleWalk}{model.tree.simpleWalk} function.)
 \begin{json}
 {"input": {"type": "record", "name": "Datum", "fields":
    [{"name": "one", "type": "int"},
@@ -245,8 +247,48 @@ The top-level field {\PFAc options}, if present, is a JSON object whose member n
 
 \section{Scoring engine execution model}
 
+A PFA document (string of JSON-formatted text) describes a PFA scoring engine (executable routine) or a battery of initially identical engines.  An engine behaves as a single-threaded executable with global state (cells and pools) and local variables.  A battery of scoring engines may run in parallel and only share data if some cells or pools are explicitly marked as {\PFAc shared}.  Although a battery of scoring engines generated by a single PFA document start in exactly the same state, they may evolve into different states if they have any unshared cells or pools.
 
+PFA engines are units of work that may fit into a pipeline system such as Hadoop, Storm, or Akka.  In a map-reduce framework like Hadoop, for instance, one PFA document could describe the calculation performed by all of the mappers and another could describe the calculation performed by all of the reducers.  The mappers are a battery of independent PFA engines, as are the reducers.  In pure map-reduce, the mappers would not communicate with each other and the reducers would not communicate with each other, so none of the cells or pools should be marked as {\PFAc shared}.  With this separation of concerns, issues of interpreting input file types and formatting output should be handled by the pipeline system (Hadoop in this case) while the mathematical procedure is handled by PFA.  Changing file formats would require an update to the pipeline code (and possibly a code review), but changing details of the analytic would only require a new PFA document (a JSON configuration file).
 
+\hypertarget{hsec:phases}{}
+\subsection{Execution phases of a PFA scoring engine}
+\label{sec:phases}
+
+A PFA engine has a 7 phase lifecycle.  These phases are the following, executed in this order:
+
+\vspace{-0.3 cm}
+\begin{center}
+\begin{minipage}{0.9\linewidth}
+\begin{enumerate}
+\item reading the PFA document and performing a syntax check;
+\item verifying PFA invariants and checking type consistency;
+\item additional checks, constraints required by a particular PFA system;
+\item initialization of the engine;
+\item execution of the {\PFAc begin} routine;
+\item execution of the {\PFAc action} routine for each input datum;
+\item execution of the {\PFAc end} routine.
+\end{enumerate}
+\end{minipage}
+\end{center}
+
+In phase 1, JSON is decoded and may be used to build an abstract syntax tree of the whole document.  At this stage, JSON types must be correctly matched (e.g.\ if a number is expected, a string cannot be provided instead) to build the syntax tree.  Incorrectly formatted JSON should also be rejected, though we recommend that a dedicated JSON decoder is used for this task.  Avro schemae should also be interpreted in this phase (see \hyperlink{hsec:avro-types}{Sec.~\ref{sec:avro-types}}).
+
+In phase 2, the loaded PFA document is interpreted as an executable.  If the specific PFA implementation builds code with macros, compiles bytecode, or synthesizes a circuit for execution, that work should happen in this phase.  Data types should be inferred and checked (see \hyperlink{hsec:type-inference}{Sec.~\ref{sec:type-inference}}), especially if the executable is compiled.
+
+Phase 3 is provided for optional checks.  Due to limitations of a particular environment, some PFA systems may need to be more restrictive than the general specification and reject what would otherwise be a valid PFA document.  Reasons include unimplemented function calls, inability to implement recursion, or data structures that are too large.  The phase 3 checks may need to be performed concurrently with the phase 2 checks to build the executable.
+
+Phase 4, initialization, is when data structures such as cells and pools are allocated and filled, network connections are established (if relevant for a particular PFA implementation), pseudorandom number generators are seeded, etc.  These are actions that the engine must perform to work properly but are not a part of the {\PFAc begin}, {\PFAc action}, or {\PFAc end} routines.
+
+The actions performed in the last three phases, {\PFAc begin}, {\PFAc action}, and {\PFAc end}, are explicitly defined in the PFA document.  A PFA system must implement the {\PFAc action} phase, since every PFA document must define an {\PFAc action}.  The {\PFAc action} accepts input and returns output, though the way it does so depends on the {\PFAc method} (\hyperlink{hsec:method}{Sec.~\ref{sec:method}}).
+
+The {\PFAc begin} and {\PFAc end} phases do not accept input and do not return output: they can only modify cells and pools, emit log messages, or throw exceptions.  A PFA system is not required to implement {\PFAc begin} and {\PFAc end}.  If a system that does not implement {\PFAc begin} encounters a document that has a {\PFAc begin} routine, it must fail with an error.  If a system that does not implement {\PFAc end} encounters a document that has an {\PFAc end} routine, it need not fail with an error, though it may.  This is because some PFA documents may use {\PFAc begin} to initialize essential data structures and the {\PFAc action} would only function properly if {\PFAc begin} has been executed, but the {\PFAc end} routine can only affect the state of a completed scoring engine whose interpretation is implementation-specific.  Moreover, some data pipelines do not even have a concept of completion, such as Storm.
+
+After all input data have been passed to the scoring engine and the last {\PFAc action} or {\PFAc end} routine has finished, the scoring engine is said to be completed.  This may be considered an eighth phase of the engine, though its behavior at this point is not defined by this specification.  A particular PFA system may extract aggregated results from a completed engine's state and it may even call functions defined in the document's {\PFAc fcn} field, but this is beyond the scope of the standard PFA lifecycle.  (Note: if the primary purpose of a scoring engine is to aggregate data, consider using the ``fold'' {\PFAc method} instead of extracting from the engine's internal state.)
+
+A completed scoring engine may be used to create a new PFA document, in which the final state of the cells and pools are used to define the {\PFAc cell} {\PFAc init} or {\PFAc pool} {\PFAc init} of the new document, such that a new scoring engine would start where the old one left off.  A PFA system may even re-use an old scoring engine as a new scoring engine (repeating phase 4 onward), but a re-used engine must behave exactly like a new engine with copied state, such that the re-use is an implementation detail and does not affect behavior.
+
+A PFA system may call functions defined in the document's {\PFAc fcn} field at any time, but if the function modifies state (a {\PFAc cell-to} or {\PFAc pool-to} special form is reachable in its call graph) and the engine is not complete, the function call must not be allowed because it could affect the engine's behavior.  A PFA system must not execute {\PFAc begin}, {\PFAc action}, or {\PFAc end} outside of its lifecycle.
 
 \hypertarget{hsec:method}{}
 \subsection{Scoring method: map, emit, and fold}
@@ -257,12 +299,6 @@ The top-level field {\PFAc options}, if present, is a JSON object whose member n
 \label{sec:input-output}
 
 data funnel (how input and output are handled)
-
-\hypertarget{hsec:phases}{}
-\subsection{Execution phases: begin, action, and end}
-\label{sec:phases}
-
-some applications would only have a begin and action, but no end
 
 \hypertarget{hsec:state}{}
 \subsection{Persistent state: cells and pools}
@@ -298,11 +334,18 @@ random numbers
 
 \section{Type system}
 
+\hypertarget{hsec:avro-types}{}
 \subsection{Avro types}
+\label{sec:avro-types}
+
+Orderless Avro schema reading
+
 
 Type-safe null
 
+\hypertarget{hsec:type-inference}{}
 \subsection{Type inference}
+\label{sec:type-inference}
 
 \subsection{Type resolution, promotion, and covariance}
 
