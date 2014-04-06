@@ -2285,6 +2285,8 @@ action:
     until: {==: [x, -5]}
     step: {x: {+: [x, 1]}}
     do: [x]
+options:
+  timeout: 1000
 """).head.action("hey") } should produce [PFATimeoutException]
   }
 

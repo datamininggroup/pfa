@@ -23,7 +23,7 @@ package options {
       case _ => throw new PFAInitializationException(name + " must be an integral number")
     }
 
-    val timeout = longOpt("timeout", 1000)
+    val timeout = longOpt("timeout", -1)
     val timeout_begin = longOpt("timeout.begin", timeout)
     val timeout_action = longOpt("timeout.action", timeout)
     val timeout_end = longOpt("timeout.end", timeout)
