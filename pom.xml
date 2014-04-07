@@ -181,8 +181,8 @@
         <configuration>
           <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
           <junitxml>.</junitxml>
-          <tagsToInclude>MakeDocsLatex</tagsToInclude>
-          <tagsToExclude>PythonTest, Lib1ModelTree, JVMCompilation, TypeCheck, Types, AstToJson, JsonToAst, RandomJson, Lib1String, Lib1Core, Lib1StatSample, Lib1Math, SignatureMatch, Data, Shared, Yaml, MultiThreaded, Lib1Bytes, Lib1Enum, Lib1Fixed, Lib1Impute, Lib1Map, Lib1Record, Lib1Array</tagsToExclude>
+          <tagsToInclude>PythonTest, Lib1ModelTree, JVMCompilation, TypeCheck, Types, AstToJson, JsonToAst, RandomJson, Lib1String, Lib1Core, Lib1StatSample, Lib1Math, SignatureMatch, Data, Shared, Yaml, MultiThreaded, Lib1Bytes, Lib1Enum, Lib1Fixed, Lib1Impute, Lib1Map, Lib1Record, Lib1Array, MakeDocsLatex</tagsToInclude>
+          <tagsToExclude></tagsToExclude>
         </configuration>
         <executions>
           <execution>
