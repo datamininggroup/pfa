@@ -6,6 +6,7 @@
 \usepackage{xcolor}
 \usepackage{amsthm}
 \usepackage{fancyvrb}
+\usepackage{longtable}
 
 \newcommand{\PFAc}{\ttfamily\bfseries}
 \newcommand{\PFAp}{\ttfamily\bfseries}
@@ -33,6 +34,8 @@
   \VerbatimEnvironment
   \begin{center}\begin{minipage}{0.9\linewidth}
   \begin{Verbatim}[formatcom=\ttfamily\bfseries]}{\end{Verbatim}\end{minipage}\end{center}}
+
+\renewcommand{\arraystretch}{1.4}
 
 \title{PFA: Portable Format for Analytics}
 \author{Jim Pivarski}
@@ -152,7 +155,7 @@ A PFA document is a serialized JSON object representing an executable scoring en
 \item[\PFAc randseed:] An integer which, if present, sets the seed for pseudorandom number generation (\hyperlink{hsec:method}{see Sec.~\ref{sec:random}}).
 \item[\PFAc doc:] A string used to describe the scoring engine or its provenance (has no effect on calculations).
 \item[\PFAc metadata:] A JSON object, array, string, number, boolean, or null used to describe the scoring engine or its provenance (has no effect on calculations).
-\item[\PFAc options:] A JSON object of JSON objects, arrays, strings, numbers, booleans, or nulls used to control execution.  The format of this JSON object is restricted: see \hyperlink{hsec:options}{see Sec.~\ref{sec:options}}.
+\item[\PFAc options:] A JSON object of JSON objects, arrays, strings, numbers, booleans, or nulls used to control execution.  The set of possible options and their representation is restricted:: see \hyperlink{hsec:options}{see Sec.~\ref{sec:options}}.
 \end{allowedfields}
 
 \noindent \begin{minipage}{\linewidth}
@@ -235,18 +238,6 @@ A pool-specification is a JSON object with the following fields.
 \end{allowedfields}
 
 A complete explanation of cells and pools is given in \hyperlink{hsec:state}{Sec.~\ref{sec:state}}.
-
-\hypertarget{hsec:options}{}
-\subsection{Engine options}
-\label{sec:options}
-
-The top-level field {\PFAc options}, if present, is a JSON object whose member names must be chosen from the following.  Each member name is associated with a particular JSON type, also specified below.  See \hyperlink{hsec:state}{Sec.~\ref{sec:control}} for a complete explanation of the overridable options framework.
-\begin{allowedfields}
-\item[\PFAc timeout:] {\it (integer)} If positive, the maximum number of milliseconds before a single execution of {\PFAc begin}, {\PFAc action}, or {\PFAc end} throws a \hyperlink{hsec:exceptions}{timeout exception}.  Default is $-1$ (no timeout).
-\item[\PFAc timeout.begin:] {\it (integer)} If positive, the maximum number of milliseconds before a single execution of {\PFAc begin} throws a \hyperlink{hsec:exceptions}{timeout exception}.  Overrides {\PFAc timeout} if present and defaults to {\PFAc timeout} if not.
-\item[\PFAc timeout.action:] {\it (integer)} If positive, the maximum number of milliseconds before a single execution of {\PFAc action} throws a \hyperlink{hsec:exceptions}{timeout exception}.  Overrides {\PFAc timeout} if present and defaults to {\PFAc timeout} if not.
-\item[\PFAc timeout.end:] {\it (integer)} If positive, the maximum number of milliseconds before a single execution of {\PFAc end} throws a \hyperlink{hsec:exceptions}{timeout exception}.  Overrides {\PFAc timeout} if present and defaults to {\PFAc timeout} if not.
-\end{allowedfields}
 
 \pagebreak
 
@@ -365,21 +356,33 @@ If a {\PFAc timeout} is defined in the PFA document's {\PFAc options} or is impo
 
 If possible in a given system, no exceptions other than PFA exceptions should ever be raised while executing a {\PFAc begin}, {\PFAc action}, or {\PFAc end} routine.
 
-\hypertarget{hsec:control}{}
-\subsection{Execution control}
-\label{sec:control}
+\hypertarget{hsec:options}{}
+\subsection{Execution options}
+\label{sec:options}
 
-overridable options
+The {\PFAc options} top-level field allows PFA documents to request that they are executed in a particular way.  However, the PFA system may override any of these options with its own values, or with the defaults.  When overriding an option, the PFA system should somehow indicate that this is the case, possibly through a log message.
 
-timeouts
+The complete set of options, their JSON types, and their default values are given below.  If a PFA document attempts to set an option that is not in this list or attempts to set an option with the wrong type, it is a semantic error (phase 2 in \hyperlink{hsec:phases}{see Sec.~\ref{sec:phases}}) and the scoring engine should not be started.
+
+\noindent\begin{longtable}{p{0.23\linewidth} p{0.12\linewidth} p{0.14\linewidth} p{0.4\linewidth}}
+{\bf Option name} & {\bf JSON type} & {\bf Default value} & {\bf Description} \\\hline\endhead
+{\PFAc timeout} & integer & $-1$ & Number of milliseconds to let the {\PFAc begin}, {\PFAc action}, or {\PFAc end} routine run; at or after this time, the PFA system may stop the routine with an exception (\hyperlink{hsec:exceptions}{see Sec.~\ref{sec:exceptions}}).  If negative, the execution has no timeout. \\
+{\PFAc timeout.begin} & integer & {\PFAc timeout} & A specific timeout for the {\PFAc begin} routine that overrides the general {\PFAc timeout}. \\
+{\PFAc timeout.action} & integer & {\PFAc timeout} & A specific timeout for the {\PFAc action} routine that overrides the general {\PFAc timeout}. \\
+{\PFAc timeout.end} & integer & {\PFAc timeout} & A specific timeout for the {\PFAc end} routine that overrides the general {\PFAc timeout}. \\
+\end{longtable}
 
 \hypertarget{hsec:random}{}
 \subsection{Pseudorandom number management}
 \label{sec:random}
 
-random numbers
+The {\PFAc randseed} top-level field specifies a seed for library functions that generate pseudorandom numbers.  If the {\PFAc randseed} is absent, the random number generator should be unpredictable: multiple runs of the same PFA document would yield different results if the output depends on pseudorandom numbers.  If a {\PFAc randseed} is provided, the random number generator should be predictable: multiple runs of the same PFA document would yield the same results on the same system.  Explicitly setting a {\PFAc randseed} is useful for tests.
 
-no restriction on generator used: the randseed only guarantees reproducibility on a specific implementation
+The pseudorandom number generator maintains state between {\PFAc begin}, {\PFAc action}, and {\PFAc end} invocations: the generator is not reseeded with each call.  If a PFA document is used to create a battery of identical scoring engines, the {\PFAc randseed} is used to generate different seeds for all of the scoring engines: they are not guaranteed to produce identical results.
+
+The algorithm for generating pseudorandom numbers is not specified, so different PFA implementations may use different algorithms.  Therefore, a PFA document with an explicit {\PFAc randseed} is only guaranteed to yield identical results when re-run on the same system.  On different systems, it may yield different results.
+
+Every library function that depends on pseudorandom numbers should be seeded by the {\PFAc randseed}.  Pseudorandom functions are explicitly denoted by this specification.
 
 \pagebreak
 

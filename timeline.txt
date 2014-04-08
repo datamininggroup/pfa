@@ -86,7 +86,7 @@
 2014-04-05:
 2014-04-06:   Wrote conformance and document structure sections.
 2014-04-07:   Wrote execution phases, method, and input/output.
-2014-04-08:   
+2014-04-08:   Finished the "Scoring engine execution model" section.
 
 
 Implement cell and pool roll-back on exception!!!
