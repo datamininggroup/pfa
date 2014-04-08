@@ -283,7 +283,7 @@ After all input data have been passed to the scoring engine and the last {\PFAc 
 
 A completed scoring engine may be used to create a new PFA document, in which the final state of the cells and pools are used to define the {\PFAc cell} {\PFAc init} or {\PFAc pool} {\PFAc init} of the new document, such that a new scoring engine would start where the old one left off.  A PFA system may even re-use an old scoring engine as a new scoring engine (repeating phase 4 onward), but a re-used engine must behave exactly like a new engine with copied state, such that the re-use is an implementation detail and does not affect behavior.
 
-A PFA system may call functions defined in the document's {\PFAc fcn} field at any time, but if the function modifies state (a {\PFAc cell-to} or {\PFAc pool-to} special form is reachable in its call graph) and the engine is not complete, the function call must not be allowed because it could affect the engine's behavior.  A PFA system must not execute {\PFAc begin}, {\PFAc action}, or {\PFAc end} outside of its lifecycle.
+A PFA system may call functions defined in the document's {\PFAc fcn} field at any time, but if the function modifies state (a ``cell-to'' or ``pool-to'' special form is reachable in its call graph) and the engine is not complete, the function call must not be allowed because it could affect the engine's behavior.  A PFA system must not execute {\PFAc begin}, {\PFAc action}, or {\PFAc end} outside of its lifecycle.
 
 \hypertarget{hsec:method}{}
 \subsection{Scoring method: map, emit, and fold}
@@ -324,17 +324,23 @@ Given that the input and output types are described by Avro schemae, the Avro bi
 \subsection{Persistent state: cells and pools}
 \label{sec:state}
 
-HERE
+PFA defines two mechanisms to maintain state: cells and pools.  Cells are global variables with a fixed name and type that must be initialized before the scoring engine's run begins.  A cell's value can change to a new value of the same type, but the cell cannot be deleted and new cells cannot be created during the scoring engine's run.  Pools are global namespaces with a fixed type.  New named values can be created within a pool at runtime, as long as they have the correct type, and old values can be deleted at runtime.
 
+A pool of type ``{\PFAtp X}'' would be equivalent to a cell whose type is ``map of {\PFAtp X}'' execpt for performance and concurrency issues.  All special forms and library functions in the PFA specification treat data structures as immutable objects (\hyperlink{hsec:immutable}{see Sec.~\ref{sec:immutable}}), but scoring engines often need to maintain very large maps as caches or for aggregation.  If pools were not available, a PFA implementation would either incur a performance penalty if it maintained a very large map in a cell as an immutable object or if it maintained all temporary variables as mutable objects.  With both cells and pools, a PFA implementation may maintain all values as immutable objects, including cells, and maintain pools as mutable maps of immutable objects.  \hyperlink{hsec:concurrent}{See Sec.~\ref{sec:concurrent}} for a discussion of concurrency issues in cells and pools.
 
-
-cells and pools (specification only: link to extraction and manipulation)
+Cells can only be accessed through the ``cell'' special form and can only be modified through the ``cell-to'' special form.  Pools can only be accessed through the ``pool'' special form and modified through the ``pool-to'' special form (\hyperlink{hsec:cell-pool-forms}{see Sec.~\ref{sec:cell-pool-forms}}).
 
 \hypertarget{hsec:concurrent}{}
 \subsection{Concurrent access to shared state}
 \label{sec:concurrent}
 
-multiple engines
+If the {\PFAc shared} member of a cell or pool's specification is {\PFAc true}, the cell or pool is not assumed to be thread-local (\hyperlink{hsec:cells-pools}{see Sec.~\ref{sec:cells-pools}}).  It may be shared among a battery of identical scoring engines in a multi-threaded process, shared among identical scoring engines distributed across a network, shared in a database among different types of processes, or shared among components of an integrated circuit, etc.  In any case, some rules must be followed to avoid simultaneous attempts to modify the data.
+
+Shared cells and pools in PFA follow a read-copy-update rule for concurrent access: attempts to read the shared resource (through the ``cell'' or ``pool'' special forms) always succeed without blocking and attempts to write (through the ``cell-to'' or ``pool-to'' special forms) lock the resource or wait until another writer's lock is released.  The writers must operate on a copy of the cell or pool's data (or on immutable data) so that readers can access the old version during the update process.  The new value must be updated atomically at the end of the update process.
+
+Although an update operation may only modify a part of the cell's structure (one value in an array, for instance), the granularity of the writers' lock is the entire cell: two writers must not be able to modify different parts of the same cell at the same time.  The granularity of the writers' lock on pools is limited to a single named entity within the pool: two writers must be able to modify different entities in the pool at the same time, but not different parts of the same named entity.
+
+The ``cell-to'' and ``pool-to'' special forms accept user-defined update functions (\hyperlink{hsec:cell-pool-forms}{see Sec.~\ref{sec:cell-pool-forms}}) but these functions must not directly or indirectly call ``cell-to'' or ``pool-to'' because such a situation could lead to deadlock.  This rule can be enforced by examining the call graph.
 
 \hypertarget{hsec:exceptions}{}
 \subsection{Exceptions}
@@ -396,7 +402,9 @@ promotes conflicting label matches to a union
 
 implicit garbage collector; no restriction on the choice of garbage collector (use whatever is available on your system!)
 
+\hypertarget{hsec:immutable}{}
 \subsection{Immutable data, reassignable symbols}
+\label{sec:immutable}
 
 \subsection{Expression-level scope and mutation restrictions}
 
@@ -434,7 +442,9 @@ Special forms and ordinary function calls
 \subsection{Symbol references}
 \label{sec:symbol-ref}
 
+\hypertarget{hsec:literals}{}
 \subsection{Literal values}
+\label{sec:literals}
 
         %% if (keys == Set("int"))                                      LiteralInt(_int, Some(pos(dot, _at)))
         %% else if (keys == Set("long"))                                LiteralLong(_long, Some(pos(dot, _at)))
@@ -446,24 +456,32 @@ Special forms and ordinary function calls
 
 % short-cut for strings: ["x"] to mean {"string": "x"}
 
+\hypertarget{hsec:new-form}{}
 \subsection{Creating arrays, maps, and records}
+\label{sec:new-form}
 
         %% else if (keys == Set("new", "type")  &&  _newObject != null) NewObject(_newObject, _avroType, avroTypeBuilder, Some(pos(dot, _at)))
         %% else if (keys == Set("new", "type")  &&  _newArray != null)  NewArray(_newArray, _avroType, avroTypeBuilder, Some(pos(dot, _at)))
 
+\hypertarget{hsec:let-set}{}
 \subsection{Symbol assignment and reassignment}
+\label{sec:let-set}
 
         %% else if (keys == Set("let"))                                 Let(_let, Some(pos(dot, _at)))
         %% else if (keys == Set("set"))                                 SetVar(_set, Some(pos(dot, _at)))
 
+\hypertarget{hsec:attr-form}{}
 \subsection{Extracting from and updating arrays, maps, and records}
+\label{sec:attr-form}
 
         %% else if (keys == Set("attr", "path"))                        AttrGet(_attr, _path, Some(pos(dot, _at)))
         %% else if (keys == Set("attr", "path", "to"))                  AttrTo(_attr, _path, _to, Some(pos(dot, _at)))
 
 % short-cut: "name.path.elements.0.etc"
 
+\hypertarget{hsec:cell-pool-forms}{}
 \subsection{Extracting from and updating cells and pools}
+\label{sec:cell-pool-forms}
 
         %% else if (keys == Set("cell")  ||
         %%          keys == Set("cell", "path"))                        CellGet(_cell, _path, Some(pos(dot, _at)))
@@ -475,23 +493,31 @@ Special forms and ordinary function calls
 
 % short-cut: "name.path.elements.0.etc"
 
+\hypertarget{hsec:doblocks}{}
 \subsection{Do blocks}
+\label{sec:doblocks}
 
         %% else if (keys == Set("do"))                                  Do(_body, Some(pos(dot, _at)))
 
+\hypertarget{hsec:conditionals}{}
 \subsection{Conditionals: if and cond}
+\label{sec:conditionals}
 
         %% else if (keys == Set("if", "then"))                          If(_ifPredicate, _thenClause, None, Some(pos(dot, _at)))
         %% else if (keys == Set("if", "then", "else"))                  If(_ifPredicate, _thenClause, Some(_elseClause), Some(pos(dot, _at)))
         %% else if (keys == Set("cond"))                                Cond(_cond.map(_.asInstanceOf[If]), None, Some(pos(dot, _at)))
         %% else if (keys == Set("cond", "else"))                        Cond(_cond.map(_.asInstanceOf[If]), Some(_elseClause), Some(pos(dot, _at)))
 
+\hypertarget{hsec:whileloops}{}
 \subsection{While loops: pretest and posttest}
+\label{sec:whileloops}
 
         %% else if (keys == Set("while", "do"))                         While(_whilePredicate, _body, Some(pos(dot, _at)))
         %% else if (keys == Set("do", "until"))                         DoUntil(_body, _until, Some(pos(dot, _at)))
 
+\hypertarget{hsec:forloops}{}
 \subsection{For loops: by index, array element, and key-value}
+\label{sec:forloops}
 
         %% else if (keys == Set("for", "until", "step", "do")  ||
         %%          keys == Set("for", "until", "step", "do", "seq"))   For(_forlet, _until, _forstep, _body, _seq, Some(pos(dot, _at)))
@@ -499,22 +525,30 @@ Special forms and ordinary function calls
         %%          keys == Set("foreach", "in", "do", "seq"))          Foreach(_foreach, _in, _body, _seq, Some(pos(dot, _at)))
         %% else if (keys == Set("forkey", "forval", "in", "do"))        Forkeyval(_forkey, _forval, _in, _body, Some(pos(dot, _at)))
 
+\hypertarget{hsec:casting}{}
 \subsection{Type-safe casting}
+\label{sec:casting}
 
         %% else if (keys == Set("cast", "cases")  ||
         %%          keys == Set("cast", "cases", "partial"))            CastBlock(_cast, _cases, _partial, Some(pos(dot, _at)))
         %% else if (keys == Set("upcast", "as"))                        Upcast(_upcast, _as, Some(pos(dot, _at)))
 
+\hypertarget{hsec:inline-doc}{}
 \subsection{Inline documentation}
+\label{sec:inline-doc}
 
         %% else if (keys == Set("doc"))                                 Doc(_doc, Some(pos(dot, _at)))
 
+\hypertarget{hsec:exception-form}{}
 \subsection{User-defined exceptions}
+\label{sec:exception-form}
 
         %% else if (keys == Set("error"))                               Error(_error, None, Some(pos(dot, _at)))
         %% else if (keys == Set("error", "code"))                       Error(_error, Some(_code), Some(pos(dot, _at)))
 
+\hypertarget{hsec:logs}{}
 \subsection{Log messages}
+\label{sec:logs}
 
         %% else if (keys == Set("log"))                                 Log(_log, None, Some(pos(dot, _at)))
         %% else if (keys == Set("log", "namespace"))                    Log(_log, Some(_namespace), Some(pos(dot, _at)))
@@ -526,90 +560,90 @@ Special forms and ordinary function calls
 \subsection{Basic arithmetic}
 
 \subsubsection{Addition of two values ($+$)}
-\libfcn{+}
+% \libfcn{+}
 
 \subsubsection{Subtraction ($-$)}
-\libfcn{-}
+% \libfcn{-}
 
 \subsubsection{Multiplication of two values (*)}
-\libfcn{*}
+% \libfcn{*}
 
 \subsubsection{Floating-point division (/)}
-\libfcn{/}
+% \libfcn{/}
 
 \subsubsection{Integer division (//)}
-\libfcn{//}
+% \libfcn{//}
 
 \subsubsection{Negation (u$-$)}
-\libfcn{u-}
+% \libfcn{u-}
 
 \subsubsection{Modulo (\%)}
-\libfcn{\%}
+% \libfcn{\%}
 
 \subsubsection{Remainder (\%\%)}
-\libfcn{\%\%}
+% \libfcn{\%\%}
 
 \subsubsection{Raising to a power (**)}
-\libfcn{**}
+% \libfcn{**}
 
 \subsection{Comparison operators}
 
 Avro defines a \href{http://avro.apache.org/docs/1.7.6/spec.html#order}{sort order} for every pair of values with a compatible type, so any two objects of compatible type can be compared in PFA.
 
 \subsubsection{General comparision (cmp)}
-\libfcn{cmp}
+% \libfcn{cmp}
 
 \subsubsection{Equality (==)}
-\libfcn{==}
+% \libfcn{==}
 
 \subsubsection{Inequality (!=)}
-\libfcn{!=}
+% \libfcn{!=}
 
 \subsubsection{Less than (<)}
-\libfcn{<}
+% \libfcn{<}
 
 \subsubsection{Less than or equal to (<=)}
-\libfcn{<=}
+% \libfcn{<=}
 
 \subsubsection{Greater than (>)}
-\libfcn{>}
+% \libfcn{>}
 
 \subsubsection{Greater than or equal to (>=)}
-\libfcn{>=}
+% \libfcn{>=}
 
 \subsubsection{Maximum of two values (max)}
-\libfcn{max}
+% \libfcn{max}
 
 \subsubsection{Minimum of two values (min)}
-\libfcn{min}
+% \libfcn{min}
 
 \subsection{Logical operators}
 
 \subsubsection{Logical and (and)}
-\libfcn{and}
+% \libfcn{and}
 
 \subsubsection{Logical or (or)}
-\libfcn{or}
+% \libfcn{or}
 
 \subsubsection{Logical xor (xor)}
-\libfcn{xor}
+% \libfcn{xor}
 
 \subsubsection{Logical not (not)}
-\libfcn{not}
+% \libfcn{not}
 
 \subsection{Bitwise arithmetic}
 
 \subsubsection{Bitwise and (\&)}
-\libfcn{\&}
+% \libfcn{\&}
 
 \subsubsection{Bitwise or (|)}
-\libfcn{|}
+% \libfcn{|}
 
 \subsubsection{Bitwise xor (\^{})}
-\libfcn{\^{}}
+% \libfcn{\^{}}
 
 \subsubsection{Bitwise not (\textasciitilde{})}
-\libfcn{TILDE}
+% \libfcn{TILDE}
 
 \pagebreak
 
@@ -620,89 +654,89 @@ Avro defines a \href{http://avro.apache.org/docs/1.7.6/spec.html#order}{sort ord
 Constants such as $\pi$ and $e$ are represented as stateless functions with no arguments.  Specific implementations may choose to replace the function call with its inline value.
 
 \subsubsection{Archimedes' constant $\pi$ (m.pi)}
-\libfcn{m.pi}
+% \libfcn{m.pi}
 
 \subsubsection{Euler's constant $e$ (m.e)}
-\libfcn{m.e}
+% \libfcn{m.e}
 
 \subsection{Common functions}
 
 \subsubsection{Square root (m.sqrt)}
-\libfcn{m.sqrt}
+% \libfcn{m.sqrt}
 
 \subsubsection{Hypotnuse (m.hypot)}
-\libfcn{m.hypot}
+% \libfcn{m.hypot}
 
 \subsubsection{Trigonometric sine (m.sin)}
-\libfcn{m.sin}
+% \libfcn{m.sin}
 
 \subsubsection{Trigonometric cosine (m.cos)}
-\libfcn{m.cos}
+% \libfcn{m.cos}
 
 \subsubsection{Trigonometric tangent (m.tan)}
-\libfcn{m.tan}
+% \libfcn{m.tan}
 
 \subsubsection{Inverse trigonometric sine (m.asin)}
-\libfcn{m.asin}
+% \libfcn{m.asin}
 
 \subsubsection{Inverse trigonometric cosine (m.acos)}
-\libfcn{m.acos}
+% \libfcn{m.acos}
 
 \subsubsection{Inverse trigonometric tangent (m.atan)}
-\libfcn{m.atan}
+% \libfcn{m.atan}
 
 \subsubsection{Robust inverse trigonometric tangent (m.atan2)}
-\libfcn{m.atan2}
+% \libfcn{m.atan2}
 
 \subsubsection{Hyperbolic sine (m.sinh)}
-\libfcn{m.sinh}
+% \libfcn{m.sinh}
 
 \subsubsection{Hyperbolic cosine (m.cosh)}
-\libfcn{m.cosh}
+% \libfcn{m.cosh}
 
 \subsubsection{Hyperbolic tangent (m.tanh)}
-\libfcn{m.tanh}
+% \libfcn{m.tanh}
 
 \subsubsection{Natural exponential (m.exp)}
-\libfcn{m.exp}
+% \libfcn{m.exp}
 
 \subsubsection{Natural exponential minus one (m.expm1)}
-\libfcn{m.expm1}
+% \libfcn{m.expm1}
 
 \subsubsection{Natural logarithm (m.ln)}
-\libfcn{m.ln}
+% \libfcn{m.ln}
 
 \subsubsection{Logarithm base 10 (m.log10)}
-\libfcn{m.log10}
+% \libfcn{m.log10}
 
 \subsubsection{Arbitrary logarithm (m.log)}
-\libfcn{m.log}
+% \libfcn{m.log}
 
 \subsubsection{Natural logarithm of one plus square (m.ln1p)}
-\libfcn{m.ln1p}
+% \libfcn{m.ln1p}
 
 \subsection{Rounding}
 
 \subsubsection{Absolute value (m.abs)}
-\libfcn{m.abs}
+% \libfcn{m.abs}
 
 \subsubsection{Floor (m.floor)}
-\libfcn{m.floor}
+% \libfcn{m.floor}
 
 \subsubsection{Ceiling (m.ceil)}
-\libfcn{m.ceil}
+% \libfcn{m.ceil}
 
 \subsubsection{Simple rounding (m.round)}
-\libfcn{m.round}
+% \libfcn{m.round}
 
 \subsubsection{Unbiased rounding (m.rint)}
-\libfcn{m.rint}
+% \libfcn{m.rint}
 
 \subsubsection{Threshold function (m.signum)}
-\libfcn{m.signum}
+% \libfcn{m.signum}
 
 \subsubsection{Copy sign (m.copysign)}
-\libfcn{m.copysign}
+% \libfcn{m.copysign}
 
 \subsection{Linear algebra}
 
@@ -717,76 +751,76 @@ Strings are immutable, so none of the following functions modifies a string in-p
 \subsection{Basic access}
 
 \subsubsection{Length (s.len)}
-\libfcn{s.len}
+% \libfcn{s.len}
 
 \subsubsection{Extract substring (s.substr)}
-\libfcn{s.substr}
+% \libfcn{s.substr}
 
 \subsubsection{Modify substring (s.substrto)}
-\libfcn{s.substrto}
+% \libfcn{s.substrto}
 
 \subsection{Search and replace}
 
 \subsubsection{Contains (s.contains)}
-\libfcn{s.contains}
+% \libfcn{s.contains}
 
 \subsubsection{Count instances (s.count)}
-\libfcn{s.count}
+% \libfcn{s.count}
 
 \subsubsection{Find first index (s.index)}
-\libfcn{s.index}
+% \libfcn{s.index}
 
 \subsubsection{Find last index (s.rindex)}
-\libfcn{s.rindex}
+% \libfcn{s.rindex}
 
 \subsubsection{Check start (s.startswith)}
-\libfcn{s.startswith}
+% \libfcn{s.startswith}
 
 \subsubsection{Check end (s.endswith)}
-\libfcn{s.endswith}
+% \libfcn{s.endswith}
 
 \subsection{Conversions to or from other types}
 
 \subsubsection{Join an array of strings (s.join)}
-\libfcn{s.join}
+% \libfcn{s.join}
 
 \subsubsection{Split into an array of strings (s.split)}
-\libfcn{s.split}
+% \libfcn{s.split}
 
 \subsection{Conversions to or from other strings}
 
 \subsubsection{Concatenate two strings (s.concat)}
-\libfcn{s.concat}
+% \libfcn{s.concat}
 
 \subsubsection{Repeat pattern (s.repeat)}
-\libfcn{s.repeat}
+% \libfcn{s.repeat}
 
 \subsubsection{Lowercase (s.lower)}
-\libfcn{s.lower}
+% \libfcn{s.lower}
 
 \subsubsection{Uppercase (s.upper)}
-\libfcn{s.upper}
+% \libfcn{s.upper}
 
 \subsubsection{Left-strip (s.lstrip)}
-\libfcn{s.lstrip}
+% \libfcn{s.lstrip}
 
 \subsubsection{Right-strip (s.rstrip)}
-\libfcn{s.rstrip}
+% \libfcn{s.rstrip}
 
 \subsubsection{Strip both ends (s.strip)}
-\libfcn{s.strip}
+% \libfcn{s.strip}
 
 \subsubsection{Replace all matches (s.replaceall)}
-\libfcn{s.replaceall}
+% \libfcn{s.replaceall}
 
 \subsubsection{Replace first match (s.replacefirst)}
-\libfcn{s.replacefirst}
+% \libfcn{s.replacefirst}
 
 \subsubsection{Replace last match (s.replacelast)}
-\libfcn{s.replacelast}
+% \libfcn{s.replacelast}
 
 \subsubsection{Translate characters (s.translate)}
-\libfcn{s.translate}
+% \libfcn{s.translate}
 
 \subsection{Regular Expressions}
 
@@ -799,228 +833,228 @@ and stemming
 \subsection{Basic access}
 
 \subsubsection{Length (a.len)}
-\libfcn{a.len}
+% \libfcn{a.len}
 
 \subsubsection{Extract subsequence (a.subseq)}
-\libfcn{a.subseq}
+% \libfcn{a.subseq}
 
 \subsubsection{Modify subsequence (a.subseqto)}
-\libfcn{a.subseqto}
+% \libfcn{a.subseqto}
 
 \subsection{Search and replace}
 
 \subsubsection{Contains (a.contains)}
-\libfcn{a.contains}
+% \libfcn{a.contains}
 
 \subsubsection{Count instances (a.count)}
-\libfcn{a.count}
+% \libfcn{a.count}
 
 \subsubsection{Count instances by predicate (a.countPredicate)}
 libfcn{a.countPredicate}
 
 \subsubsection{Find first index (a.index)}
-\libfcn{a.index}
+% \libfcn{a.index}
 
 \subsubsection{Find last index (a.rindex)}
-\libfcn{a.rindex}
+% \libfcn{a.rindex}
 
 \subsubsection{Check start (a.startswith)}
-\libfcn{a.startswith}
+% \libfcn{a.startswith}
 
 \subsubsection{Check end (a.endswith)}
-\libfcn{a.endswith}
+% \libfcn{a.endswith}
 
 \subsection{Manipulation}
 
 \subsubsection{Concatenate two arrays (a.concat)}
-\libfcn{a.concat}
+% \libfcn{a.concat}
 
 \subsubsection{Append (a.append)}
-\libfcn{a.append}
+% \libfcn{a.append}
 
 \subsubsection{Insert or prepend (a.insert)}
-\libfcn{a.insert}
+% \libfcn{a.insert}
 
 \subsubsection{Replace item (a.replace)}
-\libfcn{a.replace}
+% \libfcn{a.replace}
 
 \subsubsection{Remove item (a.remove)}
-\libfcn{a.remove}
+% \libfcn{a.remove}
 
 \subsection{Reordering}
 
 \subsubsection{Sort (a.sort)}
-\libfcn{a.sort}
+% \libfcn{a.sort}
 
 \subsubsection{Sort with a less-than function (a.sortLT)}
-\libfcn{a.sortLT}
+% \libfcn{a.sortLT}
 
 \subsubsection{Randomly shuffle array (a.shuffle)}
-\libfcn{a.shuffle}
+% \libfcn{a.shuffle}
 
 \subsubsection{Reverse order (a.reverse)}
-\libfcn{a.reverse}
+% \libfcn{a.reverse}
 
 \subsection{Extreme values}
 
 \subsubsection{Maximum of all values (a.max)}
-\libfcn{a.max}
+% \libfcn{a.max}
 
 \subsubsection{Minimum of all values (a.min)}
-\libfcn{a.min}
+% \libfcn{a.min}
 
 \subsubsection{Maximum with a less-than function (a.maxLT)}
-\libfcn{a.maxLT}
+% \libfcn{a.maxLT}
 
 \subsubsection{Minimum with a less-than function (a.minLT)}
-\libfcn{a.minLT}
+% \libfcn{a.minLT}
 
 \subsubsection{Maximum $N$ items (a.maxN)}
-\libfcn{a.maxN}
+% \libfcn{a.maxN}
 
 \subsubsection{Minimum $N$ items (a.minN)}
-\libfcn{a.minN}
+% \libfcn{a.minN}
 
 \subsubsection{Maximum $N$ with a less-than function (a.maxNLT)}
-\libfcn{a.maxNLT}
+% \libfcn{a.maxNLT}
 
 \subsubsection{Minimum $N$ with a less-than function (a.minNLT)}
-\libfcn{a.minNLT}
+% \libfcn{a.minNLT}
 
 \subsubsection{Argument maximum (a.argmax)}
-\libfcn{a.argmax}
+% \libfcn{a.argmax}
 
 \subsubsection{Argument minimum (a.argmin)}
-\libfcn{a.argmin}
+% \libfcn{a.argmin}
 
 \subsubsection{Argument maximum with a less-than function (a.argmaxLT)}
-\libfcn{a.argmaxLT}
+% \libfcn{a.argmaxLT}
 
 \subsubsection{Argument minimum with a less-than function (a.argminLT)}
-\libfcn{a.argminLT}
+% \libfcn{a.argminLT}
 
 \subsubsection{Maximum $N$ arguments (a.argmaxN)}
-\libfcn{a.argmaxN}
+% \libfcn{a.argmaxN}
 
 \subsubsection{Minimum $N$ arguments (a.argminN)}
-\libfcn{a.argminN}
+% \libfcn{a.argminN}
 
 \subsubsection{Maximum $N$ arguments with a less-than function (a.argmaxNLT)}
-\libfcn{a.argmaxNLT}
+% \libfcn{a.argmaxNLT}
 
 \subsubsection{Minimum $N$ arguments with a less-than function (a.argminNLT)}
-\libfcn{a.argminNLT}
+% \libfcn{a.argminNLT}
 
 \subsection{Numerical combinations}
 
 \subsubsection{Add all array values (a.sum)}
-\libfcn{a.sum}
+% \libfcn{a.sum}
 
 \subsubsection{Multiply all array values (a.product)}
-\libfcn{a.product}
+% \libfcn{a.product}
 
 \subsubsection{Sum of logarithms (a.lnsum)}
-\libfcn{a.lnsum}
+% \libfcn{a.lnsum}
 
 \subsubsection{Arithmetic mean (a.mean)}
-\libfcn{a.mean}
+% \libfcn{a.mean}
 
 \subsubsection{Geometric mean (a.geomean)}
-\libfcn{a.geomean}
+% \libfcn{a.geomean}
 
 \subsubsection{Median (a.median)}
-\libfcn{a.median}
+% \libfcn{a.median}
 
 \subsubsection{Mode, or most common value (a.mode)}
-\libfcn{a.mode}
+% \libfcn{a.mode}
 
 \subsection{Set or set-like functions}
 
 PFA does not have a set datatype, but arrays can be interpreted as sets with the following functions.
 
 \subsubsection{Distinct items (a.distinct)}
-\libfcn{a.distinct}
+% \libfcn{a.distinct}
 
 \subsubsection{Set equality (a.seteq)}
-\libfcn{a.seteq}
+% \libfcn{a.seteq}
 
 \subsubsection{Union (a.union)}
-\libfcn{a.union}
+% \libfcn{a.union}
 
 \subsubsection{Intersection (a.intersect)}
-\libfcn{a.intersect}
+% \libfcn{a.intersect}
 
 \subsubsection{Set difference (a.diff)}
-\libfcn{a.diff}
+% \libfcn{a.diff}
 
 \subsubsection{Symmetric set difference (a.symdiff)}
-\libfcn{a.symdiff}
+% \libfcn{a.symdiff}
 
 \subsubsection{Subset check (a.subset)}
-\libfcn{a.subset}
+% \libfcn{a.subset}
 
 \subsubsection{Disjointness check (a.disjoint)}
-\libfcn{a.disjoint}
+% \libfcn{a.disjoint}
 
 \subsection{Functional programming}
 
 \subsubsection{Map array items with function (a.map)}
-\libfcn{a.map}
+% \libfcn{a.map}
 
 \subsubsection{Filter array items with function (a.filter)}
-\libfcn{a.filter}
+% \libfcn{a.filter}
 
 \subsubsection{Filter and map (a.filtermap)}
-\libfcn{a.filtermap}
+% \libfcn{a.filtermap}
 
 \subsubsection{Map and flatten (a.flatmap)}
-\libfcn{a.flatmap}
+% \libfcn{a.flatmap}
 
 \subsubsection{Reduce array items to a single value (a.reduce)}
-\libfcn{a.reduce}
+% \libfcn{a.reduce}
 
 \subsubsection{Right-to-left reduce (a.reduceright)}
-\libfcn{a.reduceright}
+% \libfcn{a.reduceright}
 
 \subsubsection{Fold array items to another type (a.fold)}
-\libfcn{a.fold}
+% \libfcn{a.fold}
 
 \subsubsection{Right-to-left fold (a.foldright)}
-\libfcn{a.foldright}
+% \libfcn{a.foldright}
 
 \subsubsection{Take items until predicate is false (a.takeWhile)}
-\libfcn{a.takeWhile}
+% \libfcn{a.takeWhile}
 
 \subsubsection{Drop items until predicate is true (a.dropWhile)}
-\libfcn{a.dropWhile}
+% \libfcn{a.dropWhile}
 
 \subsection{Functional tests}
 
 \subsubsection{Existential check, $\exists$ (a.any)}
-\libfcn{a.any}
+% \libfcn{a.any}
 
 \subsubsection{Univeral check, $\forall$ (a.all)}
-\libfcn{a.all}
+% \libfcn{a.all}
 
 \subsubsection{Pairwise check of two arrays (a.corresponds)}
-\libfcn{a.corresponds}
+% \libfcn{a.corresponds}
 
 \subsection{Restructuring}
 
 \subsubsection{Sliding window (a.slidingWindow)}
-\libfcn{a.slidingWindow}
+% \libfcn{a.slidingWindow}
 
 \subsubsection{Unique combinations of a fixed size (a.combinations)}
-\libfcn{a.combinations}
+% \libfcn{a.combinations}
 
 \subsubsection{Permutations (a.permutations)}
-\libfcn{a.permutations}
+% \libfcn{a.permutations}
 
 \subsubsection{Flatten array (a.flatten)}
-\libfcn{a.flatten}
+% \libfcn{a.flatten}
 
 \subsubsection{Group items by category (a.groupby)}
-\libfcn{a.groupby}
+% \libfcn{a.groupby}
 
 \pagebreak
 
@@ -1041,10 +1075,10 @@ PFA does not have a set datatype, but arrays can be interpreted as sets with the
 \subsection{Impute library}
 
 \subsubsection{Skip record (impute.errorOnNull)}
-\libfcn{impute.errorOnNull}
+% \libfcn{impute.errorOnNull}
 
 \subsubsection{Replace with default (impute.defaultOnNull)}
-\libfcn{impute.defaultOnNull}
+% \libfcn{impute.defaultOnNull}
 
 \pagebreak
 
@@ -1063,10 +1097,10 @@ CUSUM
 \subsection{Sample statistics}
 
 \subsubsection{Update aggregated mean (stat.sample.updateMean)}
-\libfcn{stat.sample.updateMean}
+% \libfcn{stat.sample.updateMean}
 
 \subsubsection{Compute aggregated mean (stat.sample.mean)}
-\libfcn{stat.sample.mean}
+% \libfcn{stat.sample.mean}
 
 accumulated mean, median(?)
 
@@ -1077,10 +1111,10 @@ accumulated mean, median(?)
 \subsection{Decision and regression Trees}
 
 \subsubsection{Tree walk with simple predicates (model.tree.simpleWalk)}
-\libfcn{model.tree.simpleWalk}
+% \libfcn{model.tree.simpleWalk}
 
 \subsubsection{Tree walk with user-defined predicates (model.tree.predicateWalk)}
-\libfcn{model.tree.predicateWalk}
+% \libfcn{model.tree.predicateWalk}
 
 \subsection{Cluster models}
 
