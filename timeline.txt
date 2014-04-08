@@ -86,6 +86,14 @@
 2014-04-05:
 2014-04-06:   Wrote conformance and document structure sections.
 2014-04-07:   Wrote execution phases, method, and input/output.
+2014-04-08:   
+
+
+Implement cell and pool roll-back on exception!!!
+
+Number of items requirements (e.g. "do requires >= 1 expression") should change to syntax errors and be checked in the Ast node constructors.
+
+Do you need to implement hashCode functions on all your AST nodes?  Or is it okay because they're already case classes?
 
 
 Tomorrow:     Documentation (auto-generated and hand-made)
