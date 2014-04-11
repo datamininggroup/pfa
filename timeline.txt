@@ -90,6 +90,7 @@
 2014-04-09:
 2014-04-10:
 2014-04-11:   Finished the Avro type subsections.
+2014-04-12:   Finished the types section.  And also...
 
 
 Implement cell and pool roll-back on exception!!!
