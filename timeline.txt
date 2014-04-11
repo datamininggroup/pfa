@@ -87,6 +87,9 @@
 2014-04-06:   Wrote conformance and document structure sections.
 2014-04-07:   Wrote execution phases, method, and input/output.
 2014-04-08:   Finished the "Scoring engine execution model" section.
+2014-04-09:
+2014-04-10:
+2014-04-11:   Finished the Avro type subsections.
 
 
 Implement cell and pool roll-back on exception!!!
@@ -97,6 +100,7 @@ Do you need to implement hashCode functions on all your AST nodes?  Or is it oka
 
 
 Tomorrow:     Documentation (auto-generated and hand-made)
+And then:     An AppEngine example.
 And then:     Map, bytes, enums, fixed, record (conversions, mostly)
 And then:     Linear algebra: find a good library, matricies with named rows and columns
 And then:     Regular expressions: find a good library for PCRE
