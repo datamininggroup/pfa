@@ -388,6 +388,10 @@ Every library function that depends on pseudorandom numbers should be seeded by 
 
 \section{Type system}
 
+Rather than invent a new type system, PFA uses Avro type schemae to describe its data types.  Avro is a serialization format, but it also describes the types (sets of possible values) to be serialized or unserialized with JSON-based schemae.  Feeding Avro-formatted data into and out of a PFA scoring engine is particularly easy, since the sets of possible values that can be Avro serialized perfectly align with the sets of possible values that PFA can use in its calculations.
+
+However, Avro serialization is by no means necessary to use with PFA: data that can be described by Avro types can serialized many different ways.  In fact, the Avro project provides two: a binary format and a JSON format.  With the appropriate translations, CSV can be converted to and from a subset of Avro types, XML can be fully and reversibly transformed, as can many popular data formats.  The transformation of data formats and the internal representation of data in a PFA implementation are beyond the scope of this specification and should be handled in any way that the designer of a PFA system sees fit.
+
 \hypertarget{hsec:avro-types}{}
 \subsection{Avro types}
 \label{sec:avro-types}
