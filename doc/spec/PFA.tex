@@ -520,13 +520,167 @@ These rules are described in the \href{http://avro.apache.org/docs/1.7.6/spec.ht
 {\bf union({\PFAtp T})} & Either a {\bf union({\PFAtp T$'$})} such that for all {\PFAc t$'$} in {\PFAc T$'$}, there exists a {\PFAc t} in {\PFAc T} for which {\PFAc t} accepts {\PFAc t$'$}, or a single type {\PFAc t$''$} such that there exists a {\PFAc t} in {\PFAc T} for which {\PFAc t} accepts {\PFAc t$''$}.  For example, a {\bf union} of \{{\bf string}, {\bf bytes}, and {\bf null}\} accepts a {\bf union} of \{{\bf string} and {\bf bytes}\}, and it also accepts a {\bf string}.  However, the reverse is not true: a narrow type or union cannot accept a wider union.
 \end{longtable}
 
+\hypertarget{hsec:narrowest-supertype}{}
+\subsection{Narrowest supertype of a collection of types}
+\label{sec:narrowest-supertype}
+
+Some circumstances (return type of a special form, solution of a generic type pattern) require a single type that accepts a given set of types.  For example, an ``if'' conditional with both a ``then'' and an ``else'' clause returns a value that might have the type of the ``then'' clause or might have the type of the ``else'' clause.  If both clauses have the same type {\PFAtp X}, then the return type of the ``if'' special form is {\PFAtp X}, but if ``then'' has type {\PFAtp Y} and ``else'' has type {\PFAtp Z}, the type of the ``if'' special form is something that could be (accepts) {\PFAtp Y} or {\PFAtp Z}.  In these situations, the resultant type is the narrowest supertype of the possibilities.
+
+The following rules define the narrowest supertype of a collection of at least one type.  In cases where more than one rule matches, the first matching rule is applied.
+\noindent\begin{longtable}{p{0.02\linewidth} p{0.3\linewidth} p{0.6\linewidth}}
+\# & {\bf Collection of types} & {\bf Narrowest supertype} \\\hline\endhead
+1. & all {\bf null} & {\bf null} \\
+2. & all {\bf boolean} & {\bf boolean} \\
+3. & all {\bf int} & {\bf int} \\
+4. & all {\bf int} or {\bf long} & {\bf long} \\
+5. & all {\bf int}, {\bf long}, or {\bf float} & {\bf float} \\
+6. & all {\bf int}, {\bf long}, {\bf float}, or {\bf double} & {\bf double} \\
+7. & all {\bf string} & {\bf string} \\
+8. & all {\bf bytes} & {\bf bytes} \\
+9. & all {\bf fixed} with the same length and fully-qualified name & that {\bf fixed} type \\
+10. & all {\bf enum} types with the same symbols and fully-qualified name & that {\bf enum} type \\
+11. & all {\bf arrays} & an {\bf array} of the narrowest supertype of the items of each {\bf array} \\
+12. & all {\bf maps} & a {\bf map} of the narrowest supertype of the values of each {\bf map} \\
+13. & all {\bf records} with the same fields and fully-qualified name & that {\bf record} type \\
+14. & any other collection of types, excluding those containing {\bf fixed} and {\bf enum} & a union of those types, merging any unions contained in the collection (e.g.\ {\bf union({\PFAtp X}, {\PFAtp Y})} and {\bf union({\PFAtp Y}, {\PFAtp Z})} combine into {\bf union({\PFAtp X}, {\PFAtp Y}, {\PFAtp Z})}) and combining any types that can be combined with the rules above (e.g.\ {\bf int} and {\bf double} become {\bf double}, rather than {\bf union(int, double)}). \\
+15. & any other case & is a type error.
+\end{longtable}
+
+In summary, any cases that cannot be promoted to the same type are combined into a union except for collections containing {\bf fixed} or {\bf enum}.  These cases, had they been allowed, would introduce the need for PFA implementations to perform runtime type conversions: values of different {\bf fixed} types would need to be converted into raw {\bf bytes} and values of different {\bf enum} types would need to be converted into {\bf string} or an {\bf enum} with a superset of symbols.  These new, anonymous types would have potentially unexpected properties: the broadening of {\bf enums} cannot maintain the order of a collection of symbols, which are used in some statistical applications as a finite ordinal set.  It is better to raise a type error and force the PFA author to explicitly convert these types to {\bf bytes}, {\bf string}, or explicitly define an {\bf enum} with a superset of symbols.
+
+Distinct {\bf records} are combined into a union of those {\bf records}, however (rule 13 falls through to rule 14 when the {\bf records} are not exactly the same).
+
 \subsection{Generic library function signatures}
 
-including wildcards and wildrecords; typeset them the same way as they are used in libfcn reference
+User-defined functions in the {\PFAc fcns} top-level field have parameter lists and return types specified strictly by Avro type schemae (\hyperlink{hsec:user-defined-fcns}{see Sec.~\ref{sec:user-defined-fcns}}).  However, some library functions have more general type signatures so that they can be more broadly applied.
 
-solution to an equation
+Library functions are never declared in a PFA document, and thus they are not bound to the same restrictions.  It would be possible to define a JSON format for expressing generic function signatures, but that format would not be an Avro schema.  Moreover, PFA documents are not intended for generic programming, but for auto-generated code.  Since every PFA document is a specific solution to a specific problem, it should be written in terms of ungeneric functions.  (The generality can be in the routine that generates the PFA document.)  The PFA library functions, however, are intended for a wide variety of problems, and thus should be generic.
 
-promotes conflicting label matches to a union
+Library function type patterns are a superset of Avro types.  They include the same primitives:
+\begin{itemize}
+\item null, boolean, int, long, float, double, string, bytes
+\end{itemize}
+and the same parameterized, product, and sum types, though names are optional:
+\begin{itemize}
+\item fixed ({\it size:} {\PFAtp L})
+\item fixed ({\it size:} {\PFAtp L}, {\it name:} {\PFAtp N})
+\item enum ({\it symbols:} {\PFAtp S})
+\item enum ({\it symbols:} {\PFAtp S}, {\it name:} {\PFAtp N})
+\item array of {\PFAtp X}
+\item map of {\PFAtp X}
+\item record ({\it fields:} \{{\PFApf name$_1$:} {\it type$_1$,} {\PFApf name$_2$:} {\it type$_2$,} \ldots\ {\PFApf name$_n$:} {\it type$_n$}\})
+\item record ({\it fields:} \{{\PFApf name$_1$:} {\it type$_1$,} {\PFApf name$_2$:} {\it type$_2$,} \ldots\ {\PFApf name$_n$:} {\it type$_n$}\}, {\it name:} {\PFAtp N})
+\item union of \{{\PFAtp T}\}
+\end{itemize}
+When present, names are fully-qualified, rather than being split into namespace-name pairs.  A type pattern of fixed, enum, or record without a name matches any fixed, enum, or record with the specified structure (structural typing, rather than nominative).  For instance, a library function could require a record with integer, double, and string fields named ``one'', ``two'', and ``three'' like this:
+\begin{center}
+\begin{minipage}{0.9\linewidth}
+record ({\it fields:} \{{\PFApf one:} int, {\PFApf two:} double, {\PFApf three:} string\})
+\end{minipage}
+\end{center}
+Since this pattern has no {\it name,} it would match any record that has exactly these fields with these types.
+
+Unlike Avro types, the parameters of type patterns can be specified by wildcards.  Wildcards are labeled and may be restricted to a set of Avro types (not patterns):
+\begin{itemize}
+\item any {\PFAp A}
+\item any {\PFAp A} of \{{\it type$_1$, type$_2$, \ldots\ type$_n$}\}
+\end{itemize}
+Wildcards can appear anywhere that a pattern is expected.  For instance,
+\begin{center}
+\begin{minipage}{0.9\linewidth}
+array of any {\PFAp A}
+\end{minipage}
+\end{center}
+is an array with unspecified item type.
+
+Wildcards with repeated labels constrain two types to be the same type.  For instance,
+\begin{center}
+\begin{minipage}{0.9\linewidth}
+record ({\it fields:} \{{\PFApf one:} any {\PFAp A}, {\PFApf two:} any {\PFAp B}, {\PFApf three:} any {\PFAp B}\})
+\end{minipage}
+\end{center}
+is a record with three fields of unspecified type, though fields ``two'' and ``three'' have the same.  If they are not exactly the same, they are promoted to the \hyperlink{hsec:narrowest-supertype}{narrowest supertype} of the matches.  The following are examples of Avro types that would match this pattern.
+\begin{json}
+{"type": "record", "name": "R1", "fields": [
+    {"name": "one", "type": "int"},
+    {"name": "two", "type": "string"},
+    {"name": "three", "type": "string"}]}
+\end{json}
+{\PFAc R1} matches because ``two'' and ``three'' are both {\bf string}.
+
+\begin{json}
+{"type": "record", "name": "R2", "fields": [
+    {"name": "one", "type": "int"},
+    {"name": "two", "type": "int"},
+    {"name": "three", "type": "int"}]}
+\end{json}
+{\PFAc R2} matches because ``two'' and ``three'' are both {\bf int}.  The type that matches wildcard {\PFAp B} does not need to be different from the type that matches wildcard {\PFAp A} (also ``int'').
+
+\begin{json}
+{"type": "record", "name": "R3", "fields": [
+    {"name": "one", "type": "string"},
+    {"name": "two", "type": "int"},
+    {"name": "three", "type": "double"}]}
+\end{json}
+{\PFAc R3} matches because ``two'' and ``three'' can both be promoted to {\bf double}.
+
+The scope of wildcard labels is the entire function signature, including all parameters and return type.  As an example, the signature of ``+'' (the library function that adds two numbers) is
+\begin{center}
+\begin{minipage}{0.9\linewidth}
+\mbox{\PFAc \{"+":$\!$ [x, y]\} \vspace{0.2 cm} \\} \vspace{0.2 cm} \\ \rm \begin{tabular}{p{0.01\linewidth} l p{0.8\linewidth}} & \PFAc x \rm & any {\PFAtp A} of \{int, long, float, double\} \\  & \PFAc y \rm & {\PFAtp A} \\  & {\it (returns)} & {\PFAtp A} \\ \end{tabular}
+\end{minipage}
+\end{center}
+The two parameters, {\PFAp x} and {\PFAp y}, can be any type in the set \{int, long, float, double\} and the return type is the narrowest supertype of {\PFAp x} and {\PFAp y}.  Thus, int $+$ int $\to$ int, int $+$ double $\to$ double, etc.  The restriction on {\PFAtp A} in the pattern for {\PFAp x} applies equally to {\PFAp y} because all constraints must be satisfied for a pattern to match.
+
+Shared labels are primarily used to carry types from a parameter to the return type.  They allow a function like ``a.subseq'' (extract a subsequence of an array) to be defined once for any type of items.
+\begin{center}
+\begin{minipage}{0.9\linewidth}
+\mbox{\PFAc \{"a.subseq":$\!$ [a, start, end]\} \vspace{0.2 cm} \\} \vspace{0.2 cm} \\ \rm \begin{tabular}{p{0.01\linewidth} l p{0.8\linewidth}} & \PFAc a \rm & array of any {\PFAtp A} \\  & \PFAc start \rm & int \\  & \PFAc end \rm & int \\  & {\it (returns)} & array of {\PFAtp A} \\ \end{tabular}
+\end{minipage}
+\end{center}
+
+Record substructure can also be matched with wildcards.  Such a pattern has one of these two forms:
+\begin{itemize}
+\item any record {\PFAp A}
+\item any record {\PFAp A} with \{{\PFApf name$_1$:} {\it type$_1$,} {\PFApf name$_2$:} {\it type$_2$,} \ldots\ {\PFApf name$_n$:} {\it type$_n$}\}
+\end{itemize}
+The first matches any record, regarless of what fields it contains, and the second matches a record with at least the specified fields.  Wildcards with and without specifying record substructure have labels in the same namespace.
+
+For example, the function ``stat.sample.mean'' computes a mean from a record containing components of the running sum.  Its signature requires that the record has double-valued fields {\PFApf sum\_w} and {\PFApf sum\_wx}, but it does not specify anything else about the record.  This {\PFAc runningSum} could be overloaded with additional, application-specific functionality.
+\begin{center}
+\begin{minipage}{0.9\linewidth}
+\mbox{\PFAc \{"stat.sample.mean":$\!$ [runningSum]\} \vspace{0.2 cm} \\} \vspace{0.2 cm} \\ \rm \begin{tabular}{p{0.01\linewidth} l p{0.8\linewidth}} & \PFAc runningSum \rm & any record {\PFAtp A} with \{{\PFApf sum\_w:}$\!$ double, {\PFApf sum\_wx:}$\!$ double\} \\  & {\it (returns)} & double \\ \end{tabular}
+\end{minipage}
+\end{center}
+
+As another example, the ``model.tree.simpleWalk'' function for evaluating decision trees requires that {\PFAc datum} is a record and that {\PFAc treeNode} is a record with {\PFApf field}, {\PFApf operator}, {\PFApf value}, {\PFApf pass}, and {\PFApf fail} fields.  Since it does not specify anything else about the record, the {\PFAc treeNodes} could also carry metadata describing how the tree was made.
+\begin{center}
+\begin{minipage}{0.9\linewidth}
+\mbox{\PFAc \{"model.tree.simpleWalk":$\!$ [datum, treeNode]\} \vspace{0.2 cm} \\} \vspace{0.2 cm} \\ \rm \begin{tabular}{p{0.01\linewidth} l p{0.8\linewidth}} & \PFAc datum \rm & any record {\PFAtp D} \\  & \PFAc treeNode \rm & any record {\PFAtp T} with \{{\PFApf field:}$\!$ string, {\PFApf operator:}$\!$ string, {\PFApf value:}$\!$ any {\PFAtp V}, {\PFApf pass:}$\!$ union of \{{\PFAtp T}, any {\PFAtp S}\}, {\PFApf fail:}$\!$ union of \{{\PFAtp T}, {\PFAtp S}\}\} \\  & {\it (returns)} & {\PFAtp S} \\ \end{tabular}
+\end{minipage}
+\end{center}
+
+Finally, some library functions can accept functions as arguments, even though functions are not first-class objects in the language.  A function cannot be assigned to a symbol, but it can appear in an argument list.  The following type pattern matches functions:
+\begin{itemize}
+\item function ({\it type$_1$}, {\it type$_2$}, \ldots\ {\it type$_n$}) $\to$ {\it type}
+\end{itemize}
+The pattern does not specify the names of parameters, only their number, order, and types (as patterns).  Only non-generic functions can be matched, and since most library functions are generic, the matched function would usually be a user-defined function.  (Notable exceptions are mathematical special functions, probability distributions, and clustering metrics.)
+
+The parameter and return types of a function pattern can be wildcarded, as in this example of ``a.filter'', which filters an array.
+\begin{center}
+\begin{minipage}{0.9\linewidth}
+\mbox{\PFAc \{"a.filter":$\!$ [a, fcn]\} \vspace{0.2 cm} \\} \vspace{0.2 cm} \\ \rm \begin{tabular}{p{0.01\linewidth} l p{0.8\linewidth}} & \PFAc a \rm & array of any {\PFAtp A} \\  & \PFAc fcn \rm & function ({\PFAtp A}) $\to$ boolean \\  & {\it (returns)} & array of {\PFAtp A} \\ \end{tabular}
+\end{minipage}
+\end{center}
+
+Library functions with function arguments are primarily used to override the default behavior of a statistical routine through callbacks.  The ``model.tree.predicateWalk'' function illustrates how a decision tree traversal can be given an arbitrary or even user-defined predicate.
+\begin{center}
+\begin{minipage}{0.9\linewidth}
+\mbox{\PFAc \{"model.tree.predicateWalk":$\!$ [datum, treeNode, predicate]\} \vspace{0.2 cm} \\} \vspace{0.2 cm} \\ \rm \begin{tabular}{p{0.01\linewidth} l p{0.8\linewidth}} & \PFAc datum \rm & any record {\PFAtp D} \\  & \PFAc treeNode \rm & any record {\PFAtp T} with \{{\PFApf pass:}$\!$ union of \{{\PFAtp T}, any {\PFAtp S}\}, {\PFApf fail:}$\!$ union of \{{\PFAtp T}, {\PFAtp S}\}\} \\  & \PFAc predicate \rm & function ({\PFAtp D}, {\PFAtp T}) $\to$ boolean \\  & {\it (returns)} & {\PFAtp S} \\ \end{tabular}
+\end{minipage}
+\end{center}
+
+Function arguments can only be provided using the \hyperlink{hsec:fcndef}{fcndef} or \hyperlink{hsec:fcnref}{fcnref} special forms, which require explicit functions to be known during static analysis.  Therefore, the platform on which PFA is being implemented does not need first class functions or the equivalent (e.g.\ objects with a pre-specified ``apply'' method).  It does not even need functions in the normal sense: if the platform requires all functions to be expanded inline, the PFA system can generate specific code for each case.  That is, the ``a.filter'' and ``model.tree.predicateWalk'' functions can be expanded into special-case bytecode for each call that takes a different function argument, possibly mixing the library function implementation with the user-defined callback.  This would not be possible if function arguments could only be resolved at runtime.
 
 \pagebreak
 
@@ -542,7 +696,9 @@ implicit garbage collector; no restriction on the choice of garbage collector (u
 
 \pagebreak
 
+\hypertarget{hsec:user-defined-fcns}{}
 \section{User-defined functions}
+\label{sec:user-defined-fcns}
 
 \hypertarget{hsec:fcndef}{}
 \label{form:fcndef}
@@ -692,90 +848,90 @@ Special forms and ordinary function calls
 \subsection{Basic arithmetic}
 
 \subsubsection{Addition of two values ($+$)}
-% \libfcn{+}
+\libfcn{+}
 
 \subsubsection{Subtraction ($-$)}
-% \libfcn{-}
+\libfcn{-}
 
 \subsubsection{Multiplication of two values (*)}
-% \libfcn{*}
+\libfcn{*}
 
 \subsubsection{Floating-point division (/)}
-% \libfcn{/}
+\libfcn{/}
 
 \subsubsection{Integer division (//)}
-% \libfcn{//}
+\libfcn{//}
 
 \subsubsection{Negation (u$-$)}
-% \libfcn{u-}
+\libfcn{u-}
 
 \subsubsection{Modulo (\%)}
-% \libfcn{\%}
+\libfcn{\%}
 
 \subsubsection{Remainder (\%\%)}
-% \libfcn{\%\%}
+\libfcn{\%\%}
 
 \subsubsection{Raising to a power (**)}
-% \libfcn{**}
+\libfcn{**}
 
 \subsection{Comparison operators}
 
 Avro defines a \href{http://avro.apache.org/docs/1.7.6/spec.html#order}{sort order} for every pair of values with a compatible type, so any two objects of compatible type can be compared in PFA.
 
 \subsubsection{General comparision (cmp)}
-% \libfcn{cmp}
+\libfcn{cmp}
 
 \subsubsection{Equality (==)}
-% \libfcn{==}
+\libfcn{==}
 
 \subsubsection{Inequality (!=)}
-% \libfcn{!=}
+\libfcn{!=}
 
 \subsubsection{Less than (<)}
-% \libfcn{<}
+\libfcn{<}
 
 \subsubsection{Less than or equal to (<=)}
-% \libfcn{<=}
+\libfcn{<=}
 
 \subsubsection{Greater than (>)}
-% \libfcn{>}
+\libfcn{>}
 
 \subsubsection{Greater than or equal to (>=)}
-% \libfcn{>=}
+\libfcn{>=}
 
 \subsubsection{Maximum of two values (max)}
-% \libfcn{max}
+\libfcn{max}
 
 \subsubsection{Minimum of two values (min)}
-% \libfcn{min}
+\libfcn{min}
 
 \subsection{Logical operators}
 
 \subsubsection{Logical and (and)}
-% \libfcn{and}
+\libfcn{and}
 
 \subsubsection{Logical or (or)}
-% \libfcn{or}
+\libfcn{or}
 
 \subsubsection{Logical xor (xor)}
-% \libfcn{xor}
+\libfcn{xor}
 
 \subsubsection{Logical not (not)}
-% \libfcn{not}
+\libfcn{not}
 
 \subsection{Bitwise arithmetic}
 
 \subsubsection{Bitwise and (\&)}
-% \libfcn{\&}
+\libfcn{\&}
 
 \subsubsection{Bitwise or (|)}
-% \libfcn{|}
+\libfcn{|}
 
 \subsubsection{Bitwise xor (\^{})}
-% \libfcn{\^{}}
+\libfcn{\^{}}
 
 \subsubsection{Bitwise not (\textasciitilde{})}
-% \libfcn{TILDE}
+\libfcn{TILDE}
 
 \pagebreak
 
@@ -786,89 +942,89 @@ Avro defines a \href{http://avro.apache.org/docs/1.7.6/spec.html#order}{sort ord
 Constants such as $\pi$ and $e$ are represented as stateless functions with no arguments.  Specific implementations may choose to replace the function call with its inline value.
 
 \subsubsection{Archimedes' constant $\pi$ (m.pi)}
-% \libfcn{m.pi}
+\libfcn{m.pi}
 
 \subsubsection{Euler's constant $e$ (m.e)}
-% \libfcn{m.e}
+\libfcn{m.e}
 
 \subsection{Common functions}
 
 \subsubsection{Square root (m.sqrt)}
-% \libfcn{m.sqrt}
+\libfcn{m.sqrt}
 
 \subsubsection{Hypotnuse (m.hypot)}
-% \libfcn{m.hypot}
+\libfcn{m.hypot}
 
 \subsubsection{Trigonometric sine (m.sin)}
-% \libfcn{m.sin}
+\libfcn{m.sin}
 
 \subsubsection{Trigonometric cosine (m.cos)}
-% \libfcn{m.cos}
+\libfcn{m.cos}
 
 \subsubsection{Trigonometric tangent (m.tan)}
-% \libfcn{m.tan}
+\libfcn{m.tan}
 
 \subsubsection{Inverse trigonometric sine (m.asin)}
-% \libfcn{m.asin}
+\libfcn{m.asin}
 
 \subsubsection{Inverse trigonometric cosine (m.acos)}
-% \libfcn{m.acos}
+\libfcn{m.acos}
 
 \subsubsection{Inverse trigonometric tangent (m.atan)}
-% \libfcn{m.atan}
+\libfcn{m.atan}
 
 \subsubsection{Robust inverse trigonometric tangent (m.atan2)}
-% \libfcn{m.atan2}
+\libfcn{m.atan2}
 
 \subsubsection{Hyperbolic sine (m.sinh)}
-% \libfcn{m.sinh}
+\libfcn{m.sinh}
 
 \subsubsection{Hyperbolic cosine (m.cosh)}
-% \libfcn{m.cosh}
+\libfcn{m.cosh}
 
 \subsubsection{Hyperbolic tangent (m.tanh)}
-% \libfcn{m.tanh}
+\libfcn{m.tanh}
 
 \subsubsection{Natural exponential (m.exp)}
-% \libfcn{m.exp}
+\libfcn{m.exp}
 
 \subsubsection{Natural exponential minus one (m.expm1)}
-% \libfcn{m.expm1}
+\libfcn{m.expm1}
 
 \subsubsection{Natural logarithm (m.ln)}
-% \libfcn{m.ln}
+\libfcn{m.ln}
 
 \subsubsection{Logarithm base 10 (m.log10)}
-% \libfcn{m.log10}
+\libfcn{m.log10}
 
 \subsubsection{Arbitrary logarithm (m.log)}
-% \libfcn{m.log}
+\libfcn{m.log}
 
 \subsubsection{Natural logarithm of one plus square (m.ln1p)}
-% \libfcn{m.ln1p}
+\libfcn{m.ln1p}
 
 \subsection{Rounding}
 
 \subsubsection{Absolute value (m.abs)}
-% \libfcn{m.abs}
+\libfcn{m.abs}
 
 \subsubsection{Floor (m.floor)}
-% \libfcn{m.floor}
+\libfcn{m.floor}
 
 \subsubsection{Ceiling (m.ceil)}
-% \libfcn{m.ceil}
+\libfcn{m.ceil}
 
 \subsubsection{Simple rounding (m.round)}
-% \libfcn{m.round}
+\libfcn{m.round}
 
 \subsubsection{Unbiased rounding (m.rint)}
-% \libfcn{m.rint}
+\libfcn{m.rint}
 
 \subsubsection{Threshold function (m.signum)}
-% \libfcn{m.signum}
+\libfcn{m.signum}
 
 \subsubsection{Copy sign (m.copysign)}
-% \libfcn{m.copysign}
+\libfcn{m.copysign}
 
 \subsection{Linear algebra}
 
@@ -883,76 +1039,76 @@ Strings are immutable, so none of the following functions modifies a string in-p
 \subsection{Basic access}
 
 \subsubsection{Length (s.len)}
-% \libfcn{s.len}
+\libfcn{s.len}
 
 \subsubsection{Extract substring (s.substr)}
-% \libfcn{s.substr}
+\libfcn{s.substr}
 
 \subsubsection{Modify substring (s.substrto)}
-% \libfcn{s.substrto}
+\libfcn{s.substrto}
 
 \subsection{Search and replace}
 
 \subsubsection{Contains (s.contains)}
-% \libfcn{s.contains}
+\libfcn{s.contains}
 
 \subsubsection{Count instances (s.count)}
-% \libfcn{s.count}
+\libfcn{s.count}
 
 \subsubsection{Find first index (s.index)}
-% \libfcn{s.index}
+\libfcn{s.index}
 
 \subsubsection{Find last index (s.rindex)}
-% \libfcn{s.rindex}
+\libfcn{s.rindex}
 
 \subsubsection{Check start (s.startswith)}
-% \libfcn{s.startswith}
+\libfcn{s.startswith}
 
 \subsubsection{Check end (s.endswith)}
-% \libfcn{s.endswith}
+\libfcn{s.endswith}
 
 \subsection{Conversions to or from other types}
 
 \subsubsection{Join an array of strings (s.join)}
-% \libfcn{s.join}
+\libfcn{s.join}
 
 \subsubsection{Split into an array of strings (s.split)}
-% \libfcn{s.split}
+\libfcn{s.split}
 
 \subsection{Conversions to or from other strings}
 
 \subsubsection{Concatenate two strings (s.concat)}
-% \libfcn{s.concat}
+\libfcn{s.concat}
 
 \subsubsection{Repeat pattern (s.repeat)}
-% \libfcn{s.repeat}
+\libfcn{s.repeat}
 
 \subsubsection{Lowercase (s.lower)}
-% \libfcn{s.lower}
+\libfcn{s.lower}
 
 \subsubsection{Uppercase (s.upper)}
-% \libfcn{s.upper}
+\libfcn{s.upper}
 
 \subsubsection{Left-strip (s.lstrip)}
-% \libfcn{s.lstrip}
+\libfcn{s.lstrip}
 
 \subsubsection{Right-strip (s.rstrip)}
-% \libfcn{s.rstrip}
+\libfcn{s.rstrip}
 
 \subsubsection{Strip both ends (s.strip)}
-% \libfcn{s.strip}
+\libfcn{s.strip}
 
 \subsubsection{Replace all matches (s.replaceall)}
-% \libfcn{s.replaceall}
+\libfcn{s.replaceall}
 
 \subsubsection{Replace first match (s.replacefirst)}
-% \libfcn{s.replacefirst}
+\libfcn{s.replacefirst}
 
 \subsubsection{Replace last match (s.replacelast)}
-% \libfcn{s.replacelast}
+\libfcn{s.replacelast}
 
 \subsubsection{Translate characters (s.translate)}
-% \libfcn{s.translate}
+\libfcn{s.translate}
 
 \subsection{Regular Expressions}
 
@@ -965,140 +1121,140 @@ and stemming
 \subsection{Basic access}
 
 \subsubsection{Length (a.len)}
-% \libfcn{a.len}
+\libfcn{a.len}
 
 \subsubsection{Extract subsequence (a.subseq)}
-% \libfcn{a.subseq}
+\libfcn{a.subseq}
 
 \subsubsection{Modify subsequence (a.subseqto)}
-% \libfcn{a.subseqto}
+\libfcn{a.subseqto}
 
 \subsection{Search and replace}
 
 \subsubsection{Contains (a.contains)}
-% \libfcn{a.contains}
+\libfcn{a.contains}
 
 \subsubsection{Count instances (a.count)}
-% \libfcn{a.count}
+\libfcn{a.count}
 
 \subsubsection{Count instances by predicate (a.countPredicate)}
 libfcn{a.countPredicate}
 
 \subsubsection{Find first index (a.index)}
-% \libfcn{a.index}
+\libfcn{a.index}
 
 \subsubsection{Find last index (a.rindex)}
-% \libfcn{a.rindex}
+\libfcn{a.rindex}
 
 \subsubsection{Check start (a.startswith)}
-% \libfcn{a.startswith}
+\libfcn{a.startswith}
 
 \subsubsection{Check end (a.endswith)}
-% \libfcn{a.endswith}
+\libfcn{a.endswith}
 
 \subsection{Manipulation}
 
 \subsubsection{Concatenate two arrays (a.concat)}
-% \libfcn{a.concat}
+\libfcn{a.concat}
 
 \subsubsection{Append (a.append)}
-% \libfcn{a.append}
+\libfcn{a.append}
 
 \subsubsection{Insert or prepend (a.insert)}
-% \libfcn{a.insert}
+\libfcn{a.insert}
 
 \subsubsection{Replace item (a.replace)}
-% \libfcn{a.replace}
+\libfcn{a.replace}
 
 \subsubsection{Remove item (a.remove)}
-% \libfcn{a.remove}
+\libfcn{a.remove}
 
 \subsection{Reordering}
 
 \subsubsection{Sort (a.sort)}
-% \libfcn{a.sort}
+\libfcn{a.sort}
 
 \subsubsection{Sort with a less-than function (a.sortLT)}
-% \libfcn{a.sortLT}
+\libfcn{a.sortLT}
 
 \subsubsection{Randomly shuffle array (a.shuffle)}
-% \libfcn{a.shuffle}
+\libfcn{a.shuffle}
 
 \subsubsection{Reverse order (a.reverse)}
-% \libfcn{a.reverse}
+\libfcn{a.reverse}
 
 \subsection{Extreme values}
 
 \subsubsection{Maximum of all values (a.max)}
-% \libfcn{a.max}
+\libfcn{a.max}
 
 \subsubsection{Minimum of all values (a.min)}
-% \libfcn{a.min}
+\libfcn{a.min}
 
 \subsubsection{Maximum with a less-than function (a.maxLT)}
-% \libfcn{a.maxLT}
+\libfcn{a.maxLT}
 
 \subsubsection{Minimum with a less-than function (a.minLT)}
-% \libfcn{a.minLT}
+\libfcn{a.minLT}
 
 \subsubsection{Maximum $N$ items (a.maxN)}
-% \libfcn{a.maxN}
+\libfcn{a.maxN}
 
 \subsubsection{Minimum $N$ items (a.minN)}
-% \libfcn{a.minN}
+\libfcn{a.minN}
 
 \subsubsection{Maximum $N$ with a less-than function (a.maxNLT)}
-% \libfcn{a.maxNLT}
+\libfcn{a.maxNLT}
 
 \subsubsection{Minimum $N$ with a less-than function (a.minNLT)}
-% \libfcn{a.minNLT}
+\libfcn{a.minNLT}
 
 \subsubsection{Argument maximum (a.argmax)}
-% \libfcn{a.argmax}
+\libfcn{a.argmax}
 
 \subsubsection{Argument minimum (a.argmin)}
-% \libfcn{a.argmin}
+\libfcn{a.argmin}
 
 \subsubsection{Argument maximum with a less-than function (a.argmaxLT)}
-% \libfcn{a.argmaxLT}
+\libfcn{a.argmaxLT}
 
 \subsubsection{Argument minimum with a less-than function (a.argminLT)}
-% \libfcn{a.argminLT}
+\libfcn{a.argminLT}
 
 \subsubsection{Maximum $N$ arguments (a.argmaxN)}
-% \libfcn{a.argmaxN}
+\libfcn{a.argmaxN}
 
 \subsubsection{Minimum $N$ arguments (a.argminN)}
-% \libfcn{a.argminN}
+\libfcn{a.argminN}
 
 \subsubsection{Maximum $N$ arguments with a less-than function (a.argmaxNLT)}
-% \libfcn{a.argmaxNLT}
+\libfcn{a.argmaxNLT}
 
 \subsubsection{Minimum $N$ arguments with a less-than function (a.argminNLT)}
-% \libfcn{a.argminNLT}
+\libfcn{a.argminNLT}
 
 \subsection{Numerical combinations}
 
 \subsubsection{Add all array values (a.sum)}
-% \libfcn{a.sum}
+\libfcn{a.sum}
 
 \subsubsection{Multiply all array values (a.product)}
-% \libfcn{a.product}
+\libfcn{a.product}
 
 \subsubsection{Sum of logarithms (a.lnsum)}
-% \libfcn{a.lnsum}
+\libfcn{a.lnsum}
 
 \subsubsection{Arithmetic mean (a.mean)}
-% \libfcn{a.mean}
+\libfcn{a.mean}
 
 \subsubsection{Geometric mean (a.geomean)}
-% \libfcn{a.geomean}
+\libfcn{a.geomean}
 
 \subsubsection{Median (a.median)}
-% \libfcn{a.median}
+\libfcn{a.median}
 
 \subsubsection{Mode, or most common value (a.mode)}
-% \libfcn{a.mode}
+\libfcn{a.mode}
 
 \hypertarget{hsec:set-like}{}
 \subsection{Set or set-like functions}
@@ -1107,88 +1263,88 @@ libfcn{a.countPredicate}
 PFA does not have a set datatype, but arrays can be interpreted as sets with the following functions.
 
 \subsubsection{Distinct items (a.distinct)}
-% \libfcn{a.distinct}
+\libfcn{a.distinct}
 
 \subsubsection{Set equality (a.seteq)}
-% \libfcn{a.seteq}
+\libfcn{a.seteq}
 
 \subsubsection{Union (a.union)}
-% \libfcn{a.union}
+\libfcn{a.union}
 
 \subsubsection{Intersection (a.intersect)}
-% \libfcn{a.intersect}
+\libfcn{a.intersect}
 
 \subsubsection{Set difference (a.diff)}
-% \libfcn{a.diff}
+\libfcn{a.diff}
 
 \subsubsection{Symmetric set difference (a.symdiff)}
-% \libfcn{a.symdiff}
+\libfcn{a.symdiff}
 
 \subsubsection{Subset check (a.subset)}
-% \libfcn{a.subset}
+\libfcn{a.subset}
 
 \subsubsection{Disjointness check (a.disjoint)}
-% \libfcn{a.disjoint}
+\libfcn{a.disjoint}
 
 \subsection{Functional programming}
 
 \subsubsection{Map array items with function (a.map)}
-% \libfcn{a.map}
+\libfcn{a.map}
 
 \subsubsection{Filter array items with function (a.filter)}
-% \libfcn{a.filter}
+\libfcn{a.filter}
 
 \subsubsection{Filter and map (a.filtermap)}
-% \libfcn{a.filtermap}
+\libfcn{a.filtermap}
 
 \subsubsection{Map and flatten (a.flatmap)}
-% \libfcn{a.flatmap}
+\libfcn{a.flatmap}
 
 \subsubsection{Reduce array items to a single value (a.reduce)}
-% \libfcn{a.reduce}
+\libfcn{a.reduce}
 
 \subsubsection{Right-to-left reduce (a.reduceright)}
-% \libfcn{a.reduceright}
+\libfcn{a.reduceright}
 
 \subsubsection{Fold array items to another type (a.fold)}
-% \libfcn{a.fold}
+\libfcn{a.fold}
 
 \subsubsection{Right-to-left fold (a.foldright)}
-% \libfcn{a.foldright}
+\libfcn{a.foldright}
 
 \subsubsection{Take items until predicate is false (a.takeWhile)}
-% \libfcn{a.takeWhile}
+\libfcn{a.takeWhile}
 
 \subsubsection{Drop items until predicate is true (a.dropWhile)}
-% \libfcn{a.dropWhile}
+\libfcn{a.dropWhile}
 
 \subsection{Functional tests}
 
 \subsubsection{Existential check, $\exists$ (a.any)}
-% \libfcn{a.any}
+\libfcn{a.any}
 
 \subsubsection{Univeral check, $\forall$ (a.all)}
-% \libfcn{a.all}
+\libfcn{a.all}
 
 \subsubsection{Pairwise check of two arrays (a.corresponds)}
-% \libfcn{a.corresponds}
+\libfcn{a.corresponds}
 
 \subsection{Restructuring}
 
 \subsubsection{Sliding window (a.slidingWindow)}
-% \libfcn{a.slidingWindow}
+\libfcn{a.slidingWindow}
 
 \subsubsection{Unique combinations of a fixed size (a.combinations)}
-% \libfcn{a.combinations}
+\libfcn{a.combinations}
 
 \subsubsection{Permutations (a.permutations)}
-% \libfcn{a.permutations}
+\libfcn{a.permutations}
 
 \subsubsection{Flatten array (a.flatten)}
-% \libfcn{a.flatten}
+\libfcn{a.flatten}
 
 \subsubsection{Group items by category (a.groupby)}
-% \libfcn{a.groupby}
+\libfcn{a.groupby}
 
 \pagebreak
 
@@ -1211,10 +1367,10 @@ PFA does not have a set datatype, but arrays can be interpreted as sets with the
 \label{sec:impute}
 
 \subsubsection{Skip record (impute.errorOnNull)}
-% \libfcn{impute.errorOnNull}
+\libfcn{impute.errorOnNull}
 
 \subsubsection{Replace with default (impute.defaultOnNull)}
-% \libfcn{impute.defaultOnNull}
+\libfcn{impute.defaultOnNull}
 
 \pagebreak
 
@@ -1233,10 +1389,10 @@ CUSUM
 \subsection{Sample statistics}
 
 \subsubsection{Update aggregated mean (stat.sample.updateMean)}
-% \libfcn{stat.sample.updateMean}
+\libfcn{stat.sample.updateMean}
 
 \subsubsection{Compute aggregated mean (stat.sample.mean)}
-% \libfcn{stat.sample.mean}
+\libfcn{stat.sample.mean}
 
 accumulated mean, median(?)
 
@@ -1247,10 +1403,10 @@ accumulated mean, median(?)
 \subsection{Decision and regression Trees}
 
 \subsubsection{Tree walk with simple predicates (model.tree.simpleWalk)}
-% \libfcn{model.tree.simpleWalk}
+\libfcn{model.tree.simpleWalk}
 
 \subsubsection{Tree walk with user-defined predicates (model.tree.predicateWalk)}
-% \libfcn{model.tree.predicateWalk}
+\libfcn{model.tree.predicateWalk}
 
 \subsection{Cluster models}
 
