@@ -134,6 +134,16 @@ The PFA standard is defined so that a PFA-compliant system can verify that the J
 
 This specification does not define any standardized subsets of PFA.  As stated above, partial conformance is defined by ad hoc subsets of atomic units.  However, as experience develops, the community may define industry-standard subsets of PFA for specific purposes or special environments.  Conforming to a standardized subset would provide better interoperability than defining ad hoc subsets, and we would recommend such a standard when it exists.  At present, we can only recommend a carefully chosen ad hoc subset or complete conformance.
 
+\subsection{Reference implementations}
+
+Two open-source reference implementations are provided to help clarify this specification.  They can be accessed on \url{http://scoringengine.org} or \href{https://github.com/scoringengine/pfa}{GitHub}.
+\begin{description}
+\item[pfa-jvm:] A PFA system written in Scala for the Java Virtual Machine (JVM).  It performs all necessary checks and dynamically compiles PFA documents into JVM bytecode for fast execution.  It has group-id {\PFAc org.scoringengine} and artifact-id {\PFAc pfa} and (will be) submitted to the \href{http://search.maven.org/}{Sonatype repository} for use in common build tools.
+\item[pfa-py:] A PFA system written Python.  It performs all necessary checks, interprets PFA documents for testing, and transforms Python-based machine learning outputs into PFA.  It (will be) submitted to the \href{https://pypi.python.org/pypi}{Python Package Index} with package name {\PFAc pfa}.
+\end{description}
+
+Although these implementations are intended to help clarify the intent of the specification for future implementations, they are not normative definitions of the standard.  Only this document (and those that may supersede it) are normative.  All versions of this document, including the latest version, can be found on the websites listed above.
+
 \pagebreak
 
 \section{PFA document structure}
@@ -388,7 +398,7 @@ Every library function that depends on pseudorandom numbers should be seeded by 
 
 \section{Type system}
 
-Rather than invent a new type system, PFA uses Avro type schemae to describe its data types.  Avro is a serialization format, but it also describes the types (sets of possible values) to be serialized or unserialized with JSON-based schemae.  Feeding Avro-formatted data into and out of a PFA scoring engine is particularly easy, since the sets of possible values that can be Avro serialized perfectly align with the sets of possible values that PFA can use in its calculations.
+Rather than invent a new type system, PFA uses Avro type schemae to describe its data types.  Avro is a serialization format, but it also describes the types (sets of possible values) that are to be serialized or unserialized with JSON-based schemae.  Feeding Avro-formatted data into and out of a PFA scoring engine is particularly easy, since the sets of possible values that can be Avro-serialized perfectly align with the sets of possible values that PFA can use in its calculations.
 
 However, Avro serialization is by no means necessary to use with PFA: data that can be described by Avro types can be serialized many different ways.  In fact, the Avro project provides two: a binary format and a JSON format.  With the appropriate translations, CSV can be converted to and from a subset of Avro types, XML can be fully and reversibly transformed, as can many popular data formats.  The transformation of data formats and the internal representation of data in a PFA implementation are beyond the scope of this specification and should be handled in any way that the designer of a PFA system sees fit.
 
@@ -403,17 +413,19 @@ The set of all expressible types is the closure under the following primitives a
 \item[null:] A type with only one value, {\PFAc null}.  This is a type-safe null in the sense that no other types are nullable unless specifically declared to be a union with type {\bf null}.
 \item[boolean:] A type with only two values, {\PFAc true} and {\PFAc false}.
 \item[int:] Signed whole numbers with a 32-bit range: from $-2147483648$ to $2147483647$ inclusive.
-\item[long:] Signed whole numbers with a 64-bit range: from $-9223372036854775808$ to $9223372036854775807$.
+\item[long:] Signed whole numbers with a 64-bit range: from $-9223372036854775808$ to $9223372036854775807$ inclusive.
 \item[float:] Signed fractional numbers with 32-bit binary precision as defined by \href{http://dx.doi.org/10.1109%2FIEEESTD.2008.4610935}{IEEE 754}.
 \item[double:] Signed fractional numbers with 64-bit binary precision according to the same standard.
 \item[string:] Strings of text characters that can be encoded in \href{http://www.unicode.org/standard/standard.html}{Unicode}.
 \item[bytes:] Arrays of uninterpreted bytes with any length.
-\item[fixed({\PFAtp L}):] Named arrays of uninterpreted bytes with length {\PFAtp L} (integer).
-\item[enum({\PFAtp S}):] Named enumeration of a finite set of symbols {\PFAtp S} (ordered list of strings).
+\item[fixed({\PFAtp L}, {\PFAtp N}, {\PFAtp NS}):] Named arrays of uninterpreted bytes with length {\PFAtp L} (integer), name {\PFAtp N} (string), and optional namespace {\PFAtp NS} (string).
+\item[enum({\PFAtp S}, {\PFAtp N}, {\PFAtp NS}):] Named enumeration of a finite set of symbols {\PFAtp S} (ordered list of strings), name {\PFAtp N} (string), and optional namespace {\PFAtp NS} (string).
 \item[array({\PFAtp X}):] Homogeneous array of type {\PFAtp X} (Avro type) with any length.
 \item[map({\PFAtp X}):] Homogeneous map from strings to type {\PFAtp X} (Avro type).  The keys of all maps must be strings (just like JSON).
-\item[record({\PFAtp F}):] Heterogeneous record of fields {\PFAtp F} (named slots with Avro types).  This is a product type, since the possible values that a record can have is the Cartesian product of the possible values that each field can have.
-\item[union({\PFAtp T}):] Union of types {\PFAtp T}.  This is a sum type, since the possible values that a union can have is sum of types {\PFAtp T}.
+\item[record({\PFAtp F}, {\PFAtp N}, {\PFAtp NS}):] Heterogeneous record of fields {\PFAtp F} (named slots with Avro types) with name {\PFAtp N} (string) and optional namespace {\PFAtp NS} (string).  This is a product type; the possible values that it can have is the Cartesian product of the possible values that each field can have.
+\end{allowedfields}
+\begin{allowedfields}
+\item[union({\PFAtp T}):] Union of types {\PFAtp T} (array of Avro types).  This is a sum type; the possible values that it can have is union of the values of each type in {\PFAtp T}.
 \end{allowedfields}
 
 \noindent\begin{minipage}{\linewidth}
@@ -442,7 +454,7 @@ Again, this restriction can be an advantage.  It is often known as a type-safe n
 Most library functions in PFA interpret {\PFAc null} as a missing value.  Missing value handling is an important consideration in many statistical analyses, so PFA has a \hyperlink{hsec:impute}{suite of functions} for addressing this case.
 \end{itemize}
 
-The advantages of this type system are that (a) it aligns well with types already used by major data pipeline tools (binary Avro and, with some transformation, Thrift and Protocol Buffers), (b) it is easy to represent as JSON or XML (the lack of circular references is particularly helpful), (c) any type is nullable, including primitives, (d) Avro's rules for schema resolution can be reinterpreted as type promotion for type inference (\hyperlink{hsec:type-inference}{see Sec.~\ref{sec:type-inference}}), (e) all types have a strict ordering (see \href{http://avro.apache.org/docs/1.7.6/spec.html#order}{Avro sort order specification}), and (f) the type schemae are JSON objects and strings, which fit seamlessly into a PFA document.
+The advantages of this type system are that (1) it aligns well with types already used by major data pipeline tools (binary Avro and, with some transformation, Thrift and Protocol Buffers), (2) it is easy to represent as JSON or XML (the lack of circular references is particularly helpful), (3) any type is nullable, including primitives, (4) Avro's rules for schema resolution can be reinterpreted as type promotion for type inference (\hyperlink{hsec:type-inference}{see Sec.~\ref{sec:type-inference}}), (5) all types have a strict ordering (see \href{http://avro.apache.org/docs/1.7.6/spec.html#order}{Avro sort order specification}), and (6) the type schemae are JSON objects and strings, which fit seamlessly into a PFA document.
 
 \subsection{Type schemae in the PFA document}
 
@@ -456,11 +468,11 @@ A byte array with name {\PFAtp N} and fixed length {\PFAtp L} is specified by th
 
 An enumeration with name {\PFAtp N} and symbols {\PFAtp S} is specified by the form {\PFAc \{"type":$\!$ "enum", "name":$\!$ "N", "namespace":$\!$ "NS", "symbols":$\!$ S\}}.  The namespace is optional, but the name is not.  The symbols {\PFAtp S} must be a JSON array of strings.  Avro enumeration types have additional object members, but they are not relevant for PFA.
 
-An array with elements of type {\PFAtp X} is specified by the form {\PFAc \{"type": "array", "items": X\}}.  An array does not accept a name or any other member values.
+An array with elements of type {\PFAtp X} is specified by the form {\PFAc \{"type":$\!$ "array", "items":$\!$ X\}}.  An array does not accept a name or any other member values.
 
-An map with values of type {\PFAtp X} is specified by the form {\PFAc \{"type": "map", "values": X\}}.  A map does not accept a name or any other member values.
+An map with values of type {\PFAtp X} is specified by the form {\PFAc \{"type":$\!$ "map", "values":$\!$ X\}}.  A map does not accept a name or any other member values.
 
-A record with name {\PFAtp N} and fields {\PFAtp F} is specified by the form {\PFAc \{"type":$\!$ "record", "name":$\!$ "N", "namespace":$\!$ "NS", "fields":$\!$ F\}}.  The namespace is optional, but the name is not.  The fields {\PFAtp F} must be JSON objects with the following form: {\PFAc \{"name": "FN", "type": "FT", "default": D, "order": O\}} where {\PFAc name} and {\PFAc type} are required and {\PFAc default} and {\PFAc order} are not.  The default {\PFAtp D} is encoded in the Avro-JSON format and provides a default value if the input data stream is missing one.  The order {\PFAc O} is one of these strings: ``ascending'', ``descending'', and ``ignore'', and it defines the sort order for the record.  Avro record types and field types have additional object members, but they are not relevant for PFA.
+A record with name {\PFAtp N} and fields {\PFAtp F} is specified by the form {\PFAc \{"type":$\!$ "record", "name":$\!$ "N", "namespace":$\!$ "NS", "fields":$\!$ F\}}.  The namespace is optional, but the name is not.  The fields {\PFAtp F} must be JSON objects with the following form: {\PFAc \{"name":$\!$ "FN", "type":$\!$ "FT", "default":$\!$ D, "order":$\!$ O\}} where {\PFAc name} and {\PFAc type} are required and {\PFAc default} and {\PFAc order} are not.  The default {\PFAtp D} is encoded in the Avro-JSON format and provides a default value if the input data stream is missing one.  The order {\PFAc O} is one of these strings: ``ascending'', ``descending'', and ``ignore'', and it defines the sort order for the record.  Avro record types and field types have additional object members, but they are not relevant for PFA.
 
 A union of types {\PFAtp T1} \ldots {\PFAtp TN} is specified by a JSON array form {\PFAc [T \ldots\ TN]}.
 
@@ -474,26 +486,39 @@ Therefore, PFA implementations must pass Avro schemae to be parsed in an order t
 \subsection{Type inference}
 \label{sec:type-inference}
 
-PFA uses a near-minimum of type annotations for static type analysis.  Only the inputs to every calculation, which are function parameters, literal constants, inline arrays/maps/records, the symbols {\PFAc input} and {\PFAc tally}, and cell/pool definitions, and the outputs of every calculation, which are function return values and the scoring engine {\PFAc output}, need to be specified.  Unlike traditional languages (e.g.\ C or Java), the types of new variables are not specified: they are inferred through their initialization expressions (and would be redundant if supplied).
+PFA uses a near-minimum of type annotations for static type analysis.  Only the inputs to every calculation, which are function parameters, literal constants, inline arrays/maps/records, the symbols {\PFAc input} and {\PFAc tally}, and cell/pool definitions, and the outputs of every calculation, which are function return values and the scoring engine {\PFAc output}, need to be specified.  Unlike traditional languages (e.g.\ C or Java), the types of new variables are not specified: they are inferred through their initialization expressions (and would have been redundant if supplied).
 
 With these annotations, the type check algorithm is simple.  Every expression is a tree of subexpressions, whose leaves are either references to previously defined symbols, function parameters, cells, or pools (with known type) or constants (with specified type).  Every function and special form has a type signature that may accept its arguments, in which case type-checking continues toward the root of the tree, or reject its arguments, in which case the PFA document fails with a semantic error.  Every function and special form has a return type, which may depend on the types of its arguments (but not the values of its arguments, which are only known at runtime).  Arguments and return types should be recursively checked until the root of the tree (the type of the expression as a whole) is reached.  This derived type is checked against the declared function return type or {\PFAc output}.  If the declared type does not accept the derived type, the PFA document is rejected with a semantic error.
 
 Some special forms take a JSON array of expressions and either apply no return type constraint or only constrain the last expression, which is used as a return value.  Each case is explicitly specified in \hyperlink{hsec:expressions}{Sec.~\ref{sec:expressions}}.
 
-In passing, we note that the type annotations could have been more minimal if return types were not required, and some input types could, in principle, be inferred from their position in a function argument list.  However, an explicit {\PFAc output} allows a PFA system or casual observer to quickly determine if a scoring engine will fit into a given workflow, in which the input types and output types are constrained by data pipelines.  Function return values cannot always be omitted: recursive functions cannot determine their return type from parameters only, for instance.  Inferring input types from parents or siblings in the expression tree unnecessarily complicates the type-check algorithm, which most PFA systems should implement.  The algorithm chosen for PFA is strictly local--- only subexpressions and previously defined symbols are needed to infer an expression type--- and uniform--- the same rules apply regardless of the function's call graph.
+In passing, we note that the type annotations could have been more minimal if return types were not required, and some input types could, in principle, be inferred from their position in a function argument list.  However, an explicit {\PFAc output} allows a PFA system or casual observer to quickly determine if a scoring engine will fit into a given workflow, in which the input types and output types are constrained by data pipelines.  Moreover, function return types cannot always be omitted, even in theory: recursive functions cannot determine their return type from parameters only, for instance.  Also, inferring input types from parents or siblings in the expression tree unnecessarily complicates the type-check algorithm.  The algorithm chosen for PFA is strictly local--- only subexpressions and previously defined symbols are needed to infer an expression type--- and uniform--- the same rules apply regardless of the function's call graph.
 
 \subsection{Type resolution, promotion, and covariance}
 
-At each step in the type inference algorithm, the expected type or type pattern is checked against the actual or derived type.  All types have a non-commutative, binary ``accepts'' relation, in which ``A accepts B'' means that B is an acceptable actual type for expected type A.  For example, ``double accepts int'' because integers are a subset of double-precision floating point numbers, and any function that needs a double must be able to use an int instead.
+At each step in the type inference algorithm, the expected type or type pattern is checked against the actual or derived type.  All types have a non-commutative, binary ``accepts'' relation, for which ``A accepts B'' means that B is an acceptable observed type for expected type A.  For example, ``{\bf double} accepts {\bf int}'' because integers are a subset of double-precision floating point numbers, and any function that needs a {\bf double} must be able to use an {\bf int} instead.
 
 Even though Avro is a serialization protocol, it defines a suite of type promotion rules for the sake of schema resolution.  In Avro, these rules are used to determine if an old version of a schema is compatible with a new version of a schema: for instance, if the old schema defines a variable as an int and the new schema defines it as a double, the old serialized dataset is forward-compatible--- it can be used in an application as though it had the new schema.  PFA uses the same rules to promote data through an expression.
 
-These rules are described in the \href{http://avro.apache.org/docs/1.7.6/spec.html#Schema+Resolution}{Schema Resolution section} of the Avro specification, but it is reviewed here with an emphasis on how these rules are used in PFA type inference.
+These rules are described in the \href{http://avro.apache.org/docs/1.7.6/spec.html#Schema+Resolution}{Schema Resolution section} of the Avro specification, but they are reviewed here with an emphasis on how the rules are used in PFA type inference.
 
-
-
-
-copy Avro rules here (and check them in REPL)
+\noindent\begin{longtable}{p{0.2\linewidth} p{0.75\linewidth}}
+{\bf Expected type} & {\bf Accepts} \\\hline\endhead
+{\bf null} & Only {\bf null} or a {\bf union} of only {\bf null} (union of exactly one type, which is not a useful union). \\
+{\bf boolean} & Only {\bf boolean} or a {\bf union} of only {\bf boolean}. \\
+{\bf int} & Only {\bf int} or a {\bf union} of only {\bf int}. \\
+{\bf long} & {\bf int} or {\bf long} or a {\bf union} of any subset of \{{\bf int}, {\bf long}\}. \\
+{\bf float} & {\bf int}, {\bf long}, or {\bf float} or a {\bf union} of any subset of \{{\bf int}, {\bf long}, {\bf float}\}. \\
+{\bf double} & {\bf int}, {\bf long}, {\bf float} or {\bf double} (all numeric types are promoted).  Also accepts a {\bf union} of any subset of \{{\bf int}, {\bf long}, {\bf float}, {\bf double}\}. \\
+{\bf string} & Only {\bf string} or a {\bf union} of only {\bf string}. \\
+{\bf bytes} & Only {\bf bytes} or a {\bf union} of only {\bf bytes}. \\
+{\bf fixed({\PFAtp L}, {\PFAtp N}, {\PFAtp NS})} & Only a {\bf fixed} with the same length {\PFAtp L} and fully-qualified name given by {\PFAtp NS} and {\PFAtp N}.  Also accepts a {\bf union} of only this {\bf fixed} type. \\
+{\bf enum({\PFAtp S}, {\PFAtp N}, {\PFAtp NS})} & An {\bf enum} whose symbols {\PFAc S} are a subset of the expected {\bf enum}'s symbols with fully-qualified name given by {\PFAtp NS} and {\PFAtp N}.  For example, if an {\bf enum} with symbols ``one'', ``two'', and ``three'' is expected, it will accept an {\bf enum} of the same name with symbols ``two'' and ``one''.  Also accepts a {\bf union} of only these {\bf enum} types. \\
+{\bf array({\PFAtp X})} & An {\bf array} with items {\PFAc Y} for which {\PFAc X} accepts {\PFAc Y} (arrays are covariant).  For example, an {\bf array} of {\bf double} accepts an {\bf array} of {\bf int}, but an an {\bf array} of {\bf int} does not accept an an {\bf array} of {\bf double}.  Also accepts a {\bf union} of only these {\bf array} types. \\
+{\bf map({\PFAtp X})} & A {\bf map} with values {\PFAc Y} for which {\PFAc X} accepts {\PFAc Y} (maps are covariant).  Also accepts a {\bf union} of only these {\bf map} types. \\
+{\bf record({\PFAtp F}, {\PFAtp N}, {\PFAtp NS})} & A {\bf record} whose fields are a superset of fields {\PFAc F} (in any order) with corresponding field types such that the expected field accepts the observed field (records are covariant).  For example, an expected record with fields \{``one'': {\bf double} and ``two'': {\bf string}\} accepts an observed record with fields \{``one'': {\bf double}, ``two'': {\bf string}, and ``three'': {\bf bytes}\}.  It also accepts an observed record with fields \{``one'': {\bf int} and ``two'': {\bf string}\}.  The observed record must also have the same fully-qualified name given by {\PFAc NS} and {\PFAc N}.  Also accepts a {\bf union} of only these {\bf record} types. \\
+{\bf union({\PFAtp T})} & Either a {\bf union({\PFAtp T$'$})} such that for all {\PFAc t$'$} in {\PFAc T$'$}, there exists a {\PFAc t} in {\PFAc T} for which {\PFAc t} accepts {\PFAc t$'$}, or a single type {\PFAc t$''$} such that there exists a {\PFAc t} in {\PFAc T} for which {\PFAc t} accepts {\PFAc t$''$}.  For example, a {\bf union} of \{{\bf string}, {\bf bytes}, and {\bf null}\} accepts a {\bf union} of \{{\bf string} and {\bf bytes}\}, and it also accepts a {\bf string}.  However, the reverse is not true: a narrow type or union cannot accept a wider union.
+\end{longtable}
 
 \subsection{Generic library function signatures}
 
