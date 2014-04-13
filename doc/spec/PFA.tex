@@ -563,7 +563,9 @@ In summary, any cases that cannot be promoted to the same type are combined into
 
 Distinct {\bf records} are combined into a union of those {\bf records}, however (rule 13 falls through to rule 14 when the {\bf records} are not exactly the same).
 
+\hypertarget{hsec:generic-signatures}{}
 \subsection{Generic library function signatures}
+\label{sec:generic-signatures}
 
 User-defined functions in the {\PFAc fcns} top-level field have parameter lists and return types specified strictly by Avro type schemae (\hyperlink{hsec:user-defined-fcns}{see Sec.~\ref{sec:user-defined-fcns}}).  However, some library functions have more general type signatures so that they can be more broadly applied.
 
@@ -717,6 +719,8 @@ Some forms also do not allow new variable declarations.  One such example is the
 
 The sealed-from-above or sealed-within status of scopes within each special form is specified in \hyperlink{hsec:expressions}{Sec.~\ref{sec:expressions}}.
 
+Symbol names must match the following pattern: {\PFAc [A-Za-z\_][A-Za-z0-9\_]*} (the first character must be a letter or underscore; subsequent characters, if they exist, may also be numbers).
+
 \hypertarget{hsec:immutable}{}
 \subsection{Immutable data structures}
 \label{sec:immutable}
@@ -797,6 +801,16 @@ PFA does not define any particular memory management technique.  The language ha
 \hypertarget{hsec:user-defined-fcns}{}
 \section{User-defined functions}
 \label{sec:user-defined-fcns}
+
+New functions can be defined in a PFA document and can be called as though they were library functions.  
+
+
+
+Function names must match the following pattern: {\PFAc [A-Za-z\_]([A-Za-z0-9\_]|\textbackslash.[A-Za-z][A-Za-z0-9\_]*)*} (consists of period-delimited words in which each word starts with a letter or underscore; subsequent characters, if they exist, may also be numbers; there must be at least one word).
+
+(\hyperlink{hsec:generic-signatures}{see Sec.~\ref{sec:generic-signatures}})
+
+
 
 \hypertarget{hsec:fcndef}{}
 \label{form:fcndef}
