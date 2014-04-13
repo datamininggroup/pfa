@@ -699,7 +699,7 @@ Function arguments can only be provided using the \hyperlink{hsec:fcndef}{fcndef
 
 \section{Symbols, scope, and data structures}
 
-Calculations in PFA are performed by nesting function calls in argument lists (purely functional programming) and assigning values to symbols, cells, and pools, possibly overwriting previous values (imperative programming).  Some mathematical algorithms are more easily expressed in a functional style while others are more easily expressed in an imperative style.  Cells and pools (global state) are discussed in \hyperlink{hsec:hsec:state}{Sec.~\ref{sec:hsec:state}}.  Symbols provide temporary local state.
+Calculations in PFA are performed by nesting function calls in argument lists (purely functional programming) and assigning values to symbols, cells, and pools, possibly overwriting previous values (imperative programming).  Some mathematical algorithms are more easily expressed in a functional style while others are more easily expressed in an imperative style.  Cells and pools (global state) are discussed in \hyperlink{hsec:state}{Sec.~\ref{sec:state}}.  Symbols provide temporary local state.
 
 Much like a cell, a symbol is a named container with fixed type whose value can be replaced: it is a variable.  Unlike a cell, a symbol can only be referenced within a limited scope.  Symbol scopes in PFA are
 \begin{itemize}
@@ -707,33 +707,86 @@ Much like a cell, a symbol is a named container with fixed type whose value can 
 \item block-level: they range from the declaration of the symbol to the end of the containing block, which is either a single expression of a JSON array of expressions.
 \end{itemize}
 
-Since blocks are highly nested in a PFA document, symbol scopes are highly nested as well.  A symbol must not be shadowed; that is, it must not be declared twice in the same scope or in two scopes, one of which is nested within the other.  The same symbol name may be used in non-overlapping scopes.
+Since blocks are deeply nested in a moderately complex PFA document, symbol scopes may be deeply nested as well.  A symbol must not be shadowed; that is, it must not be declared twice in the same scope or in two scopes such that one is nested within the other.  The same symbol name may be used in non-overlapping scopes.
 
-Symbols are declared with the ``let'' special form and reassigned with the ``set'' special form (\hyperlink{hsec:let-set}{see Sec.~\ref{sec:let-set}}).  This distinction between declaration and reassignment should be enforced, and it allows an observer to determine which symbols are constant or which algorithms are purely functional at a glance.
+Symbols are declared with the ``let'' special form and reassigned with the ``set'' special form (\hyperlink{hsec:let-set}{see Sec.~\ref{sec:let-set}}).  This distinction between declaration and reassignment should be enforced, as it allows an observer to determine which symbols are constant and which algorithms are purely functional at a glance.
 
-Although a symbol is readable in scopes nested within a given scope, some special forms limit the scopes in which a symbol can be reassigned.  For example, symbols declared outside of a function call should not be reassigned in the arguments of the function call.  If the function being called is {\PFAc and}, for instance, the second argument would not be evaluated if the first evaluates to {\PFAc true}.  Updating the symbol's state in the second argument could lead to some subtle bugs if the PFA author assumes that it is always evaluated.  As another example, loops for which {\PFAc seq} is {\PFAc false} may be evaluated in any order (to allow for systems that might parallelize loops).  Symbols declared outside of these loops cannot be reassigned in the loop, since that would lead to subtle bugs if the PFA author assumes that the loop order is sequential.
+Although a symbol is readable anywhere below the point at which it is defined, some special forms limit the scopes in which a symbol can be reassigned.  For example, symbols declared outside of an anonymous function cannot be modified by the function, since that would be hard to implement in a system that does not have closures.  Looping special forms for which {\PFAc seq} is {\PFAc false} may be evaluated in any order to allow for systems that might parallelize the loop--- in this case, symbols declared outside the loop cannot be modified in the loop, since that would lead to race conditions.  Special forms that prohibit modification of symbols declared outside the form are said to be ``sealed from above''.
 
-Scopes in which symbols defined in a parent scope cannot be reassigned are said to be ``sealed from above''.  Scopes in which new symbols cannot be defined are said to be ``sealed within''.  The parts of the special forms are sealed from above or sealed within are specified in \hyperlink{hsec:expressions}{Sec.~\ref{sec:expressions}}.
+Some forms also do not allow new variable declarations.  One such example is the argument list of a function call, since such a declaration could never be used (each argument of the function call is in a different scope).  These scopes are said to be ``sealed within''.  In a functional programming style, it is sometimes desirable to insert whole algorithms in what would otherwise be a restricted block like a function argument.  To allow for this usage, a ``do'' special form can be placed within such a scope, creating a sub-scope that allows variable declarations and expands a single-expression block into a JSON array of expressions.  The ``do'' form is required to ensure that this usage is intentional.
+
+The sealed-from-above or sealed-within status of scopes within each special form is specified in \hyperlink{hsec:expressions}{Sec.~\ref{sec:expressions}}.
 
 \hypertarget{hsec:immutable}{}
 \subsection{Immutable data structures}
 \label{sec:immutable}
 
-All values in PFA, including complex data structures like arrays, maps, and records, are immutable.  That is, there are no special forms or library functions that can change the internal structure of a value, and thus one cannot be constructed either.  The PFA specification places no constraints on how values are implemented: these values that are immutable in the context of PFA may be mutable in the context of the host system.  (If so, it is the implementer's responsibility to avoid changing a value in place while the PFA algorithm is running.)  Since the values are immutable, we suggest that they be implemented with structural sharing to optimize the speed and memory usage of the data structures.
+All values in PFA, including complex data structures like arrays, maps, and records, are immutable.  That is, there are no special forms or library functions that can change the structure of a value in-place, so in-place operations cannot be expressed in any routine constructed from those calls.  The PFA specification puts no constraints on how values are implemented, however: they may be immutable in the context of PFA operations and yet mutable in the context of the host system.  We suggest that complex data structures be implemented with structural sharing to optimize speed and memory usage, but this is an implementation detail.
 
-Note that the semantics of immutable values in reassignable symbols is different from what would be expected in Python or Java.  In these languages with mutable values and references, the statement
+One consequence of all data structures being immutable is that there is no distinction between a value and a reference to a value or between copying and linking.  In languages with mutable values and references, this distinction is important because linking a reference to the same value in multiple places creates an unseen connection between them.  For instance (in Python),
+\begin{center}
+\begin{minipage}{0.9\linewidth}
+\PFAc y.child = x \\
+z.child = x \\
+... \\
+y.child.modify()
+\end{minipage}
+\end{center}
+modifies {\PFAc z.child} as well as {\PFAc y.child}, while
+\begin{center}
+\begin{minipage}{0.9\linewidth}
+\PFAc y.child = deepcopy(x) \\
+z.child = deepcopy(x) \\
+... \\
+y.child.modify()
+\end{minipage}
+\end{center}
+only modifies {\PFAc y.child}.  Since PFA lacks the equivalent of {\PFAc modify()}, the above distinction is irrelevant.
+
+Another consequence is that it is impossible to create a circular reference in PFA.  In Python, one can create a circular reference in a list {\PFAc x} by
 \begin{center}
 \begin{minipage}{0.9\linewidth}
 \PFAc x.append(x)
 \end{minipage}
 \end{center}
-creates a circular reference: after this line, {\PFAc x} will contain a reference to itself as the last entry.  In PFA, the equivalent statemnt
+Attempts to depth-first walk through this list of lists would result in an infinite loop, and modifications of {\PFAc x} would silently change this nested element (as above).  In PFA, the equivalent statement
 \begin{json}
 {"set": {"x": {"a.append": ["x", "x"]}}}
 \end{json}
-(read as {\PFAc x = a.append(x, x)}: ``set {\PFAc x} to {\PFAc x} appended with {\PFAc x}'') becomes the structured equivalent of {\PFAc x = x + 1}.  The new value of {\PFAc x} is an appended version of the old value of {\PFAc x}.  Evaluating this expression $N$ times would produce $N$ nestings, but no circular references.  In fact, it is impossible to create circular references by any method in PFA.
+creates a new array that contains all of the old items of {\PFAc x} with the entire old array {\PFAc x} appended.  This new array is assigned to symbol {\PFAc x}.  Since PFA has no mutable structures (and no lazy evaluation), it is impossible to create a circular reference.
 
-The decision to use immutable data structures was driven by two needs: (1) they are more readily serialized, particularly by excluding the possibility of circular references, and (2) the read-copy-update (\hyperlink{hsec:concurrent}{concurrency algorithm}) is simple when applied to immutable data, and very difficult (and patent-holding) when applied to mutable data.
+In fact, assignments with the same symbol on the left-hand side as the right-hand side behave like ``{\PFAc x = x + 1}'' in that the right-hand side always deals with the old value of the symbol and the left-hand side may change the meaning of the symbol to a new value.  For instance,
+\begin{json}
+{"do": [
+    {"let": {"x": {
+        "type": {"type": "record", "name": "R", "fields": [
+            {"name": "child", ["R", "null"]}]},
+        "value": {"child": null}}}},
+    {"set": {"x": {"attr": "x", "path": ["child"], "to": "x"}}},
+    {"set": {"x": {"attr": "x", "path": ["child"], "to": "x"}}},
+    {"set": {"x": {"attr": "x", "path": ["child"], "to": "x"}}},
+    "x"]}
+\end{json}
+results in
+\begin{json}
+{"child": {"child": {"child": {"child": null}}}}
+\end{json}
+just as
+\begin{json}
+{"do": [
+    {"let": {"x": 0}},
+    {"set": {"x": {"+": ["x", 1]}}},
+    {"set": {"x": {"+": ["x", 1]}}},
+    {"set": {"x": {"+": ["x", 1]}}},
+    "x"]}
+\end{json}
+results in 3.  In languages with mutable data structures, some updates behave like ``{\PFAc x = x + 1}'' while others create circular references.
+
+Similarly, there is no distinction between passing a function argument by reference versus passing it by value.  Such a distinction would be seen when the function modifies the object that it is given, but in PFA, these modifications are not possible.
+
+To get this behavior in a language or context that allows in-place modifications, one must make deep copies of the objects because copies are not linked the way that references are.  However, purely immutable objects can be safely passed without copying and structurally shared when modified.  In the examples above, a PFA implementation may use the same object in memory wherever its value is needed and may always pass a pointer to the object as a function argument.  Since values and references are equivalent, one can choose the computationally least expensive operation.
+
+Our decision to make all data structures immutable was driven by two needs: (1) to make them fully expressible by Avro type schemae, which do not allow for circular references or any non-treelike graph, and (2) to simplify the read-copy-update \hyperlink{hsec:concurrent}{concurrency algorithm}.  If objects were mutable, then an explicit copy would be needed to allow read operations to see the old version of the object while write operations create a new version.  In addition to making implementations more complicated, this would make all write operations more expensive, since they must do a deep copy on every update.  With immutable objects, the copy step is unnecessary.
 
 \subsection{Memory management}
 
@@ -893,90 +946,90 @@ Special forms and ordinary function calls
 \subsection{Basic arithmetic}
 
 \subsubsection{Addition of two values ($+$)}
-\libfcn{+}
+% \libfcn{+}
 
 \subsubsection{Subtraction ($-$)}
-\libfcn{-}
+% \libfcn{-}
 
 \subsubsection{Multiplication of two values (*)}
-\libfcn{*}
+% \libfcn{*}
 
 \subsubsection{Floating-point division (/)}
-\libfcn{/}
+% \libfcn{/}
 
 \subsubsection{Integer division (//)}
-\libfcn{//}
+% \libfcn{//}
 
 \subsubsection{Negation (u$-$)}
-\libfcn{u-}
+% \libfcn{u-}
 
 \subsubsection{Modulo (\%)}
-\libfcn{\%}
+% \libfcn{\%}
 
 \subsubsection{Remainder (\%\%)}
-\libfcn{\%\%}
+% \libfcn{\%\%}
 
 \subsubsection{Raising to a power (**)}
-\libfcn{**}
+% \libfcn{**}
 
 \subsection{Comparison operators}
 
 Avro defines a \href{http://avro.apache.org/docs/1.7.6/spec.html#order}{sort order} for every pair of values with a compatible type, so any two objects of compatible type can be compared in PFA.
 
 \subsubsection{General comparision (cmp)}
-\libfcn{cmp}
+% \libfcn{cmp}
 
 \subsubsection{Equality (==)}
-\libfcn{==}
+% \libfcn{==}
 
 \subsubsection{Inequality (!=)}
-\libfcn{!=}
+% \libfcn{!=}
 
 \subsubsection{Less than (<)}
-\libfcn{<}
+% \libfcn{<}
 
 \subsubsection{Less than or equal to (<=)}
-\libfcn{<=}
+% \libfcn{<=}
 
 \subsubsection{Greater than (>)}
-\libfcn{>}
+% \libfcn{>}
 
 \subsubsection{Greater than or equal to (>=)}
-\libfcn{>=}
+% \libfcn{>=}
 
 \subsubsection{Maximum of two values (max)}
-\libfcn{max}
+% \libfcn{max}
 
 \subsubsection{Minimum of two values (min)}
-\libfcn{min}
+% \libfcn{min}
 
 \subsection{Logical operators}
 
 \subsubsection{Logical and (and)}
-\libfcn{and}
+% \libfcn{and}
 
 \subsubsection{Logical or (or)}
-\libfcn{or}
+% \libfcn{or}
 
 \subsubsection{Logical xor (xor)}
-\libfcn{xor}
+% \libfcn{xor}
 
 \subsubsection{Logical not (not)}
-\libfcn{not}
+% \libfcn{not}
 
 \subsection{Bitwise arithmetic}
 
 \subsubsection{Bitwise and (\&)}
-\libfcn{\&}
+% \libfcn{\&}
 
 \subsubsection{Bitwise or (|)}
-\libfcn{|}
+% \libfcn{|}
 
 \subsubsection{Bitwise xor (\^{})}
-\libfcn{\^{}}
+% \libfcn{\^{}}
 
 \subsubsection{Bitwise not (\textasciitilde{})}
-\libfcn{TILDE}
+% \libfcn{TILDE}
 
 \pagebreak
 
@@ -987,89 +1040,89 @@ Avro defines a \href{http://avro.apache.org/docs/1.7.6/spec.html#order}{sort ord
 Constants such as $\pi$ and $e$ are represented as stateless functions with no arguments.  Specific implementations may choose to replace the function call with its inline value.
 
 \subsubsection{Archimedes' constant $\pi$ (m.pi)}
-\libfcn{m.pi}
+% \libfcn{m.pi}
 
 \subsubsection{Euler's constant $e$ (m.e)}
-\libfcn{m.e}
+% \libfcn{m.e}
 
 \subsection{Common functions}
 
 \subsubsection{Square root (m.sqrt)}
-\libfcn{m.sqrt}
+% \libfcn{m.sqrt}
 
 \subsubsection{Hypotnuse (m.hypot)}
-\libfcn{m.hypot}
+% \libfcn{m.hypot}
 
 \subsubsection{Trigonometric sine (m.sin)}
-\libfcn{m.sin}
+% \libfcn{m.sin}
 
 \subsubsection{Trigonometric cosine (m.cos)}
-\libfcn{m.cos}
+% \libfcn{m.cos}
 
 \subsubsection{Trigonometric tangent (m.tan)}
-\libfcn{m.tan}
+% \libfcn{m.tan}
 
 \subsubsection{Inverse trigonometric sine (m.asin)}
-\libfcn{m.asin}
+% \libfcn{m.asin}
 
 \subsubsection{Inverse trigonometric cosine (m.acos)}
-\libfcn{m.acos}
+% \libfcn{m.acos}
 
 \subsubsection{Inverse trigonometric tangent (m.atan)}
-\libfcn{m.atan}
+% \libfcn{m.atan}
 
 \subsubsection{Robust inverse trigonometric tangent (m.atan2)}
-\libfcn{m.atan2}
+% \libfcn{m.atan2}
 
 \subsubsection{Hyperbolic sine (m.sinh)}
-\libfcn{m.sinh}
+% \libfcn{m.sinh}
 
 \subsubsection{Hyperbolic cosine (m.cosh)}
-\libfcn{m.cosh}
+% \libfcn{m.cosh}
 
 \subsubsection{Hyperbolic tangent (m.tanh)}
-\libfcn{m.tanh}
+% \libfcn{m.tanh}
 
 \subsubsection{Natural exponential (m.exp)}
-\libfcn{m.exp}
+% \libfcn{m.exp}
 
 \subsubsection{Natural exponential minus one (m.expm1)}
-\libfcn{m.expm1}
+% \libfcn{m.expm1}
 
 \subsubsection{Natural logarithm (m.ln)}
-\libfcn{m.ln}
+% \libfcn{m.ln}
 
 \subsubsection{Logarithm base 10 (m.log10)}
-\libfcn{m.log10}
+% \libfcn{m.log10}
 
 \subsubsection{Arbitrary logarithm (m.log)}
-\libfcn{m.log}
+% \libfcn{m.log}
 
 \subsubsection{Natural logarithm of one plus square (m.ln1p)}
-\libfcn{m.ln1p}
+% \libfcn{m.ln1p}
 
 \subsection{Rounding}
 
 \subsubsection{Absolute value (m.abs)}
-\libfcn{m.abs}
+% \libfcn{m.abs}
 
 \subsubsection{Floor (m.floor)}
-\libfcn{m.floor}
+% \libfcn{m.floor}
 
 \subsubsection{Ceiling (m.ceil)}
-\libfcn{m.ceil}
+% \libfcn{m.ceil}
 
 \subsubsection{Simple rounding (m.round)}
-\libfcn{m.round}
+% \libfcn{m.round}
 
 \subsubsection{Unbiased rounding (m.rint)}
-\libfcn{m.rint}
+% \libfcn{m.rint}
 
 \subsubsection{Threshold function (m.signum)}
-\libfcn{m.signum}
+% \libfcn{m.signum}
 
 \subsubsection{Copy sign (m.copysign)}
-\libfcn{m.copysign}
+% \libfcn{m.copysign}
 
 \subsection{Linear algebra}
 
@@ -1084,76 +1137,76 @@ Strings are immutable, so none of the following functions modifies a string in-p
 \subsection{Basic access}
 
 \subsubsection{Length (s.len)}
-\libfcn{s.len}
+% \libfcn{s.len}
 
 \subsubsection{Extract substring (s.substr)}
-\libfcn{s.substr}
+% \libfcn{s.substr}
 
 \subsubsection{Modify substring (s.substrto)}
-\libfcn{s.substrto}
+% \libfcn{s.substrto}
 
 \subsection{Search and replace}
 
 \subsubsection{Contains (s.contains)}
-\libfcn{s.contains}
+% \libfcn{s.contains}
 
 \subsubsection{Count instances (s.count)}
-\libfcn{s.count}
+% \libfcn{s.count}
 
 \subsubsection{Find first index (s.index)}
-\libfcn{s.index}
+% \libfcn{s.index}
 
 \subsubsection{Find last index (s.rindex)}
-\libfcn{s.rindex}
+% \libfcn{s.rindex}
 
 \subsubsection{Check start (s.startswith)}
-\libfcn{s.startswith}
+% \libfcn{s.startswith}
 
 \subsubsection{Check end (s.endswith)}
-\libfcn{s.endswith}
+% \libfcn{s.endswith}
 
 \subsection{Conversions to or from other types}
 
 \subsubsection{Join an array of strings (s.join)}
-\libfcn{s.join}
+% \libfcn{s.join}
 
 \subsubsection{Split into an array of strings (s.split)}
-\libfcn{s.split}
+% \libfcn{s.split}
 
 \subsection{Conversions to or from other strings}
 
 \subsubsection{Concatenate two strings (s.concat)}
-\libfcn{s.concat}
+% \libfcn{s.concat}
 
 \subsubsection{Repeat pattern (s.repeat)}
-\libfcn{s.repeat}
+% \libfcn{s.repeat}
 
 \subsubsection{Lowercase (s.lower)}
-\libfcn{s.lower}
+% \libfcn{s.lower}
 
 \subsubsection{Uppercase (s.upper)}
-\libfcn{s.upper}
+% \libfcn{s.upper}
 
 \subsubsection{Left-strip (s.lstrip)}
-\libfcn{s.lstrip}
+% \libfcn{s.lstrip}
 
 \subsubsection{Right-strip (s.rstrip)}
-\libfcn{s.rstrip}
+% \libfcn{s.rstrip}
 
 \subsubsection{Strip both ends (s.strip)}
-\libfcn{s.strip}
+% \libfcn{s.strip}
 
 \subsubsection{Replace all matches (s.replaceall)}
-\libfcn{s.replaceall}
+% \libfcn{s.replaceall}
 
 \subsubsection{Replace first match (s.replacefirst)}
-\libfcn{s.replacefirst}
+% \libfcn{s.replacefirst}
 
 \subsubsection{Replace last match (s.replacelast)}
-\libfcn{s.replacelast}
+% \libfcn{s.replacelast}
 
 \subsubsection{Translate characters (s.translate)}
-\libfcn{s.translate}
+% \libfcn{s.translate}
 
 \subsection{Regular Expressions}
 
@@ -1166,140 +1219,140 @@ and stemming
 \subsection{Basic access}
 
 \subsubsection{Length (a.len)}
-\libfcn{a.len}
+% \libfcn{a.len}
 
 \subsubsection{Extract subsequence (a.subseq)}
-\libfcn{a.subseq}
+% \libfcn{a.subseq}
 
 \subsubsection{Modify subsequence (a.subseqto)}
-\libfcn{a.subseqto}
+% \libfcn{a.subseqto}
 
 \subsection{Search and replace}
 
 \subsubsection{Contains (a.contains)}
-\libfcn{a.contains}
+% \libfcn{a.contains}
 
 \subsubsection{Count instances (a.count)}
-\libfcn{a.count}
+% \libfcn{a.count}
 
 \subsubsection{Count instances by predicate (a.countPredicate)}
 libfcn{a.countPredicate}
 
 \subsubsection{Find first index (a.index)}
-\libfcn{a.index}
+% \libfcn{a.index}
 
 \subsubsection{Find last index (a.rindex)}
-\libfcn{a.rindex}
+% \libfcn{a.rindex}
 
 \subsubsection{Check start (a.startswith)}
-\libfcn{a.startswith}
+% \libfcn{a.startswith}
 
 \subsubsection{Check end (a.endswith)}
-\libfcn{a.endswith}
+% \libfcn{a.endswith}
 
 \subsection{Manipulation}
 
 \subsubsection{Concatenate two arrays (a.concat)}
-\libfcn{a.concat}
+% \libfcn{a.concat}
 
 \subsubsection{Append (a.append)}
-\libfcn{a.append}
+% \libfcn{a.append}
 
 \subsubsection{Insert or prepend (a.insert)}
-\libfcn{a.insert}
+% \libfcn{a.insert}
 
 \subsubsection{Replace item (a.replace)}
-\libfcn{a.replace}
+% \libfcn{a.replace}
 
 \subsubsection{Remove item (a.remove)}
-\libfcn{a.remove}
+% \libfcn{a.remove}
 
 \subsection{Reordering}
 
 \subsubsection{Sort (a.sort)}
-\libfcn{a.sort}
+% \libfcn{a.sort}
 
 \subsubsection{Sort with a less-than function (a.sortLT)}
-\libfcn{a.sortLT}
+% \libfcn{a.sortLT}
 
 \subsubsection{Randomly shuffle array (a.shuffle)}
-\libfcn{a.shuffle}
+% \libfcn{a.shuffle}
 
 \subsubsection{Reverse order (a.reverse)}
-\libfcn{a.reverse}
+% \libfcn{a.reverse}
 
 \subsection{Extreme values}
 
 \subsubsection{Maximum of all values (a.max)}
-\libfcn{a.max}
+% \libfcn{a.max}
 
 \subsubsection{Minimum of all values (a.min)}
-\libfcn{a.min}
+% \libfcn{a.min}
 
 \subsubsection{Maximum with a less-than function (a.maxLT)}
-\libfcn{a.maxLT}
+% \libfcn{a.maxLT}
 
 \subsubsection{Minimum with a less-than function (a.minLT)}
-\libfcn{a.minLT}
+% \libfcn{a.minLT}
 
 \subsubsection{Maximum $N$ items (a.maxN)}
-\libfcn{a.maxN}
+% \libfcn{a.maxN}
 
 \subsubsection{Minimum $N$ items (a.minN)}
-\libfcn{a.minN}
+% \libfcn{a.minN}
 
 \subsubsection{Maximum $N$ with a less-than function (a.maxNLT)}
-\libfcn{a.maxNLT}
+% \libfcn{a.maxNLT}
 
 \subsubsection{Minimum $N$ with a less-than function (a.minNLT)}
-\libfcn{a.minNLT}
+% \libfcn{a.minNLT}
 
 \subsubsection{Argument maximum (a.argmax)}
-\libfcn{a.argmax}
+% \libfcn{a.argmax}
 
 \subsubsection{Argument minimum (a.argmin)}
-\libfcn{a.argmin}
+% \libfcn{a.argmin}
 
 \subsubsection{Argument maximum with a less-than function (a.argmaxLT)}
-\libfcn{a.argmaxLT}
+% \libfcn{a.argmaxLT}
 
 \subsubsection{Argument minimum with a less-than function (a.argminLT)}
-\libfcn{a.argminLT}
+% \libfcn{a.argminLT}
 
 \subsubsection{Maximum $N$ arguments (a.argmaxN)}
-\libfcn{a.argmaxN}
+% \libfcn{a.argmaxN}
 
 \subsubsection{Minimum $N$ arguments (a.argminN)}
-\libfcn{a.argminN}
+% \libfcn{a.argminN}
 
 \subsubsection{Maximum $N$ arguments with a less-than function (a.argmaxNLT)}
-\libfcn{a.argmaxNLT}
+% \libfcn{a.argmaxNLT}
 
 \subsubsection{Minimum $N$ arguments with a less-than function (a.argminNLT)}
-\libfcn{a.argminNLT}
+% \libfcn{a.argminNLT}
 
 \subsection{Numerical combinations}
 
 \subsubsection{Add all array values (a.sum)}
-\libfcn{a.sum}
+% \libfcn{a.sum}
 
 \subsubsection{Multiply all array values (a.product)}
-\libfcn{a.product}
+% \libfcn{a.product}
 
 \subsubsection{Sum of logarithms (a.lnsum)}
-\libfcn{a.lnsum}
+% \libfcn{a.lnsum}
 
 \subsubsection{Arithmetic mean (a.mean)}
-\libfcn{a.mean}
+% \libfcn{a.mean}
 
 \subsubsection{Geometric mean (a.geomean)}
-\libfcn{a.geomean}
+% \libfcn{a.geomean}
 
 \subsubsection{Median (a.median)}
-\libfcn{a.median}
+% \libfcn{a.median}
 
 \subsubsection{Mode, or most common value (a.mode)}
-\libfcn{a.mode}
+% \libfcn{a.mode}
 
 \hypertarget{hsec:set-like}{}
 \subsection{Set or set-like functions}
@@ -1308,88 +1361,88 @@ libfcn{a.countPredicate}
 PFA does not have a set datatype, but arrays can be interpreted as sets with the following functions.
 
 \subsubsection{Distinct items (a.distinct)}
-\libfcn{a.distinct}
+% \libfcn{a.distinct}
 
 \subsubsection{Set equality (a.seteq)}
-\libfcn{a.seteq}
+% \libfcn{a.seteq}
 
 \subsubsection{Union (a.union)}
-\libfcn{a.union}
+% \libfcn{a.union}
 
 \subsubsection{Intersection (a.intersect)}
-\libfcn{a.intersect}
+% \libfcn{a.intersect}
 
 \subsubsection{Set difference (a.diff)}
-\libfcn{a.diff}
+% \libfcn{a.diff}
 
 \subsubsection{Symmetric set difference (a.symdiff)}
-\libfcn{a.symdiff}
+% \libfcn{a.symdiff}
 
 \subsubsection{Subset check (a.subset)}
-\libfcn{a.subset}
+% \libfcn{a.subset}
 
 \subsubsection{Disjointness check (a.disjoint)}
-\libfcn{a.disjoint}
+% \libfcn{a.disjoint}
 
 \subsection{Functional programming}
 
 \subsubsection{Map array items with function (a.map)}
-\libfcn{a.map}
+% \libfcn{a.map}
 
 \subsubsection{Filter array items with function (a.filter)}
-\libfcn{a.filter}
+% \libfcn{a.filter}
 
 \subsubsection{Filter and map (a.filtermap)}
-\libfcn{a.filtermap}
+% \libfcn{a.filtermap}
 
 \subsubsection{Map and flatten (a.flatmap)}
-\libfcn{a.flatmap}
+% \libfcn{a.flatmap}
 
 \subsubsection{Reduce array items to a single value (a.reduce)}
-\libfcn{a.reduce}
+% \libfcn{a.reduce}
 
 \subsubsection{Right-to-left reduce (a.reduceright)}
-\libfcn{a.reduceright}
+% \libfcn{a.reduceright}
 
 \subsubsection{Fold array items to another type (a.fold)}
-\libfcn{a.fold}
+% \libfcn{a.fold}
 
 \subsubsection{Right-to-left fold (a.foldright)}
-\libfcn{a.foldright}
+% \libfcn{a.foldright}
 
 \subsubsection{Take items until predicate is false (a.takeWhile)}
-\libfcn{a.takeWhile}
+% \libfcn{a.takeWhile}
 
 \subsubsection{Drop items until predicate is true (a.dropWhile)}
-\libfcn{a.dropWhile}
+% \libfcn{a.dropWhile}
 
 \subsection{Functional tests}
 
 \subsubsection{Existential check, $\exists$ (a.any)}
-\libfcn{a.any}
+% \libfcn{a.any}
 
 \subsubsection{Univeral check, $\forall$ (a.all)}
-\libfcn{a.all}
+% \libfcn{a.all}
 
 \subsubsection{Pairwise check of two arrays (a.corresponds)}
-\libfcn{a.corresponds}
+% \libfcn{a.corresponds}
 
 \subsection{Restructuring}
 
 \subsubsection{Sliding window (a.slidingWindow)}
-\libfcn{a.slidingWindow}
+% \libfcn{a.slidingWindow}
 
 \subsubsection{Unique combinations of a fixed size (a.combinations)}
-\libfcn{a.combinations}
+% \libfcn{a.combinations}
 
 \subsubsection{Permutations (a.permutations)}
-\libfcn{a.permutations}
+% \libfcn{a.permutations}
 
 \subsubsection{Flatten array (a.flatten)}
-\libfcn{a.flatten}
+% \libfcn{a.flatten}
 
 \subsubsection{Group items by category (a.groupby)}
-\libfcn{a.groupby}
+% \libfcn{a.groupby}
 
 \pagebreak
 
@@ -1412,10 +1465,10 @@ PFA does not have a set datatype, but arrays can be interpreted as sets with the
 \label{sec:impute}
 
 \subsubsection{Skip record (impute.errorOnNull)}
-\libfcn{impute.errorOnNull}
+% \libfcn{impute.errorOnNull}
 
 \subsubsection{Replace with default (impute.defaultOnNull)}
-\libfcn{impute.defaultOnNull}
+% \libfcn{impute.defaultOnNull}
 
 \pagebreak
 
@@ -1434,10 +1487,10 @@ CUSUM
 \subsection{Sample statistics}
 
 \subsubsection{Update aggregated mean (stat.sample.updateMean)}
-\libfcn{stat.sample.updateMean}
+% \libfcn{stat.sample.updateMean}
 
 \subsubsection{Compute aggregated mean (stat.sample.mean)}
-\libfcn{stat.sample.mean}
+% \libfcn{stat.sample.mean}
 
 accumulated mean, median(?)
 
@@ -1448,10 +1501,10 @@ accumulated mean, median(?)
 \subsection{Decision and regression Trees}
 
 \subsubsection{Tree walk with simple predicates (model.tree.simpleWalk)}
-\libfcn{model.tree.simpleWalk}
+% \libfcn{model.tree.simpleWalk}
 
 \subsubsection{Tree walk with user-defined predicates (model.tree.predicateWalk)}
-\libfcn{model.tree.predicateWalk}
+% \libfcn{model.tree.predicateWalk}
 
 \subsection{Cluster models}
 
