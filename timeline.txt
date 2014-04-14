@@ -91,6 +91,8 @@
 2014-04-10:
 2014-04-11:   Finished the Avro type subsections.
 2014-04-12:   Finished the types section and symbols & scope.
+2014-04-13:
+2014-04-14:   Heavily revised the symbols & scope section and finished the functions section.
 
 
 Implement cell and pool roll-back on exception!!!
