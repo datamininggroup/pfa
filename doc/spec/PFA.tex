@@ -247,6 +247,8 @@ A pool-specification is a JSON object with the following fields.
 \item[\PFAc rollback:] An optional boolean specifying whether this pool should be rolled back to the state it had at the beginning of an {\PFAc action} if an \hyperlink{hsec:exceptions}{exception} occurs during the {\PFAc action}.  The default is {\PFAc false}, and {\PFAc shared} and {\PFAc rollback} are mututally incompatible: they cannot both be {\PFAc true}.
 \end{allowedfields}
 
+Cell and pool names must match the following pattern: {\PFAc [A-Za-z\_][A-Za-z0-9\_]*} (the first character must be a letter or underscore; subsequent characters, if they exist, may also be numbers).  Cells and pools do not share a namespace with each other or with symbols or functions.
+
 A complete explanation of cells and pools is given in \hyperlink{hsec:state}{Sec.~\ref{sec:state}}.
 
 \subsection{Locator marks}
@@ -719,7 +721,7 @@ Some forms also do not allow new variable declarations.  One such example is the
 
 The sealed-from-above or sealed-within status of scopes within each special form is specified in \hyperlink{hsec:expressions}{Sec.~\ref{sec:expressions}}.
 
-Symbol names must match the following pattern: {\PFAc [A-Za-z\_][A-Za-z0-9\_]*} (the first character must be a letter or underscore; subsequent characters, if they exist, may also be numbers).
+Symbol names must match the following pattern: {\PFAc [A-Za-z\_][A-Za-z0-9\_]*} (the first character must be a letter or underscore; subsequent characters, if they exist, may also be numbers).  Symbol names do not share a namespace with cells, pools, or functions.
 
 \hypertarget{hsec:immutable}{}
 \subsection{Immutable data structures}
@@ -802,29 +804,152 @@ PFA does not define any particular memory management technique.  The language ha
 \section{User-defined functions}
 \label{sec:user-defined-fcns}
 
-New functions can be defined in a PFA document and can be called as though they were library functions.  
+A PFA document may define new functions that are called as though they were library functions.  There are two differences between these ``user-defined'' functions and the library functions specified by PFA:
+\begin{itemize}
+\item user-defined functions are prefixed by ``{\PFAc u.}'' when called (in the ``u'' branch of the module tree);
+\item their signatures must consist of specific Avro types, since only library functions can have generic signatures (\hyperlink{hsec:generic-signatures}{see Sec.~\ref{sec:generic-signatures}}).
+\end{itemize}
 
+The scope of all functions, including user-defined functions, is global.  Functions are also static; they cannot be declared at runtime.  They may be declared in the {\PFAc fcns} top-level field, which makes their global, static nature manifest, or they may be declared inline in the argument list of a special form or library function that accepts a function as an argument.
 
+In the latter case, the user-defined function has no name (an ``anonymous function'') and some features of a lexical closure.  It has access to symbols defined in an enclosing scope (it ``closes over'' those symbols), but this access is limited to reading only.  A PFA system may implement this by internally adding the closed symbols to its parameter list.  In all other aspects, an anonymous function behaves like a globally defined function and may be implemented as one (with an auto-generated name).
 
-Function names must match the following pattern: {\PFAc [A-Za-z\_]([A-Za-z0-9\_]|\textbackslash.[A-Za-z][A-Za-z0-9\_]*)*} (consists of period-delimited words in which each word starts with a letter or underscore; subsequent characters, if they exist, may also be numbers; there must be at least one word).
+Function names must match the following: {\PFAc [A-Za-z\_]([A-Za-z0-9\_]|\textbackslash.[A-Za-z][A-Za-z0-9\_]*)*} (consists of period-delimited words in which each word starts with a letter or underscore; subsequent characters, if they exist, may also be numbers; there must be at least one word).  Functions do not share a namespace with cells, pools, or symbols.
 
-(\hyperlink{hsec:generic-signatures}{see Sec.~\ref{sec:generic-signatures}})
+\subsection{No first-class functions}
 
+Some languages have first-class functions, meaning that functions are ``first-class citizens'' and can be treated like any other data structure.  In PFA, functions are second-class, but not coach.  Similar to first-class functions, they may be passed as arguments to other functions (specific library functions that accept functions as arguments) and they may be defined inline as anonymous functions that close over local variables.  Unlike first-class functions, they cannot be assigned to symbols or be returned from functions, and the closures have read-only access to the variables they close over.
 
+These restrictions make it possible to implement PFA functions in very limited environments and to be able to fully analyze the function call graph without executing the scoring engine (thereby statically detecting recursion, if necessary).  If, instead, a function could be assigned to a symbol, then it could be changed at runtime and not be predicted statically.  If an inline function could reassign symbols in its scope, then it could not be internally implemented as a simple function.
+
+These rules provide enough flexibility to implement callbacks in library functions, but not so much as to make the call graph unpredictable or make the scoring engine impossible to implement in environments that only accept inline-expanded functions.  Pascal and Algol are two historical examples of languages with the same set of rules.
+
+\subsection{Syntax for declaring new functions}
+
+User functions are declared with the ``fcndef'' special form.  If ``fcndef'' appears in an argument list, it defines an anonymous function.  If it appears as a member value for a name-value pair in the {\PFAc fcns} top-level field, it defines a named function.
 
 \hypertarget{hsec:fcndef}{}
 \label{form:fcndef}
+\begin{minipage}{\linewidth}
+The ``fcndef'' special form has the following syntax.
+\begin{center}
+\begin{minipage}{0.9\linewidth}
+\mbox{\PFAc \{"params":$\!$ [\{par1:$\!$ type1\}, \{par2:$\!$ type2\}, ...], "ret":$\!$ retType, "do":$\!$ expr\} \vspace{0.2 cm} \\} \vspace{0.2 cm} \\
+\rm \begin{tabular}{p{0.01\linewidth} l p{0.8\linewidth}}
+& \PFAc par1 \rm & string, name of first parameter \\
+& \PFAc type1 \rm & Avro schema, type of first parameter \\
+& \PFAc par2 \rm & string, name of second parameter \\
+& \PFAc type2 \rm & Avro schema, type of second parameter \\
+& \ldots & \\
+& \PFAc retType \rm & Avro schema, return type \\
+& \PFAc expr \rm & expression or JSON array of expressions \\
+\end{tabular}
+\end{minipage}
+\end{center}
+\end{minipage}
 
-        %% else if (keys == Set("params", "ret", "do"))                 FcnDef(_params, _ret, _body, Some(pos(dot, _at)))
+The {\PFAc params}, {\PFAc ret}, and {\PFAc do} fields must be present, though {\PFAc params} could be an empty JSON array (no parameters).  The individual parameters are always represented by single-member JSON objects: the name is the parameter name (used in the function body), and the value is its type.
+
+The {\PFAc do} field is the function body, and its return value is the last or only expression it contains.  The {\PFAc do} field must contain at least one expression (it must not be an empty JSON array).
+
+If this form appears in the {\PFAc fcns} top-level field, the function name (without its namespace qualifier, ``{\PFAc u.}'') is given by the associated member name.  For example,
+\begin{json}
+"fcns": {
+    "square": {"params": [{"x": "double"}], "ret": "double", "do": {"**": ["x", 2]}},
+    "cube": {"params": [{"x": "double"}], "ret": "double", "do": {"**": ["x", 3]}}
+}
+\end{json}
+defines {\PFAc u.square} (which squares the input value) and {\PFAc u.cube} (which cubes the input value).  The number 5 may now be squared by {\PFAc \{"u.square":$\!$ 5\}} or {\PFAc \{"u.square":$\!$ [5]\}}.
+
+This Fibonacci number algorithm demonstrates recursion.
+\begin{json}
+"fcns": {
+    "fib": {"params": [{"n": "int"}], "ret": "int", "do":
+        {"cond": {"if": {"==": ["n", 0]}, "then": 0},
+                 {"if": {"==": ["n", 1]}, "then": 1},
+         "else": {"+": [
+             {"u.fib": [{"-": ["n", 1]}]},
+             {"u.fib": [{"-": ["n", 2]}]}
+         ]}}}
+}
+\end{json}
+
+\begin{minipage}{\linewidth}
+This iterative Fibonacci number algorithm illustrates a multi-line {\PFAc do} field.
+\begin{json}
+"fcns": {
+    "fib": {"params": [{"n": "int"}], "ret": "int", "do": [
+        {"let": {"now": 0,
+                 "next": 1}},
+        {"for": {"i": "n"},
+         "until": {"<": ["i", 0]},
+         "step": {"i": {"-": ["i", 1]}},
+         "seq": true,
+         "do": [
+             {"let": {"tmp": {"+": ["now", "next"]}}},
+             {"set": {"now": "next",
+                      "next": "tmp"}}
+         ]},
+         {"if": {"==": ["n", 0]},
+          "then": 0,
+          "else": "next"}
+    ]}
+}
+\end{json}
+\end{minipage}
+
+\subsection{Syntax for referencing functions}
+
+Named functions are referenced with the ``fcnref'' special form, and anonymous functions are both declared and referenced with an inline ``fcndef'' special form (see above).
 
 \hypertarget{hsec:fcnref}{}
 \label{form:fcnref}
 
-        %% else if (keys == Set("fcnref"))                              FcnRef(_fcnref, Some(pos(dot, _at)))
+\begin{minipage}{\linewidth}
+The ``fcnref'' special form has the following syntax.
+\begin{center}
+\begin{minipage}{0.9\linewidth}
+\mbox{\PFAc \{"fcnref":$\!$ name\} \vspace{0.2 cm} \\} \vspace{0.2 cm} \\
+\rm \begin{tabular}{p{0.01\linewidth} l p{0.8\linewidth}}
+& \PFAc name \rm & string, the name of the function \\
+\end{tabular}
+\end{minipage}
+\end{center}
+\end{minipage}
 
-\subsection{Syntax and scope}
+The {\PFAc name} string must be an exact name of the function, not an expression that can be evaluated at runtime.
 
-\subsection{Anonymous callbacks and function references}
+Here is a complete PFA document that increments and returns a counter every time it is pinged (the scoring engine is executed with {\PFAc null} input).
+\begin{json}
+{"input": "null",
+ "output": "int",
+ "action": [
+     {"cell": "counter", "to": {"fcnref": "u.increment"}},
+     {"cell": "counter"}],
+ "cells":
+     {"counter": {"type": "int", "init": 0, "shared": true}},
+ "fcns":
+     {"increment":
+         {"params": [{"x": "int"}],
+          "ret": "int",
+          "do": {"+": ["x", 1]}}}
+}
+\end{json}
+The increment is defined in a function so that getting the counter value, incrementing it, and putting the new value in the cell are all one atomic action--- other update attempts block until this one is done.  Without ensuring atomicity, the counter could miss an update when a second update attempt reads {\PFAc counter} before the first writes its new value.
+
+The same operation could be performed with an inline ``fcndef''.  In the example below, the scoring engine adds the input value to {\PFAc counter} every time it is called.  Because of its location, the anonymous function can close over the {\PFAc input} symbol, which exists in the {\PFAc action} block but not in {\PFAc fcns}.
+\begin{json}
+{"input": "int",
+ "output": "int",
+ "action": [
+     {"cell": "counter", "to": {"params": [{"x": "int"}],
+                                "ret": "int",
+                                "do": {"+": ["x", "input"]}}},
+     {"cell": "counter"}],
+ "cells":
+     {"counter": {"type": "int", "init": 0, "shared": true}}
+}
+\end{json}
 
 \pagebreak
 
@@ -960,90 +1085,90 @@ Special forms and ordinary function calls
 \subsection{Basic arithmetic}
 
 \subsubsection{Addition of two values ($+$)}
-% \libfcn{+}
+\libfcn{+}
 
 \subsubsection{Subtraction ($-$)}
-% \libfcn{-}
+\libfcn{-}
 
 \subsubsection{Multiplication of two values (*)}
-% \libfcn{*}
+\libfcn{*}
 
 \subsubsection{Floating-point division (/)}
-% \libfcn{/}
+\libfcn{/}
 
 \subsubsection{Integer division (//)}
-% \libfcn{//}
+\libfcn{//}
 
 \subsubsection{Negation (u$-$)}
-% \libfcn{u-}
+\libfcn{u-}
 
 \subsubsection{Modulo (\%)}
-% \libfcn{\%}
+\libfcn{\%}
 
 \subsubsection{Remainder (\%\%)}
-% \libfcn{\%\%}
+\libfcn{\%\%}
 
 \subsubsection{Raising to a power (**)}
-% \libfcn{**}
+\libfcn{**}
 
 \subsection{Comparison operators}
 
 Avro defines a \href{http://avro.apache.org/docs/1.7.6/spec.html#order}{sort order} for every pair of values with a compatible type, so any two objects of compatible type can be compared in PFA.
 
 \subsubsection{General comparision (cmp)}
-% \libfcn{cmp}
+\libfcn{cmp}
 
 \subsubsection{Equality (==)}
-% \libfcn{==}
+\libfcn{==}
 
 \subsubsection{Inequality (!=)}
-% \libfcn{!=}
+\libfcn{!=}
 
 \subsubsection{Less than (<)}
-% \libfcn{<}
+\libfcn{<}
 
 \subsubsection{Less than or equal to (<=)}
-% \libfcn{<=}
+\libfcn{<=}
 
 \subsubsection{Greater than (>)}
-% \libfcn{>}
+\libfcn{>}
 
 \subsubsection{Greater than or equal to (>=)}
-% \libfcn{>=}
+\libfcn{>=}
 
 \subsubsection{Maximum of two values (max)}
-% \libfcn{max}
+\libfcn{max}
 
 \subsubsection{Minimum of two values (min)}
-% \libfcn{min}
+\libfcn{min}
 
 \subsection{Logical operators}
 
 \subsubsection{Logical and (and)}
-% \libfcn{and}
+\libfcn{and}
 
 \subsubsection{Logical or (or)}
-% \libfcn{or}
+\libfcn{or}
 
 \subsubsection{Logical xor (xor)}
-% \libfcn{xor}
+\libfcn{xor}
 
 \subsubsection{Logical not (not)}
-% \libfcn{not}
+\libfcn{not}
 
 \subsection{Bitwise arithmetic}
 
 \subsubsection{Bitwise and (\&)}
-% \libfcn{\&}
+\libfcn{\&}
 
 \subsubsection{Bitwise or (|)}
-% \libfcn{|}
+\libfcn{|}
 
 \subsubsection{Bitwise xor (\^{})}
-% \libfcn{\^{}}
+\libfcn{\^{}}
 
 \subsubsection{Bitwise not (\textasciitilde{})}
-% \libfcn{TILDE}
+\libfcn{TILDE}
 
 \pagebreak
 
@@ -1054,89 +1179,89 @@ Avro defines a \href{http://avro.apache.org/docs/1.7.6/spec.html#order}{sort ord
 Constants such as $\pi$ and $e$ are represented as stateless functions with no arguments.  Specific implementations may choose to replace the function call with its inline value.
 
 \subsubsection{Archimedes' constant $\pi$ (m.pi)}
-% \libfcn{m.pi}
+\libfcn{m.pi}
 
 \subsubsection{Euler's constant $e$ (m.e)}
-% \libfcn{m.e}
+\libfcn{m.e}
 
 \subsection{Common functions}
 
 \subsubsection{Square root (m.sqrt)}
-% \libfcn{m.sqrt}
+\libfcn{m.sqrt}
 
 \subsubsection{Hypotnuse (m.hypot)}
-% \libfcn{m.hypot}
+\libfcn{m.hypot}
 
 \subsubsection{Trigonometric sine (m.sin)}
-% \libfcn{m.sin}
+\libfcn{m.sin}
 
 \subsubsection{Trigonometric cosine (m.cos)}
-% \libfcn{m.cos}
+\libfcn{m.cos}
 
 \subsubsection{Trigonometric tangent (m.tan)}
-% \libfcn{m.tan}
+\libfcn{m.tan}
 
 \subsubsection{Inverse trigonometric sine (m.asin)}
-% \libfcn{m.asin}
+\libfcn{m.asin}
 
 \subsubsection{Inverse trigonometric cosine (m.acos)}
-% \libfcn{m.acos}
+\libfcn{m.acos}
 
 \subsubsection{Inverse trigonometric tangent (m.atan)}
-% \libfcn{m.atan}
+\libfcn{m.atan}
 
 \subsubsection{Robust inverse trigonometric tangent (m.atan2)}
-% \libfcn{m.atan2}
+\libfcn{m.atan2}
 
 \subsubsection{Hyperbolic sine (m.sinh)}
-% \libfcn{m.sinh}
+\libfcn{m.sinh}
 
 \subsubsection{Hyperbolic cosine (m.cosh)}
-% \libfcn{m.cosh}
+\libfcn{m.cosh}
 
 \subsubsection{Hyperbolic tangent (m.tanh)}
-% \libfcn{m.tanh}
+\libfcn{m.tanh}
 
 \subsubsection{Natural exponential (m.exp)}
-% \libfcn{m.exp}
+\libfcn{m.exp}
 
 \subsubsection{Natural exponential minus one (m.expm1)}
-% \libfcn{m.expm1}
+\libfcn{m.expm1}
 
 \subsubsection{Natural logarithm (m.ln)}
-% \libfcn{m.ln}
+\libfcn{m.ln}
 
 \subsubsection{Logarithm base 10 (m.log10)}
-% \libfcn{m.log10}
+\libfcn{m.log10}
 
 \subsubsection{Arbitrary logarithm (m.log)}
-% \libfcn{m.log}
+\libfcn{m.log}
 
 \subsubsection{Natural logarithm of one plus square (m.ln1p)}
-% \libfcn{m.ln1p}
+\libfcn{m.ln1p}
 
 \subsection{Rounding}
 
 \subsubsection{Absolute value (m.abs)}
-% \libfcn{m.abs}
+\libfcn{m.abs}
 
 \subsubsection{Floor (m.floor)}
-% \libfcn{m.floor}
+\libfcn{m.floor}
 
 \subsubsection{Ceiling (m.ceil)}
-% \libfcn{m.ceil}
+\libfcn{m.ceil}
 
 \subsubsection{Simple rounding (m.round)}
-% \libfcn{m.round}
+\libfcn{m.round}
 
 \subsubsection{Unbiased rounding (m.rint)}
-% \libfcn{m.rint}
+\libfcn{m.rint}
 
 \subsubsection{Threshold function (m.signum)}
-% \libfcn{m.signum}
+\libfcn{m.signum}
 
 \subsubsection{Copy sign (m.copysign)}
-% \libfcn{m.copysign}
+\libfcn{m.copysign}
 
 \subsection{Linear algebra}
 
@@ -1151,76 +1276,76 @@ Strings are immutable, so none of the following functions modifies a string in-p
 \subsection{Basic access}
 
 \subsubsection{Length (s.len)}
-% \libfcn{s.len}
+\libfcn{s.len}
 
 \subsubsection{Extract substring (s.substr)}
-% \libfcn{s.substr}
+\libfcn{s.substr}
 
 \subsubsection{Modify substring (s.substrto)}
-% \libfcn{s.substrto}
+\libfcn{s.substrto}
 
 \subsection{Search and replace}
 
 \subsubsection{Contains (s.contains)}
-% \libfcn{s.contains}
+\libfcn{s.contains}
 
 \subsubsection{Count instances (s.count)}
-% \libfcn{s.count}
+\libfcn{s.count}
 
 \subsubsection{Find first index (s.index)}
-% \libfcn{s.index}
+\libfcn{s.index}
 
 \subsubsection{Find last index (s.rindex)}
-% \libfcn{s.rindex}
+\libfcn{s.rindex}
 
 \subsubsection{Check start (s.startswith)}
-% \libfcn{s.startswith}
+\libfcn{s.startswith}
 
 \subsubsection{Check end (s.endswith)}
-% \libfcn{s.endswith}
+\libfcn{s.endswith}
 
 \subsection{Conversions to or from other types}
 
 \subsubsection{Join an array of strings (s.join)}
-% \libfcn{s.join}
+\libfcn{s.join}
 
 \subsubsection{Split into an array of strings (s.split)}
-% \libfcn{s.split}
+\libfcn{s.split}
 
 \subsection{Conversions to or from other strings}
 
 \subsubsection{Concatenate two strings (s.concat)}
-% \libfcn{s.concat}
+\libfcn{s.concat}
 
 \subsubsection{Repeat pattern (s.repeat)}
-% \libfcn{s.repeat}
+\libfcn{s.repeat}
 
 \subsubsection{Lowercase (s.lower)}
-% \libfcn{s.lower}
+\libfcn{s.lower}
 
 \subsubsection{Uppercase (s.upper)}
-% \libfcn{s.upper}
+\libfcn{s.upper}
 
 \subsubsection{Left-strip (s.lstrip)}
-% \libfcn{s.lstrip}
+\libfcn{s.lstrip}
 
 \subsubsection{Right-strip (s.rstrip)}
-% \libfcn{s.rstrip}
+\libfcn{s.rstrip}
 
 \subsubsection{Strip both ends (s.strip)}
-% \libfcn{s.strip}
+\libfcn{s.strip}
 
 \subsubsection{Replace all matches (s.replaceall)}
-% \libfcn{s.replaceall}
+\libfcn{s.replaceall}
 
 \subsubsection{Replace first match (s.replacefirst)}
-% \libfcn{s.replacefirst}
+\libfcn{s.replacefirst}
 
 \subsubsection{Replace last match (s.replacelast)}
-% \libfcn{s.replacelast}
+\libfcn{s.replacelast}
 
 \subsubsection{Translate characters (s.translate)}
-% \libfcn{s.translate}
+\libfcn{s.translate}
 
 \subsection{Regular Expressions}
 
@@ -1233,140 +1358,140 @@ and stemming
 \subsection{Basic access}
 
 \subsubsection{Length (a.len)}
-% \libfcn{a.len}
+\libfcn{a.len}
 
 \subsubsection{Extract subsequence (a.subseq)}
-% \libfcn{a.subseq}
+\libfcn{a.subseq}
 
 \subsubsection{Modify subsequence (a.subseqto)}
-% \libfcn{a.subseqto}
+\libfcn{a.subseqto}
 
 \subsection{Search and replace}
 
 \subsubsection{Contains (a.contains)}
-% \libfcn{a.contains}
+\libfcn{a.contains}
 
 \subsubsection{Count instances (a.count)}
-% \libfcn{a.count}
+\libfcn{a.count}
 
 \subsubsection{Count instances by predicate (a.countPredicate)}
 libfcn{a.countPredicate}
 
 \subsubsection{Find first index (a.index)}
-% \libfcn{a.index}
+\libfcn{a.index}
 
 \subsubsection{Find last index (a.rindex)}
-% \libfcn{a.rindex}
+\libfcn{a.rindex}
 
 \subsubsection{Check start (a.startswith)}
-% \libfcn{a.startswith}
+\libfcn{a.startswith}
 
 \subsubsection{Check end (a.endswith)}
-% \libfcn{a.endswith}
+\libfcn{a.endswith}
 
 \subsection{Manipulation}
 
 \subsubsection{Concatenate two arrays (a.concat)}
-% \libfcn{a.concat}
+\libfcn{a.concat}
 
 \subsubsection{Append (a.append)}
-% \libfcn{a.append}
+\libfcn{a.append}
 
 \subsubsection{Insert or prepend (a.insert)}
-% \libfcn{a.insert}
+\libfcn{a.insert}
 
 \subsubsection{Replace item (a.replace)}
-% \libfcn{a.replace}
+\libfcn{a.replace}
 
 \subsubsection{Remove item (a.remove)}
-% \libfcn{a.remove}
+\libfcn{a.remove}
 
 \subsection{Reordering}
 
 \subsubsection{Sort (a.sort)}
-% \libfcn{a.sort}
+\libfcn{a.sort}
 
 \subsubsection{Sort with a less-than function (a.sortLT)}
-% \libfcn{a.sortLT}
+\libfcn{a.sortLT}
 
 \subsubsection{Randomly shuffle array (a.shuffle)}
-% \libfcn{a.shuffle}
+\libfcn{a.shuffle}
 
 \subsubsection{Reverse order (a.reverse)}
-% \libfcn{a.reverse}
+\libfcn{a.reverse}
 
 \subsection{Extreme values}
 
 \subsubsection{Maximum of all values (a.max)}
-% \libfcn{a.max}
+\libfcn{a.max}
 
 \subsubsection{Minimum of all values (a.min)}
-% \libfcn{a.min}
+\libfcn{a.min}
 
 \subsubsection{Maximum with a less-than function (a.maxLT)}
-% \libfcn{a.maxLT}
+\libfcn{a.maxLT}
 
 \subsubsection{Minimum with a less-than function (a.minLT)}
-% \libfcn{a.minLT}
+\libfcn{a.minLT}
 
 \subsubsection{Maximum $N$ items (a.maxN)}
-% \libfcn{a.maxN}
+\libfcn{a.maxN}
 
 \subsubsection{Minimum $N$ items (a.minN)}
-% \libfcn{a.minN}
+\libfcn{a.minN}
 
 \subsubsection{Maximum $N$ with a less-than function (a.maxNLT)}
-% \libfcn{a.maxNLT}
+\libfcn{a.maxNLT}
 
 \subsubsection{Minimum $N$ with a less-than function (a.minNLT)}
-% \libfcn{a.minNLT}
+\libfcn{a.minNLT}
 
 \subsubsection{Argument maximum (a.argmax)}
-% \libfcn{a.argmax}
+\libfcn{a.argmax}
 
 \subsubsection{Argument minimum (a.argmin)}
-% \libfcn{a.argmin}
+\libfcn{a.argmin}
 
 \subsubsection{Argument maximum with a less-than function (a.argmaxLT)}
-% \libfcn{a.argmaxLT}
+\libfcn{a.argmaxLT}
 
 \subsubsection{Argument minimum with a less-than function (a.argminLT)}
-% \libfcn{a.argminLT}
+\libfcn{a.argminLT}
 
 \subsubsection{Maximum $N$ arguments (a.argmaxN)}
-% \libfcn{a.argmaxN}
+\libfcn{a.argmaxN}
 
 \subsubsection{Minimum $N$ arguments (a.argminN)}
-% \libfcn{a.argminN}
+\libfcn{a.argminN}
 
 \subsubsection{Maximum $N$ arguments with a less-than function (a.argmaxNLT)}
-% \libfcn{a.argmaxNLT}
+\libfcn{a.argmaxNLT}
 
 \subsubsection{Minimum $N$ arguments with a less-than function (a.argminNLT)}
-% \libfcn{a.argminNLT}
+\libfcn{a.argminNLT}
 
 \subsection{Numerical combinations}
 
 \subsubsection{Add all array values (a.sum)}
-% \libfcn{a.sum}
+\libfcn{a.sum}
 
 \subsubsection{Multiply all array values (a.product)}
-% \libfcn{a.product}
+\libfcn{a.product}
 
 \subsubsection{Sum of logarithms (a.lnsum)}
-% \libfcn{a.lnsum}
+\libfcn{a.lnsum}
 
 \subsubsection{Arithmetic mean (a.mean)}
-% \libfcn{a.mean}
+\libfcn{a.mean}
 
 \subsubsection{Geometric mean (a.geomean)}
-% \libfcn{a.geomean}
+\libfcn{a.geomean}
 
 \subsubsection{Median (a.median)}
-% \libfcn{a.median}
+\libfcn{a.median}
 
 \subsubsection{Mode, or most common value (a.mode)}
-% \libfcn{a.mode}
+\libfcn{a.mode}
 
 \hypertarget{hsec:set-like}{}
 \subsection{Set or set-like functions}
@@ -1375,88 +1500,88 @@ libfcn{a.countPredicate}
 PFA does not have a set datatype, but arrays can be interpreted as sets with the following functions.
 
 \subsubsection{Distinct items (a.distinct)}
-% \libfcn{a.distinct}
+\libfcn{a.distinct}
 
 \subsubsection{Set equality (a.seteq)}
-% \libfcn{a.seteq}
+\libfcn{a.seteq}
 
 \subsubsection{Union (a.union)}
-% \libfcn{a.union}
+\libfcn{a.union}
 
 \subsubsection{Intersection (a.intersect)}
-% \libfcn{a.intersect}
+\libfcn{a.intersect}
 
 \subsubsection{Set difference (a.diff)}
-% \libfcn{a.diff}
+\libfcn{a.diff}
 
 \subsubsection{Symmetric set difference (a.symdiff)}
-% \libfcn{a.symdiff}
+\libfcn{a.symdiff}
 
 \subsubsection{Subset check (a.subset)}
-% \libfcn{a.subset}
+\libfcn{a.subset}
 
 \subsubsection{Disjointness check (a.disjoint)}
-% \libfcn{a.disjoint}
+\libfcn{a.disjoint}
 
 \subsection{Functional programming}
 
 \subsubsection{Map array items with function (a.map)}
-% \libfcn{a.map}
+\libfcn{a.map}
 
 \subsubsection{Filter array items with function (a.filter)}
-% \libfcn{a.filter}
+\libfcn{a.filter}
 
 \subsubsection{Filter and map (a.filtermap)}
-% \libfcn{a.filtermap}
+\libfcn{a.filtermap}
 
 \subsubsection{Map and flatten (a.flatmap)}
-% \libfcn{a.flatmap}
+\libfcn{a.flatmap}
 
 \subsubsection{Reduce array items to a single value (a.reduce)}
-% \libfcn{a.reduce}
+\libfcn{a.reduce}
 
 \subsubsection{Right-to-left reduce (a.reduceright)}
-% \libfcn{a.reduceright}
+\libfcn{a.reduceright}
 
 \subsubsection{Fold array items to another type (a.fold)}
-% \libfcn{a.fold}
+\libfcn{a.fold}
 
 \subsubsection{Right-to-left fold (a.foldright)}
-% \libfcn{a.foldright}
+\libfcn{a.foldright}
 
 \subsubsection{Take items until predicate is false (a.takeWhile)}
-% \libfcn{a.takeWhile}
+\libfcn{a.takeWhile}
 
 \subsubsection{Drop items until predicate is true (a.dropWhile)}
-% \libfcn{a.dropWhile}
+\libfcn{a.dropWhile}
 
 \subsection{Functional tests}
 
 \subsubsection{Existential check, $\exists$ (a.any)}
-% \libfcn{a.any}
+\libfcn{a.any}
 
 \subsubsection{Univeral check, $\forall$ (a.all)}
-% \libfcn{a.all}
+\libfcn{a.all}
 
 \subsubsection{Pairwise check of two arrays (a.corresponds)}
-% \libfcn{a.corresponds}
+\libfcn{a.corresponds}
 
 \subsection{Restructuring}
 
 \subsubsection{Sliding window (a.slidingWindow)}
-% \libfcn{a.slidingWindow}
+\libfcn{a.slidingWindow}
 
 \subsubsection{Unique combinations of a fixed size (a.combinations)}
-% \libfcn{a.combinations}
+\libfcn{a.combinations}
 
 \subsubsection{Permutations (a.permutations)}
-% \libfcn{a.permutations}
+\libfcn{a.permutations}
 
 \subsubsection{Flatten array (a.flatten)}
-% \libfcn{a.flatten}
+\libfcn{a.flatten}
 
 \subsubsection{Group items by category (a.groupby)}
-% \libfcn{a.groupby}
+\libfcn{a.groupby}
 
 \pagebreak
 
@@ -1479,10 +1604,10 @@ PFA does not have a set datatype, but arrays can be interpreted as sets with the
 \label{sec:impute}
 
 \subsubsection{Skip record (impute.errorOnNull)}
-% \libfcn{impute.errorOnNull}
+\libfcn{impute.errorOnNull}
 
 \subsubsection{Replace with default (impute.defaultOnNull)}
-% \libfcn{impute.defaultOnNull}
+\libfcn{impute.defaultOnNull}
 
 \pagebreak
 
@@ -1501,10 +1626,10 @@ CUSUM
 \subsection{Sample statistics}
 
 \subsubsection{Update aggregated mean (stat.sample.updateMean)}
-% \libfcn{stat.sample.updateMean}
+\libfcn{stat.sample.updateMean}
 
 \subsubsection{Compute aggregated mean (stat.sample.mean)}
-% \libfcn{stat.sample.mean}
+\libfcn{stat.sample.mean}
 
 accumulated mean, median(?)
 
@@ -1515,10 +1640,10 @@ accumulated mean, median(?)
 \subsection{Decision and regression Trees}
 
 \subsubsection{Tree walk with simple predicates (model.tree.simpleWalk)}
-% \libfcn{model.tree.simpleWalk}
+\libfcn{model.tree.simpleWalk}
 
 \subsubsection{Tree walk with user-defined predicates (model.tree.predicateWalk)}
-% \libfcn{model.tree.predicateWalk}
+\libfcn{model.tree.predicateWalk}
 
 \subsection{Cluster models}
 
