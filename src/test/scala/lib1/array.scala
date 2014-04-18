@@ -202,7 +202,7 @@ action:
 input: "null"
 output: int
 action:
-  a.countPredicate:
+  a.count:
     - {value: [0, 1, 2, 3, 4, 5], type: {type: array, items: int}}
     - params: [{x: int}]
       ret: boolean
@@ -213,7 +213,7 @@ action:
 input: "null"
 output: int
 action:
-  a.countPredicate:
+  a.count:
     - {value: [1, 3, 5, 7, 9], type: {type: array, items: int}}
     - params: [{x: int}]
       ret: boolean
@@ -224,7 +224,7 @@ action:
 input: "null"
 output: int
 action:
-  a.countPredicate:
+  a.count:
     - {value: [0, 1, 2, 3, 4, 5], type: {type: array, items: int}}
     - {fcnref: u.even}
 fcns:
@@ -238,7 +238,7 @@ fcns:
 input: "null"
 output: int
 action:
-  a.countPredicate:
+  a.count:
     - {value: [1, 3, 5, 7, 9], type: {type: array, items: int}}
     - {fcnref: u.even}
 fcns:

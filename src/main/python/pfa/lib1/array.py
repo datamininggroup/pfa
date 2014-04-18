@@ -43,13 +43,9 @@ provide(Contains)
 class Count(LibFcn):
     name = prefix + "count"
     sig = Sigs([Sig([{"haystack": P.Array(P.Wildcard("A"))}, {"needle": P.Array(P.Wildcard("A"))}], P.Int()),
-                Sig([{"haystack": P.Array(P.Wildcard("A"))}, {"needle": P.Wildcard("A")}], P.Int())])
+                Sig([{"haystack": P.Array(P.Wildcard("A"))}, {"needle": P.Wildcard("A")}], P.Int()),
+                Sig([{"a": P.Array(P.Wildcard("A"))}, {"predicate": P.Fcn([P.Wildcard("A")], P.Boolean())}], P.Int())])
 provide(Count)
-
-class CountPredicate(LibFcn):
-    name = prefix + "countPredicate"
-    sig = Sig([{"a": P.Array(P.Wildcard("A"))}, {"predicate": P.Fcn([P.Wildcard("A")], P.Boolean())}], P.Int())
-provide(CountPredicate)
 
 class Index(LibFcn):
     name = prefix + "index"

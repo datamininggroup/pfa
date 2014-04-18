@@ -148,13 +148,15 @@ package object array {
   object Count extends LibFcn {
     val name = prefix + "count"
     val sig = Sigs(List(Sig(List("haystack" -> P.Array(P.Wildcard("A")), "needle" -> P.Array(P.Wildcard("A"))), P.Int),
-                        Sig(List("haystack" -> P.Array(P.Wildcard("A")), "needle" -> P.Wildcard("A")), P.Int)))
+                        Sig(List("haystack" -> P.Array(P.Wildcard("A")), "needle" -> P.Wildcard("A")), P.Int),
+                        Sig(List("haystack" -> P.Array(P.Wildcard("A")), "needle" -> P.Fcn(List(P.Wildcard("A")), P.Boolean)), P.Int)))
     val doc =
       <doc>
-        <desc>Count the number of times <p>needle</p> appears in <p>haystack</p>.</desc>
+        <desc>Count the number of times <p>needle</p> appears in <p>haystack</p> or the number of times the <p>needle</p> function evaluates to <c>true</c>.</desc>
       </doc>
     def apply[X](haystack: PFAArray[X], needle: PFAArray[X]): Int = count(haystack.toVector, needle.toVector, 0)
     def apply[X](haystack: PFAArray[X], needle: X): Int = count(haystack.toVector, needle, 0)
+    def apply[X](haystack: PFAArray[X], needle: X => Boolean): Int = haystack.toVector.count(needle)
 
     @tailrec
     def count[X](haystack: Vector[X], needle: Vector[X], sofar: Int): Int = haystack.indexOfSlice(needle) match {
@@ -168,18 +170,6 @@ package object array {
     }
   }
   provide(Count)
-
-  ////   countPredicate (CountPredicate)
-  object CountPredicate extends LibFcn {
-    val name = prefix + "countPredicate"
-    val sig = Sig(List("a" -> P.Array(P.Wildcard("A")), "predicate" -> P.Fcn(List(P.Wildcard("A")), P.Boolean)), P.Int)
-    val doc =
-      <doc>
-        <desc>Count the number of times <p>predicate</p> is satisfied in <p>a</p>.</desc>
-      </doc>
-    def apply[X](a: PFAArray[X], predicate: X => Boolean): Int = a.toVector.count(predicate)
-  }
-  provide(CountPredicate)
 
   ////   index (Index)
   object Index extends LibFcn {

@@ -97,6 +97,7 @@
 2014-04-16:
 2014-04-17:
 2014-04-18:   Expressions through attr and attr-to.
+2014-04-19:   Finished first draft of the specification.
 
 
 Implement cell and pool roll-back on exception!!!
@@ -105,8 +106,12 @@ Number of items requirements (e.g. "do requires >= 1 expression") should change 
 
 Do you need to implement hashCode functions on all your AST nodes?  Or is it okay because they're already case classes?
 
+There needs to be a {"pool": NAME, "del": ITEM-NAME} to delete one item and {"pool": NAME, "del": null} to clear all items atomically.
 
-Tomorrow:     Documentation (auto-generated and hand-made)
+For-comprehensions to make new data structures functionally.
+
+
+Tomorrow:     Fix up loose ends (described above).
 And then:     An AppEngine example.
 And then:     Map, bytes, enums, fixed, record (conversions, mostly)
 And then:     Linear algebra: find a good library, matricies with named rows and columns
