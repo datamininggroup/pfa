@@ -54,7 +54,7 @@ This specification defines the syntax and semantics of the Portable Format for A
 
 PFA is a mini-language for mathematical calculations that is usually generated programmatically, rather than by hand.  A PFA document is a string of JSON-formatted text that describes an executable called a scoring engine.  Each engine has a well-defined input, a well-defined output, and functions for combining inputs to construct the output in an expression-centric syntax tree.  In addition, it has centralized facilities for maintaining state, with well-defined semantics for sharing state among scoring engines in a thread-safe way.  The specification defines a suite of mathematical and statistical functions for transforming data, but it does not define any means of communication with an operating system, file system, or network.  A PFA engine must be embedded in a larger system that has these capabilities, and thus an analytic workflow is decoupled into a part that manages data pipelines (such as Hadoop, Storm, or Akka), and a part that describes the algorithm to be performed on data (PFA).  
 
-PFA is similar to the Predictive Model Markup Language (PMML), an XML-based specification for statistical models, but whereas PMML's focus is on statistical models in the abstract, PFA's focus is on the scoring procedure itself.  The same input given to two PFA-enabled systems must yield the same output, regardless of platform (e.g.\ a JVM in Hadoop, a client's web browser, a GPU kernel function, or even an IP core directly embedded in an integrated circuit).  Unlike PMML, the PFA specification defines the exact bit-for-bit behavior of any well-formed document, the semantics of data types and data structures, including behavior in concurrent systems, and all cases in which an exception should be thrown.  Like PMML, PFA is a specification, not an implementation, it defines a suite of statistical algorithms for analyzing data, and it is usually generated programmatically, as the output of a machine learning algorithm, for instance.
+PFA is similar to the Predictive Model Markup Language (PMML), an XML-based specification for statistical models, but whereas PMML's focus is on statistical models in the abstract, PFA's focus is on the scoring procedure itself.  The same input given to two PFA-enabled systems must yield the same output, regardless of platform (e.g.\ a JVM in Hadoop, a client's web browser, a GPU kernel function, or even an IP core directly embedded in an integrated circuit).  Unlike PMML, the PFA specification defines the exact bit-for-bit behavior of any well-formed document, the semantics of data types and data structures, including behavior in concurrent systems, and all cases in which an exception should be raised.  Like PMML, PFA is a specification, not an implementation, it defines a suite of statistical algorithms for analyzing data, and it is usually generated programmatically, as the output of a machine learning algorithm, for instance.
 
 \vspace{0.5 cm}
 {\large \bf Status of this document}
@@ -298,7 +298,7 @@ Phase 4, initialization, is when data structures such as cells and pools are all
 
 The actions performed in the last three phases, {\PFAc begin}, {\PFAc action}, and {\PFAc end}, are explicitly defined in the PFA document.  A PFA system must implement the {\PFAc action} phase, since every PFA document must define an {\PFAc action}.  The {\PFAc action} accepts input and returns output, though the way it does so depends on the {\PFAc method} (\hyperlink{hsec:method}{Sec.~\ref{sec:method}}).
 
-The {\PFAc begin} and {\PFAc end} phases do not accept input and do not return output: they can only modify cells and pools, emit log messages, or throw exceptions.  A PFA system is not required to implement {\PFAc begin} and {\PFAc end}.  If a system that does not implement {\PFAc begin} encounters a document that has a {\PFAc begin} routine, it must fail with an error.  If a system that does not implement {\PFAc end} encounters a document that has an {\PFAc end} routine, it need not fail with an error, though it may.  This is because some PFA documents may use {\PFAc begin} to initialize essential data structures and the {\PFAc action} would only function properly if {\PFAc begin} has been executed, but the {\PFAc end} routine can only affect the state of a completed scoring engine whose interpretation is implementation-specific.  Moreover, some data pipelines do not even have a concept of completion, such as Storm.
+The {\PFAc begin} and {\PFAc end} phases do not accept input and do not return output: they can only modify cells and pools, emit log messages, or raise exceptions.  A PFA system is not required to implement {\PFAc begin} and {\PFAc end}.  If a system that does not implement {\PFAc begin} encounters a document that has a {\PFAc begin} routine, it must fail with an error.  If a system that does not implement {\PFAc end} encounters a document that has an {\PFAc end} routine, it need not fail with an error, though it may.  This is because some PFA documents may use {\PFAc begin} to initialize essential data structures and the {\PFAc action} would only function properly if {\PFAc begin} has been executed, but the {\PFAc end} routine can only affect the state of a completed scoring engine whose interpretation is implementation-specific.  Moreover, some data pipelines do not even have a concept of completion, such as Storm.
 
 After all input data have been passed to the scoring engine and the last {\PFAc action} or {\PFAc end} routine has finished, the scoring engine is said to be completed.  This may be considered an eighth phase of the engine, though its behavior at this point is not defined by this specification.  A particular PFA system may extract aggregated results from a completed engine's state and it may even call functions defined in the document's {\PFAc fcn} field, but this is beyond the scope of the standard PFA lifecycle.  (Note: if the primary purpose of a scoring engine is to aggregate data, consider using the ``fold'' {\PFAc method} instead of extracting from the engine's internal state.)
 
@@ -1189,7 +1189,7 @@ and
 {"attr": "x", "path": [4, ["key"], ["field"]], "to":
      {"params": [{"z": "int"}], "ret": "int", "do": {"+": ["z", 1]}}}
 \end{json}
-The first version represents the same path twice (the second time with dot-notation for brevity), while the second version represents the path once and applies an updator function when it gets to the end of the path.  This updator function could be referenced by name with \hyperlink{hsec:fcnref}{fcnref} for code reuse.
+The first version represents the same path twice (the second time with dot-notation for brevity), while the second version represents the path once and applies an updator function when it gets to the end of the path.  This updator function could be referenced by name with \hyperlink{hsec:fcnref}{fcnref} for code re-use.
 \end{example}
 
 \hypertarget{hsec:cell-pool-forms}{}
@@ -1227,7 +1227,7 @@ For example, suppose that {\PFAc myCell} is a cell containing an array of {\bf s
 The first line retrieves the value of the cell and a subelement of the cell, putting them in local symbols {\PFAc x} and {\PFAc y}.  The second line changes {\PFAc myCell} in such a way that element {\PFAc n} (only) is now {\PFAc "hello"}.  However, both {\PFAc x} and {\PFAc y} are unchanged--- they continue to reference the old value of {\PFAc myCell} and its components.
 \end{example}
 
-For ``attr-to'', the difference between the value form and the function form of {\PFAc VALUE-OR-FUNCTION} is just a matter of style (whether the path is repeated or the function can be reused).  For shared cells, choosing between the value form and the function form of {\PFAc VALUE-OR-FUNCTION} in ``cell-to'' could make a difference in the behavior of the scoring engine.  If a cell is extracted and replaced in two steps, then it is possible for another scoring engine sharing that value to modify it between the extraction step and the replacement step.  The function form, however, is atomic: all other attempts to modify the value wait until it is done.
+For ``attr-to'', the difference between the value form and the function form of {\PFAc VALUE-OR-FUNCTION} is just a matter of style (whether the path is repeated or the function can be re-used).  For shared cells, choosing between the value form and the function form of {\PFAc VALUE-OR-FUNCTION} in ``cell-to'' could make a difference in the behavior of the scoring engine.  If a cell is extracted and replaced in two steps, then it is possible for another scoring engine sharing that value to modify it between the extraction step and the replacement step.  The function form, however, is atomic: all other attempts to modify the value wait until it is done.
 
 \begin{example}
 Suppose that {\PFAc myCell} is a shared cell that we want to increment by 1.  If we use
@@ -1413,7 +1413,8 @@ The ``foreach'' special form iterates over elements of an array.  It has the fol
 \end{json}
 or
 \begin{json}
-{"foreach": NAME, "in": ARRAY-EXPRESSION, "do": EXPRESSION-OR-EXPRESSIONS, "seq": TRUE-OR-FALSE}
+{"foreach": NAME, "in": ARRAY-EXPRESSION, "do": EXPRESSION-OR-EXPRESSIONS,
+ "seq": TRUE-OR-FALSE}
 \end{json}
 where {\PFAc NAME} is a string naming the new symbol to declare, {\PFAc ARRAY-EXPRESSION} is a single expression whose type is an {\bf array}, the {\PFAc do} expression or expressions is the body of the loop, and the return value of the ``for'' form is {\PFAc null}.  The {\PFAc seq} flag, if present and set to {\PFAc true}, ensures that the loop order through the array is sequential.  This flag affects the scope of symbols, so that a PFA system has the option to evaluate the loop body in parallel if the {\PFAc seq} flag is absent or false.
 
@@ -1423,7 +1424,8 @@ The loop body is evaluated once for every element in the array specified by the 
 
 The ``forkey-forval'' special form iterates over key-value pairs of a map.  It has the following syntax.
 \begin{json}
-{"forkey": NAME1, "forval": NAME2, "in": MAP-EXPRESSION, "do": EXPRESSION-OR-EXPRESSIONS}
+{"forkey": NAME1, "forval": NAME2, "in": MAP-EXPRESSION,
+ "do": EXPRESSION-OR-EXPRESSIONS}
 \end{json}
 where {\PFAc NAME1} is a string naming a new symbol that iterates through map keys, {\PFAc NAME2} is a string naming a new symbol that iterates through map values, {\PFAc MAP-EXPRESSION} is a single expression whose type is a {\bf map}, and the {\PFAc do} expression or expressions is the body of the loop.
 
@@ -1437,9 +1439,58 @@ The loop body is evaluated once for every key-value pair in the map specified by
 \subsection{Type-safe casting}
 \label{sec:casting}
 
-        %% else if (keys == Set("cast", "cases")  ||
-        %%          keys == Set("cast", "cases", "partial"))            CastBlock(_cast, _cases, _partial, Some(pos(dot, _at)))
-        %% else if (keys == Set("upcast", "as"))                        Upcast(_upcast, _as, Some(pos(dot, _at)))
+Unrestricted type-casting would invalidate the guarantees that a static type check provides.  It is allowed in many popular programming languages, and if an incorrect type-cast is encountered at runtime, an exception (Java) or undefined behavior (C++) ensues.
+
+However, it is possible to provide the advantages of type-casting without invalidating the static type check.  Instead of returning the type-cast object as a single expression, we split the program flow into branches, one for each possible down-cast type.  For instance, if a possibly-missing input datum has type {\bf union(null, double)}, we split the program flow into a branch that handles the {\bf null} case and a branch that handles the {\bf double} case.  Thus, the type-cast is a special kind of conditional.
+
+Down-casting (making a value's type more specific) is handled by the ``cast-cases'' special form, which has the following syntax.
+\begin{json}
+{"cast": EXPRESSION, "cases": [
+     {"as": TYPE1, "named": NAME1, "do": EXPRESSION-OR-EXPRESSIONS1},
+     {"as": TYPE2, "named": NAME2, "do": EXPRESSION-OR-EXPRESSIONS2},
+     ...
+]}
+\end{json}
+or
+\begin{json}
+{"cast": EXPRESSION, "cases": [
+     {"as": TYPE1, "named": NAME1, "do": EXPRESSION-OR-EXPRESSIONS1},
+     {"as": TYPE2, "named": NAME2, "do": EXPRESSION-OR-EXPRESSIONS2},
+     ...],
+ "partial": TRUE-OR-FALSE}
+\end{json}
+The {\PFAc cast} clause evaluates a single {\PFAc EXPRESSION} with some type {\PFAtp X}.  The {\PFAc as} clauses enumerate possible subtypes {\PFAtp Y}$_i$ of {\PFAtp X}.  If {\PFAtp X} does not accept {\PFAtp Y}$_i$, then branch $i$ can never be reached, which should result in a semantic exception.  If {\PFAc partial} is absent or {\PFAc false}, then the Avro type schemae named by {\PFAc as} clauses should be exhaustive, there must be at least two cases, and the ``cast-cases'' form returns the last value of the followed branch.  If {\PFAc partial} is present and {\PFAc true}, then the types named by {\PFAc as} clauses do not need to be exhaustive, there must be at least one case, and the ``cast-cases'' form returns {\PFAc null}.  Only one branch is followed: the one with the first matching type schema.
+
+The {\PFAc named} clause takes a string that declares a new symbol with the given name.  The new symbol can be referenced only within the corresponding {\PFAc do} expression or expressions.  Since the scopes of the {\PFAc do} clauses do not overlap, cases may re-use names without shadowing.
+
+The {\PFAc cast} expression is sealed-from-above and sealed-within, but the {\PFAc do} expressions are unsealed (\hyperlink{hsec:symbol-scope}{see Sec.~\ref{sec:symbol-scope}}).
+
+\begin{example}
+This replaces a missing value in the {\PFAc input} symbol by a default value, assuming that the PFA document's input type {\PFAc [null, double]} (union of {\bf null} and {\bf double}).  The ``cast-cases'' form is used as an expression that initializes {\PFAc normalizedInput}.
+\begin{json}
+{"let": {"normalizedInput":
+     {"cast": "input", "cases": [
+          {"as": "null", "named": "x", "do": -1000.0},
+          {"as": "double", "named": "x", "do": "x"}
+     ]}}}
+\end{json}
+\end{example}
+
+\begin{example}
+Alternatively, we could use an imperative programming style and overwrite a default value, like the following.
+\begin{json}
+{"let": {"normalizedInput": -1000.0}},
+{"cast": "input", "cases":
+     [{"as: "double", "named": "x", "do": {"set": {"normalizedInput": "x"}}}]
+ "partial": true}
+\end{json}
+\end{example}
+
+It is sometimes (rarely) useful to up-cast a value, making it less specific.  This is handled by the ``upcast'' expression, which simply returns the casted value.
+\begin{json}
+{"upcast": EXPRESSION, "as": TYPE}
+\end{json}
+The Avro type schema specified by {\PFAc as} should accept the return type of {\PFAc EXPRESSION} and raise a semantic error if it does not.
 
 \hypertarget{hsec:inline-doc}{}
 \subsection{Inline documentation}
