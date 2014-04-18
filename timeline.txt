@@ -93,6 +93,10 @@
 2014-04-12:   Finished the types section and symbols & scope.
 2014-04-13:
 2014-04-14:   Heavily revised the symbols & scope section and finished the functions section.
+2014-04-15:
+2014-04-16:
+2014-04-17:
+2014-04-18:   Expressions through attr and attr-to.
 
 
 Implement cell and pool roll-back on exception!!!
