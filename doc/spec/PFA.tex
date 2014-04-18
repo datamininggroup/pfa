@@ -1048,7 +1048,7 @@ The arguments of a function call can either be an expression or a \hyperlink{hse
 
 Functions have strict requirements on the number of arguments (always fixed; there are no optional arguments or varargs) and their types.  Functions return a value with a specific type, though that type may depend on the argument types (for library functions).
 
-Special forms are similar to function calls in that they take arguments, perform a function, and return a value, but special forms may have more than one JSON object member.
+Special forms are similar to function calls in that they take arguments, perform a function, and return a value, but special forms can have more than one JSON object member and can apply custom interpretations to their arguments.  A function always has the same form: one member name and an expression or array of expressions.  Some library functions can apply custom rules to the evaluation of their arguments: the {\PFAc and} function only evaluates its second argument if the first does not evaluate to {\PFAc false} and the {\PFAc or} function only evaluates its second argument if the first does not evaluate to {\PFAc true}.
 
 \hypertarget{hsec:new-form}{}
 \subsection{Creating arrays, maps, and records}
@@ -1086,24 +1086,93 @@ The following initializes a record of type {\PFAc R} with a {\bf string} stored 
 \end{json}
 \end{example}
 
-        %% else if (keys == Set("new", "type")  &&  _newObject != null) NewObject(_newObject, _avroType, avroTypeBuilder, Some(pos(dot, _at)))
-        %% else if (keys == Set("new", "type")  &&  _newArray != null)  NewArray(_newArray, _avroType, avroTypeBuilder, Some(pos(dot, _at)))
-
 \hypertarget{hsec:let-set}{}
 \subsection{Symbol assignment and reassignment}
 \label{sec:let-set}
 
-        %% else if (keys == Set("let"))                                 Let(_let, Some(pos(dot, _at)))
-        %% else if (keys == Set("set"))                                 SetVar(_set, Some(pos(dot, _at)))
+The ``let'' special form creates new symbols and assigns an initial value.  The ``set'' special form changes the value associated with a set of symbols.  There are no type declarations for new symbols because its types are \hyperlink{hsec:type-inference}{inferred} from the initial value.
+
+A ``let'' has the following syntax:
+\begin{json}
+{"let": {"name1": VALUE1, "name2": VALUE2, ...}}
+\end{json}
+where {\PFAc VALUE1}, {\PFAc VALUE2}, etc. are expressions.  These expressions must not depend on symbols defined in the same ``let'' form, and they may be evaluated in any order.  (The symbols can be referenced after the end of the ``let'' form and before the end of its containing form.)  The {\PFAc VALUE} expressions are \hyperlink{hsec:symbol-scope}{sealed-within}: they may not declare new symbols unless wrapped in a ``do'' special form, and cannot change externally declared symbols.
+
+A ``let'' that only declares one symbol still requires a nested JSON object.  The ``let'' form has return type {\bf null}.  It must declare at least one symbol.
+
+A ``set'' has the following syntax:
+\begin{json}
+{"set": {"name1": VALUE1, "name2": VALUE2, ...}}
+\end{json}
+where {\PFAc VALUE1}, {\PFAc VALUE2}, etc. are expressions.  These expressions may depend on symbols that are rebound in the same ``set'' form, but if so, they are provided with the old values of those symbols, as defined immediately before the ``set'' form.  The assignments within a ``set'' may be evaluated in any order.  The {\PFAc VALUE} expressions are \hyperlink{hsec:symbol-scope}{sealed-within}, just like the ``let'' form.
+
+A ``set'' that only changes one symbol still requires a nested JSON object.  The ``set'' form has return type {\bf null}.  It must reassign at least one symbol.
+
+\begin{example}
+If the following appears in a JSON array of expressions, the final values of {\PFAc x} and {\PFAc y} are 2 and 2 (not 2 and 3 or 3 and 2).
+\begin{json}
+{"let": {"x": 1, "y": 1}},
+{"set": {"x": {"+": ["x", "y"]}, "y": {"+": ["x", "y"]}}}
+\end{json}
+Regardless of whether {\PFAc x} is reassigned first or {\PFAc y} is reassigned first, each sum sees both {\PFAc x} and {\PFAc y} as having a value of 1 at the time of assignment.
+\end{example}
 
 \hypertarget{hsec:attr-form}{}
 \subsection{Extracting from and updating arrays, maps, and records}
 \label{sec:attr-form}
 
-        %% else if (keys == Set("attr", "path"))                        AttrGet(_attr, _path, Some(pos(dot, _at)))
-        %% else if (keys == Set("attr", "path", "to"))                  AttrTo(_attr, _path, _to, Some(pos(dot, _at)))
+The ``attr'' special form extracts a value from an array, a map, a record, or any combination of these three.  The ``attr-to'' special form returns an object with one element changed (leaving the original untouched).
 
-% short-cut: "name.path.elements.0.etc"
+The form of ``attr'' is
+\begin{json}
+{"attr": SYMBOL, "path": INDEXES}
+\end{json}
+where {\PFAc SYMBOL} is a string (not an expression) that specifies a pre-existing symbol and {\PFAc INDEXES} is a JSON array of {\bf int} expressions, {\bf string} expressions, and string literals that specifies a path through the nested objects.  If nesting is only one level deep, the {\PFAc path} must have exactly one element.  It is a syntax error for the {\PFAc path} to have zero elements.
+
+If the type at a particular nesting level is an {\bf array}, the path index must resolve to an {\bf int}, though it can perform arbitrary calculations to produce the {\bf int}.  If the type at a particular nesting level is a {\bf map}, the path index must resolve to a {\bf string}.  If the type at a particular nesting level is a {\bf record}, the path index must be a literal {\bf string} (not an arbitrary expression), and that string must be a field name of the record.  Since it is a literal string, a static analysis can verify that the field name exists and a PFA system should raise a type error if no such field exists.  The nesting level is increased for each array element of the path, and the return type of ``attr'' is the type of the deepest object referenced by the path.
+
+As a convenience, ``attr'' forms may also be expressed as a period-delimited string resembling a symbol reference.  The first substring is taken to be {\PFAc SYMBOL} and the rest are taken to be elements of the {\PFAc path} array.  PFA systems should implement this short-cut.
+
+\begin{example}
+The following are equivalent:
+\begin{json}
+"x.4.key.field"
+\end{json}
+and
+\begin{json}
+{"attr": "x", "path": [4, "key", "field"]}
+\end{json}
+and 
+\begin{json}
+{"attr": {"attr": {"attr": "x", "path": [4]}, "path": ["key"]}, "path": ["field"]}
+\end{json}
+If the type of {\PFAc x} is
+\begin{json}
+{"type": "array", "items": {"type": "map", "values": {"type": "record", "name": "R",
+     "fields": [{"name": "field", "type": X}]}}}
+\end{json}
+then the example is valid and the return type is {\PFAc X}.
+\end{example}
+
+The form of ``attr-to'' is:
+\begin{json}
+{"attr": SYMBOL, "path": INDEXES, "to": VALUE-OR-FUNCTION}
+\end{json}
+with the same meaning for {\PFAc SYMBOL} and {\PFAc INDEXES}.  If the attribute evaluates to {\PFAc X} at the end of its path, the {\PFAc VALUE-OR-FUNCTION} argument must either be an expression of type {\PFAc X} or a function that maps {\PFAc X} to {\PFAc X}.  If is an expression, then the form will return a structure like the original, but with the specified subelement changed to its value.  If {\PFAc VALUE-OR-FUNCTION} is a function, then it must map from {\PFAc X} to {\PFAc X}.  The function is evaluated, passing the old value of the subelement and updating the structure with its return value.
+
+The path must contain at least item.  There is no equivalent of using the period-delimited string as a short-cut.  The ``attr-to'' form returns a whole new structure with one subelement changed; it has the same type as {\PFAc SYMBOL}.
+
+\begin{example}
+If the {\PFAc "x.4.key.field"} subelement is a {\PFAc int}, following are equivalent:
+\begin{json}
+{"attr": "x", "path": [4, "key", "field"], "to": {"+": ["x.4.key.field", 1]}}
+\end{json}
+and 
+\begin{json}
+{"attr": "x", "path": [4, "key", "field"], "to":
+     {"params": [{"z": "int"}], "ret": "int", "do": {"+": ["z", 1]}}}
+\end{json}
+\end{example}
 
 \hypertarget{hsec:cell-pool-forms}{}
 \subsection{Extracting from and updating cells and pools}
@@ -1188,90 +1257,90 @@ The following initializes a record of type {\PFAc R} with a {\bf string} stored 
 \subsection{Basic arithmetic}
 
 \subsubsection{Addition of two values ($+$)}
-% \libfcn{+}
+\libfcn{+}
 
 \subsubsection{Subtraction ($-$)}
-% \libfcn{-}
+\libfcn{-}
 
 \subsubsection{Multiplication of two values (*)}
-% \libfcn{*}
+\libfcn{*}
 
 \subsubsection{Floating-point division (/)}
-% \libfcn{/}
+\libfcn{/}
 
 \subsubsection{Integer division (//)}
-% \libfcn{//}
+\libfcn{//}
 
 \subsubsection{Negation (u$-$)}
-% \libfcn{u-}
+\libfcn{u-}
 
 \subsubsection{Modulo (\%)}
-% \libfcn{\%}
+\libfcn{\%}
 
 \subsubsection{Remainder (\%\%)}
-% \libfcn{\%\%}
+\libfcn{\%\%}
 
 \subsubsection{Raising to a power (**)}
-% \libfcn{**}
+\libfcn{**}
 
 \subsection{Comparison operators}
 
 Avro defines a \href{http://avro.apache.org/docs/1.7.6/spec.html#order}{sort order} for every pair of values with a compatible type, so any two objects of compatible type can be compared in PFA.
 
 \subsubsection{General comparision (cmp)}
-% \libfcn{cmp}
+\libfcn{cmp}
 
 \subsubsection{Equality (==)}
-% \libfcn{==}
+\libfcn{==}
 
 \subsubsection{Inequality (!=)}
-% \libfcn{!=}
+\libfcn{!=}
 
 \subsubsection{Less than (<)}
-% \libfcn{<}
+\libfcn{<}
 
 \subsubsection{Less than or equal to (<=)}
-% \libfcn{<=}
+\libfcn{<=}
 
 \subsubsection{Greater than (>)}
-% \libfcn{>}
+\libfcn{>}
 
 \subsubsection{Greater than or equal to (>=)}
-% \libfcn{>=}
+\libfcn{>=}
 
 \subsubsection{Maximum of two values (max)}
-% \libfcn{max}
+\libfcn{max}
 
 \subsubsection{Minimum of two values (min)}
-% \libfcn{min}
+\libfcn{min}
 
 \subsection{Logical operators}
 
 \subsubsection{Logical and (and)}
-% \libfcn{and}
+\libfcn{and}
 
 \subsubsection{Logical or (or)}
-% \libfcn{or}
+\libfcn{or}
 
 \subsubsection{Logical xor (xor)}
-% \libfcn{xor}
+\libfcn{xor}
 
 \subsubsection{Logical not (not)}
-% \libfcn{not}
+\libfcn{not}
 
 \subsection{Bitwise arithmetic}
 
 \subsubsection{Bitwise and (\&)}
-% \libfcn{\&}
+\libfcn{\&}
 
 \subsubsection{Bitwise or (|)}
-% \libfcn{|}
+\libfcn{|}
 
 \subsubsection{Bitwise xor (\^{})}
-% \libfcn{\^{}}
+\libfcn{\^{}}
 
 \subsubsection{Bitwise not (\textasciitilde{})}
-% \libfcn{TILDE}
+\libfcn{TILDE}
 
 \pagebreak
 
@@ -1282,89 +1351,89 @@ Avro defines a \href{http://avro.apache.org/docs/1.7.6/spec.html#order}{sort ord
 Constants such as $\pi$ and $e$ are represented as stateless functions with no arguments.  Specific implementations may choose to replace the function call with its inline value.
 
 \subsubsection{Archimedes' constant $\pi$ (m.pi)}
-% \libfcn{m.pi}
+\libfcn{m.pi}
 
 \subsubsection{Euler's constant $e$ (m.e)}
-% \libfcn{m.e}
+\libfcn{m.e}
 
 \subsection{Common functions}
 
 \subsubsection{Square root (m.sqrt)}
-% \libfcn{m.sqrt}
+\libfcn{m.sqrt}
 
 \subsubsection{Hypotnuse (m.hypot)}
-% \libfcn{m.hypot}
+\libfcn{m.hypot}
 
 \subsubsection{Trigonometric sine (m.sin)}
-% \libfcn{m.sin}
+\libfcn{m.sin}
 
 \subsubsection{Trigonometric cosine (m.cos)}
-% \libfcn{m.cos}
+\libfcn{m.cos}
 
 \subsubsection{Trigonometric tangent (m.tan)}
-% \libfcn{m.tan}
+\libfcn{m.tan}
 
 \subsubsection{Inverse trigonometric sine (m.asin)}
-% \libfcn{m.asin}
+\libfcn{m.asin}
 
 \subsubsection{Inverse trigonometric cosine (m.acos)}
-% \libfcn{m.acos}
+\libfcn{m.acos}
 
 \subsubsection{Inverse trigonometric tangent (m.atan)}
-% \libfcn{m.atan}
+\libfcn{m.atan}
 
 \subsubsection{Robust inverse trigonometric tangent (m.atan2)}
-% \libfcn{m.atan2}
+\libfcn{m.atan2}
 
 \subsubsection{Hyperbolic sine (m.sinh)}
-% \libfcn{m.sinh}
+\libfcn{m.sinh}
 
 \subsubsection{Hyperbolic cosine (m.cosh)}
-% \libfcn{m.cosh}
+\libfcn{m.cosh}
 
 \subsubsection{Hyperbolic tangent (m.tanh)}
-% \libfcn{m.tanh}
+\libfcn{m.tanh}
 
 \subsubsection{Natural exponential (m.exp)}
-% \libfcn{m.exp}
+\libfcn{m.exp}
 
 \subsubsection{Natural exponential minus one (m.expm1)}
-% \libfcn{m.expm1}
+\libfcn{m.expm1}
 
 \subsubsection{Natural logarithm (m.ln)}
-% \libfcn{m.ln}
+\libfcn{m.ln}
 
 \subsubsection{Logarithm base 10 (m.log10)}
-% \libfcn{m.log10}
+\libfcn{m.log10}
 
 \subsubsection{Arbitrary logarithm (m.log)}
-% \libfcn{m.log}
+\libfcn{m.log}
 
 \subsubsection{Natural logarithm of one plus square (m.ln1p)}
-% \libfcn{m.ln1p}
+\libfcn{m.ln1p}
 
 \subsection{Rounding}
 
 \subsubsection{Absolute value (m.abs)}
-% \libfcn{m.abs}
+\libfcn{m.abs}
 
 \subsubsection{Floor (m.floor)}
-% \libfcn{m.floor}
+\libfcn{m.floor}
 
 \subsubsection{Ceiling (m.ceil)}
-% \libfcn{m.ceil}
+\libfcn{m.ceil}
 
 \subsubsection{Simple rounding (m.round)}
-% \libfcn{m.round}
+\libfcn{m.round}
 
 \subsubsection{Unbiased rounding (m.rint)}
-% \libfcn{m.rint}
+\libfcn{m.rint}
 
 \subsubsection{Threshold function (m.signum)}
-% \libfcn{m.signum}
+\libfcn{m.signum}
 
 \subsubsection{Copy sign (m.copysign)}
-% \libfcn{m.copysign}
+\libfcn{m.copysign}
 
 \subsection{Linear algebra}
 
@@ -1379,76 +1448,76 @@ Strings are immutable, so none of the following functions modifies a string in-p
 \subsection{Basic access}
 
 \subsubsection{Length (s.len)}
-% \libfcn{s.len}
+\libfcn{s.len}
 
 \subsubsection{Extract substring (s.substr)}
-% \libfcn{s.substr}
+\libfcn{s.substr}
 
 \subsubsection{Modify substring (s.substrto)}
-% \libfcn{s.substrto}
+\libfcn{s.substrto}
 
 \subsection{Search and replace}
 
 \subsubsection{Contains (s.contains)}
-% \libfcn{s.contains}
+\libfcn{s.contains}
 
 \subsubsection{Count instances (s.count)}
-% \libfcn{s.count}
+\libfcn{s.count}
 
 \subsubsection{Find first index (s.index)}
-% \libfcn{s.index}
+\libfcn{s.index}
 
 \subsubsection{Find last index (s.rindex)}
-% \libfcn{s.rindex}
+\libfcn{s.rindex}
 
 \subsubsection{Check start (s.startswith)}
-% \libfcn{s.startswith}
+\libfcn{s.startswith}
 
 \subsubsection{Check end (s.endswith)}
-% \libfcn{s.endswith}
+\libfcn{s.endswith}
 
 \subsection{Conversions to or from other types}
 
 \subsubsection{Join an array of strings (s.join)}
-% \libfcn{s.join}
+\libfcn{s.join}
 
 \subsubsection{Split into an array of strings (s.split)}
-% \libfcn{s.split}
+\libfcn{s.split}
 
 \subsection{Conversions to or from other strings}
 
 \subsubsection{Concatenate two strings (s.concat)}
-% \libfcn{s.concat}
+\libfcn{s.concat}
 
 \subsubsection{Repeat pattern (s.repeat)}
-% \libfcn{s.repeat}
+\libfcn{s.repeat}
 
 \subsubsection{Lowercase (s.lower)}
-% \libfcn{s.lower}
+\libfcn{s.lower}
 
 \subsubsection{Uppercase (s.upper)}
-% \libfcn{s.upper}
+\libfcn{s.upper}
 
 \subsubsection{Left-strip (s.lstrip)}
-% \libfcn{s.lstrip}
+\libfcn{s.lstrip}
 
 \subsubsection{Right-strip (s.rstrip)}
-% \libfcn{s.rstrip}
+\libfcn{s.rstrip}
 
 \subsubsection{Strip both ends (s.strip)}
-% \libfcn{s.strip}
+\libfcn{s.strip}
 
 \subsubsection{Replace all matches (s.replaceall)}
-% \libfcn{s.replaceall}
+\libfcn{s.replaceall}
 
 \subsubsection{Replace first match (s.replacefirst)}
-% \libfcn{s.replacefirst}
+\libfcn{s.replacefirst}
 
 \subsubsection{Replace last match (s.replacelast)}
-% \libfcn{s.replacelast}
+\libfcn{s.replacelast}
 
 \subsubsection{Translate characters (s.translate)}
-% \libfcn{s.translate}
+\libfcn{s.translate}
 
 \subsection{Regular Expressions}
 
@@ -1461,140 +1530,140 @@ and stemming
 \subsection{Basic access}
 
 \subsubsection{Length (a.len)}
-% \libfcn{a.len}
+\libfcn{a.len}
 
 \subsubsection{Extract subsequence (a.subseq)}
-% \libfcn{a.subseq}
+\libfcn{a.subseq}
 
 \subsubsection{Modify subsequence (a.subseqto)}
-% \libfcn{a.subseqto}
+\libfcn{a.subseqto}
 
 \subsection{Search and replace}
 
 \subsubsection{Contains (a.contains)}
-% \libfcn{a.contains}
+\libfcn{a.contains}
 
 \subsubsection{Count instances (a.count)}
-% \libfcn{a.count}
+\libfcn{a.count}
 
 \subsubsection{Count instances by predicate (a.countPredicate)}
 libfcn{a.countPredicate}
 
 \subsubsection{Find first index (a.index)}
-% \libfcn{a.index}
+\libfcn{a.index}
 
 \subsubsection{Find last index (a.rindex)}
-% \libfcn{a.rindex}
+\libfcn{a.rindex}
 
 \subsubsection{Check start (a.startswith)}
-% \libfcn{a.startswith}
+\libfcn{a.startswith}
 
 \subsubsection{Check end (a.endswith)}
-% \libfcn{a.endswith}
+\libfcn{a.endswith}
 
 \subsection{Manipulation}
 
 \subsubsection{Concatenate two arrays (a.concat)}
-% \libfcn{a.concat}
+\libfcn{a.concat}
 
 \subsubsection{Append (a.append)}
-% \libfcn{a.append}
+\libfcn{a.append}
 
 \subsubsection{Insert or prepend (a.insert)}
-% \libfcn{a.insert}
+\libfcn{a.insert}
 
 \subsubsection{Replace item (a.replace)}
-% \libfcn{a.replace}
+\libfcn{a.replace}
 
 \subsubsection{Remove item (a.remove)}
-% \libfcn{a.remove}
+\libfcn{a.remove}
 
 \subsection{Reordering}
 
 \subsubsection{Sort (a.sort)}
-% \libfcn{a.sort}
+\libfcn{a.sort}
 
 \subsubsection{Sort with a less-than function (a.sortLT)}
-% \libfcn{a.sortLT}
+\libfcn{a.sortLT}
 
 \subsubsection{Randomly shuffle array (a.shuffle)}
-% \libfcn{a.shuffle}
+\libfcn{a.shuffle}
 
 \subsubsection{Reverse order (a.reverse)}
-% \libfcn{a.reverse}
+\libfcn{a.reverse}
 
 \subsection{Extreme values}
 
 \subsubsection{Maximum of all values (a.max)}
-% \libfcn{a.max}
+\libfcn{a.max}
 
 \subsubsection{Minimum of all values (a.min)}
-% \libfcn{a.min}
+\libfcn{a.min}
 
 \subsubsection{Maximum with a less-than function (a.maxLT)}
-% \libfcn{a.maxLT}
+\libfcn{a.maxLT}
 
 \subsubsection{Minimum with a less-than function (a.minLT)}
-% \libfcn{a.minLT}
+\libfcn{a.minLT}
 
 \subsubsection{Maximum $N$ items (a.maxN)}
-% \libfcn{a.maxN}
+\libfcn{a.maxN}
 
 \subsubsection{Minimum $N$ items (a.minN)}
-% \libfcn{a.minN}
+\libfcn{a.minN}
 
 \subsubsection{Maximum $N$ with a less-than function (a.maxNLT)}
-% \libfcn{a.maxNLT}
+\libfcn{a.maxNLT}
 
 \subsubsection{Minimum $N$ with a less-than function (a.minNLT)}
-% \libfcn{a.minNLT}
+\libfcn{a.minNLT}
 
 \subsubsection{Argument maximum (a.argmax)}
-% \libfcn{a.argmax}
+\libfcn{a.argmax}
 
 \subsubsection{Argument minimum (a.argmin)}
-% \libfcn{a.argmin}
+\libfcn{a.argmin}
 
 \subsubsection{Argument maximum with a less-than function (a.argmaxLT)}
-% \libfcn{a.argmaxLT}
+\libfcn{a.argmaxLT}
 
 \subsubsection{Argument minimum with a less-than function (a.argminLT)}
-% \libfcn{a.argminLT}
+\libfcn{a.argminLT}
 
 \subsubsection{Maximum $N$ arguments (a.argmaxN)}
-% \libfcn{a.argmaxN}
+\libfcn{a.argmaxN}
 
 \subsubsection{Minimum $N$ arguments (a.argminN)}
-% \libfcn{a.argminN}
+\libfcn{a.argminN}
 
 \subsubsection{Maximum $N$ arguments with a less-than function (a.argmaxNLT)}
-% \libfcn{a.argmaxNLT}
+\libfcn{a.argmaxNLT}
 
 \subsubsection{Minimum $N$ arguments with a less-than function (a.argminNLT)}
-% \libfcn{a.argminNLT}
+\libfcn{a.argminNLT}
 
 \subsection{Numerical combinations}
 
 \subsubsection{Add all array values (a.sum)}
-% \libfcn{a.sum}
+\libfcn{a.sum}
 
 \subsubsection{Multiply all array values (a.product)}
-% \libfcn{a.product}
+\libfcn{a.product}
 
 \subsubsection{Sum of logarithms (a.lnsum)}
-% \libfcn{a.lnsum}
+\libfcn{a.lnsum}
 
 \subsubsection{Arithmetic mean (a.mean)}
-% \libfcn{a.mean}
+\libfcn{a.mean}
 
 \subsubsection{Geometric mean (a.geomean)}
-% \libfcn{a.geomean}
+\libfcn{a.geomean}
 
 \subsubsection{Median (a.median)}
-% \libfcn{a.median}
+\libfcn{a.median}
 
 \subsubsection{Mode, or most common value (a.mode)}
-% \libfcn{a.mode}
+\libfcn{a.mode}
 
 \hypertarget{hsec:set-like}{}
 \subsection{Set or set-like functions}
@@ -1603,88 +1672,88 @@ libfcn{a.countPredicate}
 PFA does not have a set datatype, but arrays can be interpreted as sets with the following functions.
 
 \subsubsection{Distinct items (a.distinct)}
-% \libfcn{a.distinct}
+\libfcn{a.distinct}
 
 \subsubsection{Set equality (a.seteq)}
-% \libfcn{a.seteq}
+\libfcn{a.seteq}
 
 \subsubsection{Union (a.union)}
-% \libfcn{a.union}
+\libfcn{a.union}
 
 \subsubsection{Intersection (a.intersect)}
-% \libfcn{a.intersect}
+\libfcn{a.intersect}
 
 \subsubsection{Set difference (a.diff)}
-% \libfcn{a.diff}
+\libfcn{a.diff}
 
 \subsubsection{Symmetric set difference (a.symdiff)}
-% \libfcn{a.symdiff}
+\libfcn{a.symdiff}
 
 \subsubsection{Subset check (a.subset)}
-% \libfcn{a.subset}
+\libfcn{a.subset}
 
 \subsubsection{Disjointness check (a.disjoint)}
-% \libfcn{a.disjoint}
+\libfcn{a.disjoint}
 
 \subsection{Functional programming}
 
 \subsubsection{Map array items with function (a.map)}
-% \libfcn{a.map}
+\libfcn{a.map}
 
 \subsubsection{Filter array items with function (a.filter)}
-% \libfcn{a.filter}
+\libfcn{a.filter}
 
 \subsubsection{Filter and map (a.filtermap)}
-% \libfcn{a.filtermap}
+\libfcn{a.filtermap}
 
 \subsubsection{Map and flatten (a.flatmap)}
-% \libfcn{a.flatmap}
+\libfcn{a.flatmap}
 
 \subsubsection{Reduce array items to a single value (a.reduce)}
-% \libfcn{a.reduce}
+\libfcn{a.reduce}
 
 \subsubsection{Right-to-left reduce (a.reduceright)}
-% \libfcn{a.reduceright}
+\libfcn{a.reduceright}
 
 \subsubsection{Fold array items to another type (a.fold)}
-% \libfcn{a.fold}
+\libfcn{a.fold}
 
 \subsubsection{Right-to-left fold (a.foldright)}
-% \libfcn{a.foldright}
+\libfcn{a.foldright}
 
 \subsubsection{Take items until predicate is false (a.takeWhile)}
-% \libfcn{a.takeWhile}
+\libfcn{a.takeWhile}
 
 \subsubsection{Drop items until predicate is true (a.dropWhile)}
-% \libfcn{a.dropWhile}
+\libfcn{a.dropWhile}
 
 \subsection{Functional tests}
 
 \subsubsection{Existential check, $\exists$ (a.any)}
-% \libfcn{a.any}
+\libfcn{a.any}
 
 \subsubsection{Univeral check, $\forall$ (a.all)}
-% \libfcn{a.all}
+\libfcn{a.all}
 
 \subsubsection{Pairwise check of two arrays (a.corresponds)}
-% \libfcn{a.corresponds}
+\libfcn{a.corresponds}
 
 \subsection{Restructuring}
 
 \subsubsection{Sliding window (a.slidingWindow)}
-% \libfcn{a.slidingWindow}
+\libfcn{a.slidingWindow}
 
 \subsubsection{Unique combinations of a fixed size (a.combinations)}
-% \libfcn{a.combinations}
+\libfcn{a.combinations}
 
 \subsubsection{Permutations (a.permutations)}
-% \libfcn{a.permutations}
+\libfcn{a.permutations}
 
 \subsubsection{Flatten array (a.flatten)}
-% \libfcn{a.flatten}
+\libfcn{a.flatten}
 
 \subsubsection{Group items by category (a.groupby)}
-% \libfcn{a.groupby}
+\libfcn{a.groupby}
 
 \pagebreak
 
@@ -1707,10 +1776,10 @@ PFA does not have a set datatype, but arrays can be interpreted as sets with the
 \label{sec:impute}
 
 \subsubsection{Skip record (impute.errorOnNull)}
-% \libfcn{impute.errorOnNull}
+\libfcn{impute.errorOnNull}
 
 \subsubsection{Replace with default (impute.defaultOnNull)}
-% \libfcn{impute.defaultOnNull}
+\libfcn{impute.defaultOnNull}
 
 \pagebreak
 
@@ -1729,10 +1798,10 @@ CUSUM
 \subsection{Sample statistics}
 
 \subsubsection{Update aggregated mean (stat.sample.updateMean)}
-% \libfcn{stat.sample.updateMean}
+\libfcn{stat.sample.updateMean}
 
 \subsubsection{Compute aggregated mean (stat.sample.mean)}
-% \libfcn{stat.sample.mean}
+\libfcn{stat.sample.mean}
 
 accumulated mean, median(?)
 
@@ -1743,10 +1812,10 @@ accumulated mean, median(?)
 \subsection{Decision and regression Trees}
 
 \subsubsection{Tree walk with simple predicates (model.tree.simpleWalk)}
-% \libfcn{model.tree.simpleWalk}
+\libfcn{model.tree.simpleWalk}
 
 \subsubsection{Tree walk with user-defined predicates (model.tree.predicateWalk)}
-% \libfcn{model.tree.predicateWalk}
+\libfcn{model.tree.predicateWalk}
 
 \subsection{Cluster models}
 
