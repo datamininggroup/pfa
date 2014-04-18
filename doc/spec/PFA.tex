@@ -425,7 +425,7 @@ The normative definition of Avro 1.7.6 types and type schemae is \href{http://av
 
 The set of all expressible types is the closure under the following primitives and parameterized types.
 \begin{allowedfields}
-\item[null:] A type with only one value, {\PFAc null}.  This is a type-safe null in the sense that no other types are nullable unless specifically declared to be a union with type {\bf null}.
+\item[null:] A type with only one value, {\PFAc null}.  This is a unit type, and is usually only useful when combined with other types in a union (see below) or as a return type for functions that do not have a meaningful value to return.
 \item[boolean:] A type with only two values, {\PFAc true} and {\PFAc false}.
 \item[int:] Signed whole numbers with a 32-bit range: from $-2147483648$ to $2147483647$ inclusive.
 \item[long:] Signed whole numbers with a 64-bit range: from $-9223372036854775808$ to $9223372036854775807$ inclusive.
@@ -617,44 +617,58 @@ record ({\it fields:} \{{\PFApf one:} any {\PFAp A}, {\PFApf two:} any {\PFAp B}
 \end{minipage}
 \end{center}
 is a record with three fields of unspecified type, though fields ``two'' and ``three'' have the same.  If they are not exactly the same, they are promoted to the \hyperlink{hsec:narrowest-supertype}{narrowest supertype} of the matches.  The following are examples of Avro types that would match this pattern.
+\begin{example}
+{\PFAc R1} matches because ``two'' and ``three'' are both {\bf string}.
 \begin{json}
 {"type": "record", "name": "R1", "fields": [
     {"name": "one", "type": "int"},
     {"name": "two", "type": "string"},
     {"name": "three", "type": "string"}]}
 \end{json}
-{\PFAc R1} matches because ``two'' and ``three'' are both {\bf string}.
+\vspace{0.2 cm}
+\end{example}
 
+\begin{example}
+{\PFAc R2} matches because ``two'' and ``three'' are both {\bf int}.  The type that matches wildcard {\PFAp B} does not need to be different from the type that matches wildcard {\PFAp A} (also ``int'').
 \begin{json}
 {"type": "record", "name": "R2", "fields": [
     {"name": "one", "type": "int"},
     {"name": "two", "type": "int"},
     {"name": "three", "type": "int"}]}
 \end{json}
-{\PFAc R2} matches because ``two'' and ``three'' are both {\bf int}.  The type that matches wildcard {\PFAp B} does not need to be different from the type that matches wildcard {\PFAp A} (also ``int'').
+\vspace{0.2 cm}
+\end{example}
 
+\begin{example}
+{\PFAc R3} matches because ``two'' and ``three'' can both be promoted to {\bf double}.
 \begin{json}
 {"type": "record", "name": "R3", "fields": [
     {"name": "one", "type": "string"},
     {"name": "two", "type": "int"},
     {"name": "three", "type": "double"}]}
 \end{json}
-{\PFAc R3} matches because ``two'' and ``three'' can both be promoted to {\bf double}.
+\end{example}
 
-The scope of wildcard labels is the entire function signature, including all parameters and return type.  As an example, the signature of ``+'' (the library function that adds two numbers) is
+The scope of wildcard labels is the entire function signature, including all parameters and return type.
+
+\begin{example}
+As an example, the signature of ``+'' (the library function that adds two numbers) is
 \begin{center}
 \begin{minipage}{0.9\linewidth}
 \mbox{\PFAc \{"+":$\!$ [x, y]\} \vspace{0.2 cm} \\} \vspace{0.2 cm} \\ \rm \begin{tabular}{p{0.01\linewidth} l p{0.8\linewidth}} & \PFAc x \rm & any {\PFAtp A} of \{int, long, float, double\} \\  & \PFAc y \rm & {\PFAtp A} \\  & {\it (returns)} & {\PFAtp A} \\ \end{tabular}
 \end{minipage}
 \end{center}
 The two parameters, {\PFAp x} and {\PFAp y}, can be any type in the set \{int, long, float, double\} and the return type is the narrowest supertype of {\PFAp x} and {\PFAp y}.  Thus, int $+$ int $\to$ int, int $+$ double $\to$ double, etc.  The restriction on {\PFAtp A} in the pattern for {\PFAp x} applies equally to {\PFAp y} because all constraints must be satisfied for a pattern to match.
+\end{example}
 
+\begin{example}
 Shared labels are primarily used to carry types from a parameter to the return type.  They allow a function like ``a.subseq'' (extract a subsequence of an array) to be defined once for any type of items.
 \begin{center}
 \begin{minipage}{0.9\linewidth}
 \mbox{\PFAc \{"a.subseq":$\!$ [a, start, end]\} \vspace{0.2 cm} \\} \vspace{0.2 cm} \\ \rm \begin{tabular}{p{0.01\linewidth} l p{0.8\linewidth}} & \PFAc a \rm & array of any {\PFAtp A} \\  & \PFAc start \rm & int \\  & \PFAc end \rm & int \\  & {\it (returns)} & array of {\PFAtp A} \\ \end{tabular}
 \end{minipage}
 \end{center}
+\end{example}
 
 Record substructure can also be matched with wildcards.  Such a pattern has one of these two forms:
 \begin{itemize}
@@ -663,19 +677,23 @@ Record substructure can also be matched with wildcards.  Such a pattern has one 
 \end{itemize}
 The first matches any record, regarless of what fields it contains, and the second matches a record with at least the specified fields.  Wildcards with and without specifying record substructure have labels in the same namespace.
 
+\begin{example}
 For example, the function ``stat.sample.mean'' computes a mean from a record containing components of the running sum.  Its signature requires that the record has double-valued fields {\PFApf sum\_w} and {\PFApf sum\_wx}, but it does not specify anything else about the record.  This {\PFAc runningSum} could be overloaded with additional, application-specific functionality.
 \begin{center}
 \begin{minipage}{0.9\linewidth}
 \mbox{\PFAc \{"stat.sample.mean":$\!$ [runningSum]\} \vspace{0.2 cm} \\} \vspace{0.2 cm} \\ \rm \begin{tabular}{p{0.01\linewidth} l p{0.8\linewidth}} & \PFAc runningSum \rm & any record {\PFAtp A} with \{{\PFApf sum\_w:}$\!$ double, {\PFApf sum\_wx:}$\!$ double\} \\  & {\it (returns)} & double \\ \end{tabular}
 \end{minipage}
 \end{center}
+\end{example}
 
+\begin{example}
 As another example, the ``model.tree.simpleWalk'' function for evaluating decision trees requires that {\PFAc datum} is a record and that {\PFAc treeNode} is a record with {\PFApf field}, {\PFApf operator}, {\PFApf value}, {\PFApf pass}, and {\PFApf fail} fields.  Since it does not specify anything else about the record, the {\PFAc treeNodes} could also carry metadata describing how the tree was made.
 \begin{center}
 \begin{minipage}{0.9\linewidth}
 \mbox{\PFAc \{"model.tree.simpleWalk":$\!$ [datum, treeNode]\} \vspace{0.2 cm} \\} \vspace{0.2 cm} \\ \rm \begin{tabular}{p{0.01\linewidth} l p{0.8\linewidth}} & \PFAc datum \rm & any record {\PFAtp D} \\  & \PFAc treeNode \rm & any record {\PFAtp T} with \{{\PFApf field:}$\!$ string, {\PFApf operator:}$\!$ string, {\PFApf value:}$\!$ any {\PFAtp V}, {\PFApf pass:}$\!$ union of \{{\PFAtp T}, any {\PFAtp S}\}, {\PFApf fail:}$\!$ union of \{{\PFAtp T}, {\PFAtp S}\}\} \\  & {\it (returns)} & {\PFAtp S} \\ \end{tabular}
 \end{minipage}
 \end{center}
+\end{example}
 
 Finally, some library functions can accept functions as arguments, even though functions are not first-class objects in the language.  A function cannot be assigned to a symbol, but it can appear in an argument list.  The following type pattern matches functions:
 \begin{itemize}
@@ -683,25 +701,31 @@ Finally, some library functions can accept functions as arguments, even though f
 \end{itemize}
 The pattern does not specify the names of parameters, only their number, order, and types (as patterns).  Only non-generic functions can be matched, and since most library functions are generic, the matched function would usually be a user-defined function.  (Notable exceptions are mathematical special functions, probability distributions, and clustering metrics.)
 
+\begin{example}
 The parameter and return types of a function pattern can be wildcarded, as in this example of ``a.filter'', which filters an array.
 \begin{center}
 \begin{minipage}{0.9\linewidth}
 \mbox{\PFAc \{"a.filter":$\!$ [a, fcn]\} \vspace{0.2 cm} \\} \vspace{0.2 cm} \\ \rm \begin{tabular}{p{0.01\linewidth} l p{0.8\linewidth}} & \PFAc a \rm & array of any {\PFAtp A} \\  & \PFAc fcn \rm & function ({\PFAtp A}) $\to$ boolean \\  & {\it (returns)} & array of {\PFAtp A} \\ \end{tabular}
 \end{minipage}
 \end{center}
+\end{example}
 
+\begin{example}
 Library functions with function arguments are primarily used to override the default behavior of a statistical routine through callbacks.  The ``model.tree.predicateWalk'' function illustrates how a decision tree traversal can be given an arbitrary or even user-defined predicate.
 \begin{center}
 \begin{minipage}{0.9\linewidth}
 \mbox{\PFAc \{"model.tree.predicateWalk":$\!$ [datum, treeNode, predicate]\} \vspace{0.2 cm} \\} \vspace{0.2 cm} \\ \rm \begin{tabular}{p{0.01\linewidth} l p{0.8\linewidth}} & \PFAc datum \rm & any record {\PFAtp D} \\  & \PFAc treeNode \rm & any record {\PFAtp T} with \{{\PFApf pass:}$\!$ union of \{{\PFAtp T}, any {\PFAtp S}\}, {\PFApf fail:}$\!$ union of \{{\PFAtp T}, {\PFAtp S}\}\} \\  & \PFAc predicate \rm & function ({\PFAtp D}, {\PFAtp T}) $\to$ boolean \\  & {\it (returns)} & {\PFAtp S} \\ \end{tabular}
 \end{minipage}
 \end{center}
+\end{example}
 
 Function arguments can only be provided using the \hyperlink{hsec:fcndef}{fcndef} or \hyperlink{hsec:fcnref}{fcnref} special forms, which require explicit functions to be known during static analysis.  Therefore, the platform on which PFA is being implemented does not need first class functions or the equivalent (e.g.\ objects with a pre-specified ``apply'' method).  It does not even need functions in the normal sense: if the platform requires all functions to be expanded inline, the PFA system can generate specific code for each case.  That is, the ``a.filter'' and ``model.tree.predicateWalk'' functions can be expanded into special-case bytecode for each call that takes a different function argument, possibly mixing the library function implementation with the user-defined callback.  This would not be possible if function arguments could only be resolved at runtime.
 
 \pagebreak
 
+\hypertarget{hsec:symbol-scope}{}
 \section{Symbols, scope, and data structures}
+\label{sec:symbol-scope}
 
 Calculations in PFA are performed by nesting function calls in argument lists (purely functional programming) and assigning values to symbols, cells, and pools, possibly overwriting previous values (imperative programming).  Some mathematical algorithms are more easily expressed in a functional style while others are more easily expressed in an imperative style.  Cells and pools (global state) are discussed in \hyperlink{hsec:state}{Sec.~\ref{sec:state}}.  Symbols provide temporary local state.
 
@@ -761,6 +785,7 @@ Attempts to depth-first walk through this list of lists would result in an infin
 \end{json}
 creates a new array that contains all of the old items of {\PFAc x} with the entire old array {\PFAc x} appended.  This new array is assigned to symbol {\PFAc x}.  Since PFA has no mutable structures (and no lazy evaluation), it is impossible to create a circular reference.
 
+\begin{example}
 In fact, assignments with the same symbol on the left-hand side as the right-hand side behave like ``{\PFAc x = x + 1}'' in that the right-hand side always deals with the old value of the symbol and the left-hand side may change the meaning of the symbol to a new value.  For instance,
 \begin{json}
 {"do": [
@@ -787,6 +812,7 @@ just as
     "x"]}
 \end{json}
 results in 3.  In languages with mutable data structures, some updates behave like ``{\PFAc x = x + 1}'' while others create circular references.
+\end{example}
 
 Similarly, there is no distinction between passing a function argument by reference versus passing it by value.  Such a distinction would be seen when the function modifies the object that it is given, but in PFA, these modifications are not possible.
 
@@ -852,7 +878,10 @@ The {\PFAc params}, {\PFAc ret}, and {\PFAc do} fields must be present, though {
 
 The {\PFAc do} field is the function body, and its return value is the last or only expression it contains.  The {\PFAc do} field must contain at least one expression (it must not be an empty JSON array).
 
-If this form appears in the {\PFAc fcns} top-level field, the function name (without its namespace qualifier, ``{\PFAc u.}'') is given by the associated member name.  For example,
+If this form appears in the {\PFAc fcns} top-level field, the function name (without its namespace qualifier, ``{\PFAc u.}'') is given by the associated member name.
+
+\begin{example}
+For example,
 \begin{json}
 "fcns": {
     "square": {"params": [{"x": "double"}], "ret": "double", "do": {"**": ["x", 2]}},
@@ -860,7 +889,9 @@ If this form appears in the {\PFAc fcns} top-level field, the function name (wit
 }
 \end{json}
 defines {\PFAc u.square} (which squares the input value) and {\PFAc u.cube} (which cubes the input value).  The number 5 may now be squared by {\PFAc \{"u.square":$\!$ 5\}} or {\PFAc \{"u.square":$\!$ [5]\}}.
+\end{example}
 
+\begin{example}
 This Fibonacci number algorithm demonstrates recursion.
 \begin{json}
 "fcns": {
@@ -873,8 +904,9 @@ This Fibonacci number algorithm demonstrates recursion.
          ]}}}
 }
 \end{json}
+\end{example}
 
-\begin{minipage}{\linewidth}
+\begin{example}
 This iterative Fibonacci number algorithm illustrates a multi-line {\PFAc do} field.
 \begin{json}
 "fcns": {
@@ -896,9 +928,11 @@ This iterative Fibonacci number algorithm illustrates a multi-line {\PFAc do} fi
     ]}
 }
 \end{json}
-\end{minipage}
+\end{example}
 
+\hypertarget{hsec:referencing-functions}{}
 \subsection{Syntax for referencing functions}
+\label{sec:referencing-functions}
 
 Named functions are referenced with the ``fcnref'' special form, and anonymous functions are both declared and referenced with an inline ``fcndef'' special form (see above).
 
@@ -919,6 +953,7 @@ The ``fcnref'' special form has the following syntax.
 
 The {\PFAc name} string must be an exact name of the function, not an expression that can be evaluated at runtime.
 
+\begin{example}
 Here is a complete PFA document that increments and returns a counter every time it is pinged (the scoring engine is executed with {\PFAc null} input).
 \begin{json}
 {"input": "null",
@@ -936,7 +971,9 @@ Here is a complete PFA document that increments and returns a counter every time
 }
 \end{json}
 The increment is defined in a function so that getting the counter value, incrementing it, and putting the new value in the cell are all one atomic action--- other update attempts block until this one is done.  Without ensuring atomicity, the counter could miss an update when a second update attempt reads {\PFAc counter} before the first writes its new value.
+\end{example}
 
+\begin{example}
 The same operation could be performed with an inline ``fcndef''.  In the example below, the scoring engine adds the input value to {\PFAc counter} every time it is called.  Because of its location, the anonymous function can close over the {\PFAc input} symbol, which exists in the {\PFAc action} block but not in {\PFAc fcns}.
 \begin{json}
 {"input": "int",
@@ -950,6 +987,7 @@ The same operation could be performed with an inline ``fcndef''.  In the example
      {"counter": {"type": "int", "init": 0, "shared": true}}
 }
 \end{json}
+\end{example}
 
 \pagebreak
 
@@ -957,33 +995,96 @@ The same operation could be performed with an inline ``fcndef''.  In the example
 \section{Expressions}
 \label{sec:expressions}
 
-Special forms and ordinary function calls
-
-\hypertarget{hsec:function-call}{}
-\subsection{Function calls}
-\label{sec:function-call}
+PFA documents may contain simple programs formed by composing expressions.  There are four types of expressions: symbol references, literal values, function calls, and special forms.
 
 \hypertarget{hsec:symbol-ref}{}
 \subsection{Symbol references}
 \label{sec:symbol-ref}
 
+A symbol reference yields the current value of a predefined symbol.  For example, the {\PFAc action} routine has a {\PFAc input} symbol pre-defined: wherever this appears, the input value is inserted.  New symbols can be created with ``\hyperlink{hsec:let-set}{let}'' and old symbols can be changed with ``\hyperlink{hsec:let-set}{set}'', if the current context allows it (\hyperlink{hsec:symbol-scope}{see Sec.~\ref{sec:symbol-scope}}).  \hyperlink{hsec:cells-pools}{Cells and pools} are not symbols; they are referenced through \hyperlink{hsec:cell-pool-forms}{a pair of special forms}.
+
+A symbol reference is simply a JSON string.  JSON strings in contexts where an expression is expected are interpreted as symbol references (with one exception); JSON strings in other contexts have other meanings.  The exception is the following: a valid symbol name must not contain periods (``.'') as described at the end of \hyperlink{hsec:symbol-scope}{Sec.~\ref{sec:symbol-scope}}, and if a JSON string where an expression is expected contains periods, it should be interpreted as a shortcut for the ``\hyperlink{hsec:attr-form}{attr}'' special form.
+
 \hypertarget{hsec:literals}{}
 \subsection{Literal values}
 \label{sec:literals}
 
-        %% if (keys == Set("int"))                                      LiteralInt(_int, Some(pos(dot, _at)))
-        %% else if (keys == Set("long"))                                LiteralLong(_long, Some(pos(dot, _at)))
-        %% else if (keys == Set("float"))                               LiteralFloat(_float, Some(pos(dot, _at)))
-        %% else if (keys == Set("double"))                              LiteralDouble(_double, Some(pos(dot, _at)))
-        %% else if (keys == Set("string"))                              LiteralString(_string, Some(pos(dot, _at)))
-        %% else if (keys == Set("base64"))                              LiteralBase64(_bytes, Some(pos(dot, _at)))
-        %% else if (keys == Set("type", "value"))                       Literal(_avroType, _value, Some(pos(dot, _at)))
+Literal values are constants embedded in an expression.  Simple examples are numbers, such as the ``2'' in this expression that squares {\PFAc x}: {\PFAc \{"**":$\!$ ["x", 2]\}}.
 
-% short-cut for strings: ["x"] to mean {"string": "x"}
+Cells without ``cell-to'' can also be used to define constants in a PFA document.  The differences are: (1) a literal appears in the midst of an expression, while cells are in the {\PFAc cells} top-level field, (2) cells are named and can be referenced in many places throughout a PFA document, including functions, but literals are unnamed unless assigned to a symbol of limited scope, (3) constant cells are constructed once, in the \hyperlink{hsec:phases}{initialization phase} of the engine, but literals may or may not be constructed every time the program flow reaches them (this is an implementation detail).  Typically, large data structures like the representation of a statistical model would be stored in a cell, rather than an inline literal.
+
+Literals are represented by the following special forms:
+\begin{itemize}
+\item {\PFAc \{"int":$\!$ NUMBER\}} where {\PFAc NUMBER} is a JSON integer.  The return type is {\bf int}; a value that is too large to be represented as a 32-bit number is a syntax error.
+\item {\PFAc \{"long":$\!$ NUMBER\}} where {\PFAc NUMBER} is a JSON integer.  The return type is {\bf long}; a value that is too large to be represented as a 64-bit number is a syntax error.
+\item {\PFAc \{"float":$\!$ NUMBER\}} where {\PFAc NUMBER} is a JSON floating-point number.  The return type is {\bf float}; a value that is too large, too small, or too precise to be represented as a \href{http://dx.doi.org/10.1109%2FIEEESTD.2008.4610935}{IEEE 754} 32-bit floating point number is a syntax error.
+\item {\PFAc \{"double":$\!$ NUMBER\}} where {\PFAc NUMBER} is a JSON floating-point number.  The return type is {\bf double}; a value that is too large, too small, or too precise to be represented as a \href{http://dx.doi.org/10.1109%2FIEEESTD.2008.4610935}{IEEE 754} 64-bit floating point number is a syntax error.
+\item {\PFAc \{"string":$\!$ STRING\}} where {\PFAc STRING} is a quoted string.  The return type is {\bf string}.
+\item {\PFAc \{"base64":$\!$ STRING\}} where {\PFAc STRING} is a \href{http://www.ietf.org/rfc/rfc3548.txt}{base-64 representation} of a binary input.  The return type is {\bf bytes}.
+\item {\PFAc \{"type":$\!$ TYPE, "value":$\!$ VALUE\}} where {\PFAc TYPE} is an Avro schema and {\PFAc VALUE} is a JSON literal ({\it not} an expression) whose type matches {\PFAc TYPE}.  This form can be used to construct arrays, maps, records, etc.
+\end{itemize}
+
+Additionally, if an integer appears where an expression is expected, that number is an {\bf int} literal if 32-bit, a {\bf long} literal if 64-bit, and a syntax error if larger.  If a floating point number appears where an expression is expected, that number is a {\bf double} literal (not a {\bf float}, even if small enough).  A floating-point number that is too large, too small, or too precise to be a \href{http://dx.doi.org/10.1109%2FIEEESTD.2008.4610935}{IEEE 754} 64-bit floating point number causes a syntax error.
+
+There is also a shortcut for making {\bf string} literals: {\PFAc [STRING]} (single-element JSON array containing a string).  Note that a string, by itself is interpreted as a \hyperlink{sec:symbol-ref}{symbol reference} (because symbol references are more common than string literals).  In some contexts, such as the argument list of a function, an expression or an array of expressions is expected.  If a {\PFAc [STRING]} appears in one of these contexts, it is interpreted as a one-element array containing a symbol reference, not a literal string.
+
+\hypertarget{hsec:function-call}{}
+\subsection{Function calls}
+\label{sec:function-call}
+
+Most of the functionality of PFA is provided through function calls; data-centric scoring engines, such as statistical models, would often involve only one function call.  Library functions are part of the PFA definition (\hyperlink{hsec:core-library}{see Sec.~\ref{sec:core-library} et seq.}); user functions are defined in a PFA document (\hyperlink{hsec:user-defined-fcns}{see Sec.~\ref{sec:user-defined-fcns}}).
+
+A function call is expressed in JSON as a single-member object, like this
+\begin{json}
+{"functionName": [argument1, argument2, ... argumentN]}
+\end{json}
+for a function {\PFAc functionName} of {\PFAc N} (zero or more) arguments or
+\begin{json}
+{"functionName": argument1}
+\end{json}
+for a function of exactly one argument.
+
+The arguments of a function call can either be an expression or a \hyperlink{hsec:referencing-functions}{function reference} (assuming that the called function accepts functions as arguments).
+
+Functions have strict requirements on the number of arguments (always fixed; there are no optional arguments or varargs) and their types.  Functions return a value with a specific type, though that type may depend on the argument types (for library functions).
+
+Special forms are similar to function calls in that they take arguments, perform a function, and return a value, but special forms may have more than one JSON object member.
 
 \hypertarget{hsec:new-form}{}
 \subsection{Creating arrays, maps, and records}
 \label{sec:new-form}
+
+Arrays, maps, and records can be created with the {\PFAc \{"type":$\!$ TYPE, "value":$\!$ VALUE\}} literal form \hyperlink{hsec:literals}{described above}, but the {\PFAc VALUE} must be a JSON literal and not an expression.  Thus, the literal form cannot depend on any inputs.  The ``new'' special form exists to create arrays, maps, and records from expressions:
+\begin{json}
+{"new": ARRAY, "type": ARRAY-TYPE}
+{"new": OBJECT, "type": MAP-OR-RECORD-TYPE}
+\end{json}
+where {\PFAc ARRAY} is a JSON array of expressions whose type is accepted by Avro schema {\PFAc ARRAY-TYPE}, and {\PFAc OBJECT} is a JSON object whose member values are expressions matching Avro schema {\PFAc MAP-OR-RECORD-TYPE}.
+
+\begin{example}
+The following returns an array of powers of {\PFAc x}, which has type {\bf double}.
+\begin{json}
+{"new": [1, "x", {"**": ["x", 2]}], "type": {"type": "array", "items": "double"}}
+\end{json}
+\end{example}
+
+\begin{example}
+The following returns a map from names to powers of {\PFAc x}, which has type {\bf double}.
+\begin{json}
+{"new": {"p0": 1, "p1": "x", "p2": {"**": ["x", 2]}},
+ "type": {"type": "array", "items": "double"}}
+\end{json}
+\end{example}
+
+\begin{example}
+The following initializes a record of type {\PFAc R} with a {\bf string} stored in {\PFAc x} and its length.
+\begin{json}
+{"new": {"theString": "x", "theLength": {"s.len": "x"}},
+ "type": {"type": "record", "name": "R", "fields":
+     [{"name": "theString", "type": "string"},
+      {"name": "theLength", "type": "int"}]}}
+\end{json}
+\end{example}
 
         %% else if (keys == Set("new", "type")  &&  _newObject != null) NewObject(_newObject, _avroType, avroTypeBuilder, Some(pos(dot, _at)))
         %% else if (keys == Set("new", "type")  &&  _newArray != null)  NewArray(_newArray, _avroType, avroTypeBuilder, Some(pos(dot, _at)))
@@ -1080,95 +1181,97 @@ Special forms and ordinary function calls
 
 \pagebreak
 
+\hypertarget{hsec:core-library}{}
 \section{Core library}
+\label{sec:core-library}
 
 \subsection{Basic arithmetic}
 
 \subsubsection{Addition of two values ($+$)}
-\libfcn{+}
+% \libfcn{+}
 
 \subsubsection{Subtraction ($-$)}
-\libfcn{-}
+% \libfcn{-}
 
 \subsubsection{Multiplication of two values (*)}
-\libfcn{*}
+% \libfcn{*}
 
 \subsubsection{Floating-point division (/)}
-\libfcn{/}
+% \libfcn{/}
 
 \subsubsection{Integer division (//)}
-\libfcn{//}
+% \libfcn{//}
 
 \subsubsection{Negation (u$-$)}
-\libfcn{u-}
+% \libfcn{u-}
 
 \subsubsection{Modulo (\%)}
-\libfcn{\%}
+% \libfcn{\%}
 
 \subsubsection{Remainder (\%\%)}
-\libfcn{\%\%}
+% \libfcn{\%\%}
 
 \subsubsection{Raising to a power (**)}
-\libfcn{**}
+% \libfcn{**}
 
 \subsection{Comparison operators}
 
 Avro defines a \href{http://avro.apache.org/docs/1.7.6/spec.html#order}{sort order} for every pair of values with a compatible type, so any two objects of compatible type can be compared in PFA.
 
 \subsubsection{General comparision (cmp)}
-\libfcn{cmp}
+% \libfcn{cmp}
 
 \subsubsection{Equality (==)}
-\libfcn{==}
+% \libfcn{==}
 
 \subsubsection{Inequality (!=)}
-\libfcn{!=}
+% \libfcn{!=}
 
 \subsubsection{Less than (<)}
-\libfcn{<}
+% \libfcn{<}
 
 \subsubsection{Less than or equal to (<=)}
-\libfcn{<=}
+% \libfcn{<=}
 
 \subsubsection{Greater than (>)}
-\libfcn{>}
+% \libfcn{>}
 
 \subsubsection{Greater than or equal to (>=)}
-\libfcn{>=}
+% \libfcn{>=}
 
 \subsubsection{Maximum of two values (max)}
-\libfcn{max}
+% \libfcn{max}
 
 \subsubsection{Minimum of two values (min)}
-\libfcn{min}
+% \libfcn{min}
 
 \subsection{Logical operators}
 
 \subsubsection{Logical and (and)}
-\libfcn{and}
+% \libfcn{and}
 
 \subsubsection{Logical or (or)}
-\libfcn{or}
+% \libfcn{or}
 
 \subsubsection{Logical xor (xor)}
-\libfcn{xor}
+% \libfcn{xor}
 
 \subsubsection{Logical not (not)}
-\libfcn{not}
+% \libfcn{not}
 
 \subsection{Bitwise arithmetic}
 
 \subsubsection{Bitwise and (\&)}
-\libfcn{\&}
+% \libfcn{\&}
 
 \subsubsection{Bitwise or (|)}
-\libfcn{|}
+% \libfcn{|}
 
 \subsubsection{Bitwise xor (\^{})}
-\libfcn{\^{}}
+% \libfcn{\^{}}
 
 \subsubsection{Bitwise not (\textasciitilde{})}
-\libfcn{TILDE}
+% \libfcn{TILDE}
 
 \pagebreak
 
@@ -1179,89 +1282,89 @@ Avro defines a \href{http://avro.apache.org/docs/1.7.6/spec.html#order}{sort ord
 Constants such as $\pi$ and $e$ are represented as stateless functions with no arguments.  Specific implementations may choose to replace the function call with its inline value.
 
 \subsubsection{Archimedes' constant $\pi$ (m.pi)}
-\libfcn{m.pi}
+% \libfcn{m.pi}
 
 \subsubsection{Euler's constant $e$ (m.e)}
-\libfcn{m.e}
+% \libfcn{m.e}
 
 \subsection{Common functions}
 
 \subsubsection{Square root (m.sqrt)}
-\libfcn{m.sqrt}
+% \libfcn{m.sqrt}
 
 \subsubsection{Hypotnuse (m.hypot)}
-\libfcn{m.hypot}
+% \libfcn{m.hypot}
 
 \subsubsection{Trigonometric sine (m.sin)}
-\libfcn{m.sin}
+% \libfcn{m.sin}
 
 \subsubsection{Trigonometric cosine (m.cos)}
-\libfcn{m.cos}
+% \libfcn{m.cos}
 
 \subsubsection{Trigonometric tangent (m.tan)}
-\libfcn{m.tan}
+% \libfcn{m.tan}
 
 \subsubsection{Inverse trigonometric sine (m.asin)}
-\libfcn{m.asin}
+% \libfcn{m.asin}
 
 \subsubsection{Inverse trigonometric cosine (m.acos)}
-\libfcn{m.acos}
+% \libfcn{m.acos}
 
 \subsubsection{Inverse trigonometric tangent (m.atan)}
-\libfcn{m.atan}
+% \libfcn{m.atan}
 
 \subsubsection{Robust inverse trigonometric tangent (m.atan2)}
-\libfcn{m.atan2}
+% \libfcn{m.atan2}
 
 \subsubsection{Hyperbolic sine (m.sinh)}
-\libfcn{m.sinh}
+% \libfcn{m.sinh}
 
 \subsubsection{Hyperbolic cosine (m.cosh)}
-\libfcn{m.cosh}
+% \libfcn{m.cosh}
 
 \subsubsection{Hyperbolic tangent (m.tanh)}
-\libfcn{m.tanh}
+% \libfcn{m.tanh}
 
 \subsubsection{Natural exponential (m.exp)}
-\libfcn{m.exp}
+% \libfcn{m.exp}
 
 \subsubsection{Natural exponential minus one (m.expm1)}
-\libfcn{m.expm1}
+% \libfcn{m.expm1}
 
 \subsubsection{Natural logarithm (m.ln)}
-\libfcn{m.ln}
+% \libfcn{m.ln}
 
 \subsubsection{Logarithm base 10 (m.log10)}
-\libfcn{m.log10}
+% \libfcn{m.log10}
 
 \subsubsection{Arbitrary logarithm (m.log)}
-\libfcn{m.log}
+% \libfcn{m.log}
 
 \subsubsection{Natural logarithm of one plus square (m.ln1p)}
-\libfcn{m.ln1p}
+% \libfcn{m.ln1p}
 
 \subsection{Rounding}
 
 \subsubsection{Absolute value (m.abs)}
-\libfcn{m.abs}
+% \libfcn{m.abs}
 
 \subsubsection{Floor (m.floor)}
-\libfcn{m.floor}
+% \libfcn{m.floor}
 
 \subsubsection{Ceiling (m.ceil)}
-\libfcn{m.ceil}
+% \libfcn{m.ceil}
 
 \subsubsection{Simple rounding (m.round)}
-\libfcn{m.round}
+% \libfcn{m.round}
 
 \subsubsection{Unbiased rounding (m.rint)}
-\libfcn{m.rint}
+% \libfcn{m.rint}
 
 \subsubsection{Threshold function (m.signum)}
-\libfcn{m.signum}
+% \libfcn{m.signum}
 
 \subsubsection{Copy sign (m.copysign)}
-\libfcn{m.copysign}
+% \libfcn{m.copysign}
 
 \subsection{Linear algebra}
 
@@ -1276,76 +1379,76 @@ Strings are immutable, so none of the following functions modifies a string in-p
 \subsection{Basic access}
 
 \subsubsection{Length (s.len)}
-\libfcn{s.len}
+% \libfcn{s.len}
 
 \subsubsection{Extract substring (s.substr)}
-\libfcn{s.substr}
+% \libfcn{s.substr}
 
 \subsubsection{Modify substring (s.substrto)}
-\libfcn{s.substrto}
+% \libfcn{s.substrto}
 
 \subsection{Search and replace}
 
 \subsubsection{Contains (s.contains)}
-\libfcn{s.contains}
+% \libfcn{s.contains}
 
 \subsubsection{Count instances (s.count)}
-\libfcn{s.count}
+% \libfcn{s.count}
 
 \subsubsection{Find first index (s.index)}
-\libfcn{s.index}
+% \libfcn{s.index}
 
 \subsubsection{Find last index (s.rindex)}
-\libfcn{s.rindex}
+% \libfcn{s.rindex}
 
 \subsubsection{Check start (s.startswith)}
-\libfcn{s.startswith}
+% \libfcn{s.startswith}
 
 \subsubsection{Check end (s.endswith)}
-\libfcn{s.endswith}
+% \libfcn{s.endswith}
 
 \subsection{Conversions to or from other types}
 
 \subsubsection{Join an array of strings (s.join)}
-\libfcn{s.join}
+% \libfcn{s.join}
 
 \subsubsection{Split into an array of strings (s.split)}
-\libfcn{s.split}
+% \libfcn{s.split}
 
 \subsection{Conversions to or from other strings}
 
 \subsubsection{Concatenate two strings (s.concat)}
-\libfcn{s.concat}
+% \libfcn{s.concat}
 
 \subsubsection{Repeat pattern (s.repeat)}
-\libfcn{s.repeat}
+% \libfcn{s.repeat}
 
 \subsubsection{Lowercase (s.lower)}
-\libfcn{s.lower}
+% \libfcn{s.lower}
 
 \subsubsection{Uppercase (s.upper)}
-\libfcn{s.upper}
+% \libfcn{s.upper}
 
 \subsubsection{Left-strip (s.lstrip)}
-\libfcn{s.lstrip}
+% \libfcn{s.lstrip}
 
 \subsubsection{Right-strip (s.rstrip)}
-\libfcn{s.rstrip}
+% \libfcn{s.rstrip}
 
 \subsubsection{Strip both ends (s.strip)}
-\libfcn{s.strip}
+% \libfcn{s.strip}
 
 \subsubsection{Replace all matches (s.replaceall)}
-\libfcn{s.replaceall}
+% \libfcn{s.replaceall}
 
 \subsubsection{Replace first match (s.replacefirst)}
-\libfcn{s.replacefirst}
+% \libfcn{s.replacefirst}
 
 \subsubsection{Replace last match (s.replacelast)}
-\libfcn{s.replacelast}
+% \libfcn{s.replacelast}
 
 \subsubsection{Translate characters (s.translate)}
-\libfcn{s.translate}
+% \libfcn{s.translate}
 
 \subsection{Regular Expressions}
 
@@ -1358,140 +1461,140 @@ and stemming
 \subsection{Basic access}
 
 \subsubsection{Length (a.len)}
-\libfcn{a.len}
+% \libfcn{a.len}
 
 \subsubsection{Extract subsequence (a.subseq)}
-\libfcn{a.subseq}
+% \libfcn{a.subseq}
 
 \subsubsection{Modify subsequence (a.subseqto)}
-\libfcn{a.subseqto}
+% \libfcn{a.subseqto}
 
 \subsection{Search and replace}
 
 \subsubsection{Contains (a.contains)}
-\libfcn{a.contains}
+% \libfcn{a.contains}
 
 \subsubsection{Count instances (a.count)}
-\libfcn{a.count}
+% \libfcn{a.count}
 
 \subsubsection{Count instances by predicate (a.countPredicate)}
 libfcn{a.countPredicate}
 
 \subsubsection{Find first index (a.index)}
-\libfcn{a.index}
+% \libfcn{a.index}
 
 \subsubsection{Find last index (a.rindex)}
-\libfcn{a.rindex}
+% \libfcn{a.rindex}
 
 \subsubsection{Check start (a.startswith)}
-\libfcn{a.startswith}
+% \libfcn{a.startswith}
 
 \subsubsection{Check end (a.endswith)}
-\libfcn{a.endswith}
+% \libfcn{a.endswith}
 
 \subsection{Manipulation}
 
 \subsubsection{Concatenate two arrays (a.concat)}
-\libfcn{a.concat}
+% \libfcn{a.concat}
 
 \subsubsection{Append (a.append)}
-\libfcn{a.append}
+% \libfcn{a.append}
 
 \subsubsection{Insert or prepend (a.insert)}
-\libfcn{a.insert}
+% \libfcn{a.insert}
 
 \subsubsection{Replace item (a.replace)}
-\libfcn{a.replace}
+% \libfcn{a.replace}
 
 \subsubsection{Remove item (a.remove)}
-\libfcn{a.remove}
+% \libfcn{a.remove}
 
 \subsection{Reordering}
 
 \subsubsection{Sort (a.sort)}
-\libfcn{a.sort}
+% \libfcn{a.sort}
 
 \subsubsection{Sort with a less-than function (a.sortLT)}
-\libfcn{a.sortLT}
+% \libfcn{a.sortLT}
 
 \subsubsection{Randomly shuffle array (a.shuffle)}
-\libfcn{a.shuffle}
+% \libfcn{a.shuffle}
 
 \subsubsection{Reverse order (a.reverse)}
-\libfcn{a.reverse}
+% \libfcn{a.reverse}
 
 \subsection{Extreme values}
 
 \subsubsection{Maximum of all values (a.max)}
-\libfcn{a.max}
+% \libfcn{a.max}
 
 \subsubsection{Minimum of all values (a.min)}
-\libfcn{a.min}
+% \libfcn{a.min}
 
 \subsubsection{Maximum with a less-than function (a.maxLT)}
-\libfcn{a.maxLT}
+% \libfcn{a.maxLT}
 
 \subsubsection{Minimum with a less-than function (a.minLT)}
-\libfcn{a.minLT}
+% \libfcn{a.minLT}
 
 \subsubsection{Maximum $N$ items (a.maxN)}
-\libfcn{a.maxN}
+% \libfcn{a.maxN}
 
 \subsubsection{Minimum $N$ items (a.minN)}
-\libfcn{a.minN}
+% \libfcn{a.minN}
 
 \subsubsection{Maximum $N$ with a less-than function (a.maxNLT)}
-\libfcn{a.maxNLT}
+% \libfcn{a.maxNLT}
 
 \subsubsection{Minimum $N$ with a less-than function (a.minNLT)}
-\libfcn{a.minNLT}
+% \libfcn{a.minNLT}
 
 \subsubsection{Argument maximum (a.argmax)}
-\libfcn{a.argmax}
+% \libfcn{a.argmax}
 
 \subsubsection{Argument minimum (a.argmin)}
-\libfcn{a.argmin}
+% \libfcn{a.argmin}
 
 \subsubsection{Argument maximum with a less-than function (a.argmaxLT)}
-\libfcn{a.argmaxLT}
+% \libfcn{a.argmaxLT}
 
 \subsubsection{Argument minimum with a less-than function (a.argminLT)}
-\libfcn{a.argminLT}
+% \libfcn{a.argminLT}
 
 \subsubsection{Maximum $N$ arguments (a.argmaxN)}
-\libfcn{a.argmaxN}
+% \libfcn{a.argmaxN}
 
 \subsubsection{Minimum $N$ arguments (a.argminN)}
-\libfcn{a.argminN}
+% \libfcn{a.argminN}
 
 \subsubsection{Maximum $N$ arguments with a less-than function (a.argmaxNLT)}
-\libfcn{a.argmaxNLT}
+% \libfcn{a.argmaxNLT}
 
 \subsubsection{Minimum $N$ arguments with a less-than function (a.argminNLT)}
-\libfcn{a.argminNLT}
+% \libfcn{a.argminNLT}
 
 \subsection{Numerical combinations}
 
 \subsubsection{Add all array values (a.sum)}
-\libfcn{a.sum}
+% \libfcn{a.sum}
 
 \subsubsection{Multiply all array values (a.product)}
-\libfcn{a.product}
+% \libfcn{a.product}
 
 \subsubsection{Sum of logarithms (a.lnsum)}
-\libfcn{a.lnsum}
+% \libfcn{a.lnsum}
 
 \subsubsection{Arithmetic mean (a.mean)}
-\libfcn{a.mean}
+% \libfcn{a.mean}
 
 \subsubsection{Geometric mean (a.geomean)}
-\libfcn{a.geomean}
+% \libfcn{a.geomean}
 
 \subsubsection{Median (a.median)}
-\libfcn{a.median}
+% \libfcn{a.median}
 
 \subsubsection{Mode, or most common value (a.mode)}
-\libfcn{a.mode}
+% \libfcn{a.mode}
 
 \hypertarget{hsec:set-like}{}
 \subsection{Set or set-like functions}
@@ -1500,88 +1603,88 @@ libfcn{a.countPredicate}
 PFA does not have a set datatype, but arrays can be interpreted as sets with the following functions.
 
 \subsubsection{Distinct items (a.distinct)}
-\libfcn{a.distinct}
+% \libfcn{a.distinct}
 
 \subsubsection{Set equality (a.seteq)}
-\libfcn{a.seteq}
+% \libfcn{a.seteq}
 
 \subsubsection{Union (a.union)}
-\libfcn{a.union}
+% \libfcn{a.union}
 
 \subsubsection{Intersection (a.intersect)}
-\libfcn{a.intersect}
+% \libfcn{a.intersect}
 
 \subsubsection{Set difference (a.diff)}
-\libfcn{a.diff}
+% \libfcn{a.diff}
 
 \subsubsection{Symmetric set difference (a.symdiff)}
-\libfcn{a.symdiff}
+% \libfcn{a.symdiff}
 
 \subsubsection{Subset check (a.subset)}
-\libfcn{a.subset}
+% \libfcn{a.subset}
 
 \subsubsection{Disjointness check (a.disjoint)}
-\libfcn{a.disjoint}
+% \libfcn{a.disjoint}
 
 \subsection{Functional programming}
 
 \subsubsection{Map array items with function (a.map)}
-\libfcn{a.map}
+% \libfcn{a.map}
 
 \subsubsection{Filter array items with function (a.filter)}
-\libfcn{a.filter}
+% \libfcn{a.filter}
 
 \subsubsection{Filter and map (a.filtermap)}
-\libfcn{a.filtermap}
+% \libfcn{a.filtermap}
 
 \subsubsection{Map and flatten (a.flatmap)}
-\libfcn{a.flatmap}
+% \libfcn{a.flatmap}
 
 \subsubsection{Reduce array items to a single value (a.reduce)}
-\libfcn{a.reduce}
+% \libfcn{a.reduce}
 
 \subsubsection{Right-to-left reduce (a.reduceright)}
-\libfcn{a.reduceright}
+% \libfcn{a.reduceright}
 
 \subsubsection{Fold array items to another type (a.fold)}
-\libfcn{a.fold}
+% \libfcn{a.fold}
 
 \subsubsection{Right-to-left fold (a.foldright)}
-\libfcn{a.foldright}
+% \libfcn{a.foldright}
 
 \subsubsection{Take items until predicate is false (a.takeWhile)}
-\libfcn{a.takeWhile}
+% \libfcn{a.takeWhile}
 
 \subsubsection{Drop items until predicate is true (a.dropWhile)}
-\libfcn{a.dropWhile}
+% \libfcn{a.dropWhile}
 
 \subsection{Functional tests}
 
 \subsubsection{Existential check, $\exists$ (a.any)}
-\libfcn{a.any}
+% \libfcn{a.any}
 
 \subsubsection{Univeral check, $\forall$ (a.all)}
-\libfcn{a.all}
+% \libfcn{a.all}
 
 \subsubsection{Pairwise check of two arrays (a.corresponds)}
-\libfcn{a.corresponds}
+% \libfcn{a.corresponds}
 
 \subsection{Restructuring}
 
 \subsubsection{Sliding window (a.slidingWindow)}
-\libfcn{a.slidingWindow}
+% \libfcn{a.slidingWindow}
 
 \subsubsection{Unique combinations of a fixed size (a.combinations)}
-\libfcn{a.combinations}
+% \libfcn{a.combinations}
 
 \subsubsection{Permutations (a.permutations)}
-\libfcn{a.permutations}
+% \libfcn{a.permutations}
 
 \subsubsection{Flatten array (a.flatten)}
-\libfcn{a.flatten}
+% \libfcn{a.flatten}
 
 \subsubsection{Group items by category (a.groupby)}
-\libfcn{a.groupby}
+% \libfcn{a.groupby}
 
 \pagebreak
 
@@ -1604,10 +1707,10 @@ PFA does not have a set datatype, but arrays can be interpreted as sets with the
 \label{sec:impute}
 
 \subsubsection{Skip record (impute.errorOnNull)}
-\libfcn{impute.errorOnNull}
+% \libfcn{impute.errorOnNull}
 
 \subsubsection{Replace with default (impute.defaultOnNull)}
-\libfcn{impute.defaultOnNull}
+% \libfcn{impute.defaultOnNull}
 
 \pagebreak
 
@@ -1626,10 +1729,10 @@ CUSUM
 \subsection{Sample statistics}
 
 \subsubsection{Update aggregated mean (stat.sample.updateMean)}
-\libfcn{stat.sample.updateMean}
+% \libfcn{stat.sample.updateMean}
 
 \subsubsection{Compute aggregated mean (stat.sample.mean)}
-\libfcn{stat.sample.mean}
+% \libfcn{stat.sample.mean}
 
 accumulated mean, median(?)
 
@@ -1640,10 +1743,10 @@ accumulated mean, median(?)
 \subsection{Decision and regression Trees}
 
 \subsubsection{Tree walk with simple predicates (model.tree.simpleWalk)}
-\libfcn{model.tree.simpleWalk}
+% \libfcn{model.tree.simpleWalk}
 
 \subsubsection{Tree walk with user-defined predicates (model.tree.predicateWalk)}
-\libfcn{model.tree.predicateWalk}
+% \libfcn{model.tree.predicateWalk}
 
 \subsection{Cluster models}
 
