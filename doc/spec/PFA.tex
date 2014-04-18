@@ -1052,7 +1052,11 @@ Function call expressions evaluate all of the function's arguments, from left to
 
 The expression in each argument of a function call is evaluated in a separate, sealed-from-above and sealed-within scope (\hyperlink{hsec:symbol-scope}{see Sec.~\ref{sec:symbol-scope}}).  Thus, one cannot declare or reassign symbols as one progresses through the argument list.
 
-Special forms are similar to function calls in that they take arguments, perform an operation, and return a value, but special forms can have more than one JSON object member and can apply custom interpretations to their arguments.  A function always has the same form: one member name and an expression or array of expressions.
+\hypertarget{hsec:special-forms}{}
+\subsection{Special forms}
+\label{sec:special-forms}
+
+Special forms, are expressions that take arguments, perform an operation, and return a value, much like function calls.  Unlike function calls, however, they may have irregular syntax.  Whereas a function call is always a JSON object with one member name (the function name) and one member value (its arguments, interpreted as expressions), some special forms have multiple JSON object members and some special forms have custom interpretations for their member values.  These object members may appear in any order.  In addition, special forms have custom scoping rules when they do interpret values as expressions.
 
 \hypertarget{hsec:new-form}{}
 \subsection{Creating arrays, maps, and records}
@@ -1348,24 +1352,86 @@ or
 {"cond": [{"if": CONDITION1, "then": EXPRS1}, {"if": CONDITION2, "then": EXPRS2}, ...],
  "else": EXPRS}
 \end{json}
-The ``if'' forms within a ``cond'' are like stand-alone ``if'' forms except that they cannot have {\PFAc else} clauses.  The ``cond'' form can have a single {\PFAc else} clause.  Much like an ``if'', the return value of ``cond'' is {\PFAc null} if {\PFAc else} is absent, and it is the narrowest supertype of all {\PFAc then} clauses and the {\PFAc else} clause if the {\PFAc else} is present.  A ``cond'' must have at least one ``if''.  The {\PFAc CONDITION1}, {\PFAc CONDITION2}, \ldots\ are all single expressions that are sealed-from-above and sealed-within, and the {\PFAc EXPRS1}, {\PFAc EXPRS2}, \ldots\ and {\PFAc EXPRS} are either single expressions or JSON arrays of expressions that are unsealed.
+The ``if'' forms within a ``cond'' are like stand-alone ``if'' forms except that they cannot have {\PFAc else} clauses.  The ``cond'' form can have a single {\PFAc else} clause.  Much like an ``if'', the return value of ``cond'' is {\PFAc null} if {\PFAc else} is absent, and it is the narrowest supertype of all {\PFAc then} clauses and the {\PFAc else} clause if the {\PFAc else} is present.  A ``cond'' must have at least one ``if''.  The {\PFAc CONDITION1}, {\PFAc CONDITION2}, \ldots\ are all single expressions that are sealed-from-above and sealed-within, and the {\PFAc EXPRS1}, {\PFAc EXPRS2}, \ldots\ and {\PFAc EXPRS} are either single expressions or JSON arrays of expressions that are unsealed.  The {\PFAc then} clause corresponding to the first (and only the first) successful {\PFAc if} condition is evaluated, or the {\PFAc else} clause is evaluated if no {\PFAc if} conditions are successful.
 
 \hypertarget{hsec:whileloops}{}
-\subsection{While loops: pretest and posttest}
+\subsection{While loops: pre-test and post-test}
 \label{sec:whileloops}
 
-        %% else if (keys == Set("while", "do"))                         While(_whilePredicate, _body, Some(pos(dot, _at)))
-        %% else if (keys == Set("do", "until"))                         DoUntil(_body, _until, Some(pos(dot, _at)))
+Loops repeatedly evaluate a set of expressions until some condition is met at runtime.
+
+The pre-test ``while'' special form has the following syntax.
+\begin{json}
+{"while": CONDITION, "do": EXPRESSION-OR-EXPRESSIONS}
+\end{json}
+where {\PFAc CONDITION} is a single expression that evaluates to {\bf boolean} and {\PFAc EXPRESSION-OR-EXPRESSIONS} is either a single expression or a JSON array of expressions.  The return value of the ``while'' form is {\PFAc null}: it can only be used to modify state.  The scope of the {\PFAc CONDITION} is sealed-from-above and sealed-within, but the scope of the {\PFAc EXPRESSION-OR-EXPRESSIONS} is unsealed (\hyperlink{hsec:symbol-scope}{see Sec.~\ref{sec:symbol-scope}}).
+
+The {\PFAc CONDITION} is evaulated before the {\PFAc EXPRESSION-OR-EXPRESSIONS} and the two are evaluated in alternation until {\PFAc CONDITION} returns {\PFAc false}.  If {\PFAc CONDITION} returns {\PFAc false} the first time it is called, the {\PFAc EXPRESSION-OR-EXPRESSIONS} would never be evaluated.
+
+The post-test ``do-until'' special form has the following syntax.
+\begin{json}
+{"do": EXPRESSION-OR-EXPRESSIONS, "until": CONDITION}
+\end{json}
+Like ``while'', the {\PFAc CONDITION} is a single expression that evaluates to {\bf boolean} and {\PFAc EXPRESSION-OR-EXPRESSIONS} is either a single expression or a JSON array of expressions.  The return value is {\PFAc null}.  The difference is that the alternation between evaluating {\PFAc EXPRESSION-OR-EXPRESSIONS} and {\PFAc CONDITION} starts with the {\PFAc EXPRESSION-OR-EXPRESSIONS} and continues until {\PFAc CONDITION} is {\PFAc true}.  Thus, the {\PFAc EXPRESSION-OR-EXPRESSIONS} is evaluated at least once, even if {\PFAc CONDITION} is always {\PFAc true}.
 
 \hypertarget{hsec:forloops}{}
-\subsection{For loops: by index, array element, and key-value}
+\subsection{For loops: by symbol value, array element, and key-value pairs}
 \label{sec:forloops}
 
-        %% else if (keys == Set("for", "until", "step", "do")  ||
-        %%          keys == Set("for", "until", "step", "do", "seq"))   For(_forlet, _until, _forstep, _body, _seq, Some(pos(dot, _at)))
-        %% else if (keys == Set("foreach", "in", "do")  ||
-        %%          keys == Set("foreach", "in", "do", "seq"))          Foreach(_foreach, _in, _body, _seq, Some(pos(dot, _at)))
-        %% else if (keys == Set("forkey", "forval", "in", "do"))        Forkeyval(_forkey, _forval, _in, _body, Some(pos(dot, _at)))
+For loops are specialized loops that declare new symbols for use in the loop body.  There are three basic types: ``for'' loops, which are usually used to increment a numerical index, ``foreach'' loops, which iterate over values of an array, and ``forkey-forval'' loops, which iterate over key-value pairs of a map.
+
+The ``for'' special form has the following syntax.
+\begin{json}
+{"for": NAME-TO-EXPRESSION, "until": CONDITION, "step": NAME-TO-EXPRESSION,
+ "do": EXPRESSION-OR-EXPRESSIONS}
+\end{json}
+The {\PFAc for} clause's {\PFAc NAME-TO-EXPRESSION} is a JSON object whose members are new symbols to declare, the {\PFAc step} clause's {\PFAc NAME-TO-EXPRESSION} is a JSON object whose members are symbols to modify, and {\PFAc until} is a {\bf boolean}-valued single expression that stops the iteration when {\PFAc true}.  The {\PFAc do} expression or expressions is the body of the loop, and the return value of the ``for'' form is {\PFAc null}.
+
+The {\PFAc for} clause's {\PFAc NAME-TO-EXPRESSION} is similar to a \hyperlink{hsec:let-set}{let expression} in that it declares and initializes new symbols.  The names of the symbols are the member names of the {\PFAc NAME-TO-EXPRESSION} and the initial values are the evaluated results of the member values.  The scope of the initialization expressions are sealed-from-above and sealed-within (\hyperlink{hsec:symbol-scope}{see Sec.~\ref{sec:symbol-scope}}), and they are evaluated before anything else in the ``if'' form but the order of initialization expressions is not guaranteed.  The symbols declared by the {\PFAc for} clause can only be referenced in the {\PFAc until}, {\PFAc step}, and {\PFAc do} clauses.
+
+The {\PFAc step} clause's {\PFAc NAME-TO-EXPRESSION} is similar to a \hyperlink{hsec:let-set}{set expression} in that it changes symbols, usually by incrementing them.  The names of the symbols to modify are the member names of the {\PFAc NAME-TO-EXPRESSION} and their new values are the evaluated results of the member values.  The scope of the updator expressions are sealed-from-above and sealed-within, and if any updator expressions depend on a symbol that is also being updated, they will see the old value of the symbol.  That way, they can be evaluated in any order without conflict, which is important because their order is not guaranteed.
+
+The {\PFAc until} expression is sealed-from-above and sealed-within.  It is evaluated before the loop body ({\PFAc do}), so it is possible for the loop body to never be evaluated.
+
+The {\PFAc do} expression or expressions is evaluated until the {\PFAc CONDITION} is {\PFAc true}.  The symbols declared by the {\PFAc for} clause may be referenced and even modified, though it is good practice to modify these loop variables only in the {\PFAc step} clause.  The body of the loop is unsealed, meaning that it can modify symbols defined outside of its scope.
+
+\begin{example}
+This is a basic for loop that indexes the loop iteration with an integer {\PFAc i}.
+\begin{json}
+{"for": {"i": 0}, "until": {"==": ["i", 10]}, "step": {"i": {"+": ["i", 1]}},
+ "do": [
+     {"something": i}
+     {"somethingElse": i}
+ ]}
+\end{json}
+The {\PFAc something} and {\PFAc somethingElse} functions are called with arguments from 0 (inclusive) until 10 (exclusive).
+\end{example}
+
+The ``foreach'' special form iterates over elements of an array.  It has the following syntax.
+\begin{json}
+{"foreach": NAME, "in": ARRAY-EXPRESSION, "do": EXPRESSION-OR-EXPRESSIONS}
+\end{json}
+or
+\begin{json}
+{"foreach": NAME, "in": ARRAY-EXPRESSION, "do": EXPRESSION-OR-EXPRESSIONS, "seq": TRUE-OR-FALSE}
+\end{json}
+where {\PFAc NAME} is a string naming the new symbol to declare, {\PFAc ARRAY-EXPRESSION} is a single expression whose type is an {\bf array}, the {\PFAc do} expression or expressions is the body of the loop, and the return value of the ``for'' form is {\PFAc null}.  The {\PFAc seq} flag, if present and set to {\PFAc true}, ensures that the loop order through the array is sequential.  This flag affects the scope of symbols, so that a PFA system has the option to evaluate the loop body in parallel if the {\PFAc seq} flag is absent or false.
+
+The symbol declared by the {\PFAc foreach} clause can be referenced only in the body of the loop.  The {\PFAc ARRAY-EXPRESSION} is sealed-from-above and sealed-within.  If the return type of the {\PFAc ARRAY-EXPRESSION} is an array of {\PFAtp X}, the symbol declared by {\PFAc foreach} has type {\PFAc X}.
+
+The loop body is evaluated once for every element in the array specified by the {\PFAc in} clause.  Since the array might be empty, the loop body might never be evaluated.  If {\PFAc seq} is absent or {\PFAc false}, the order of elements is not guaranteed and the loop scope is sealed-from-above.  Some PFA implementations may take advantage of this fact to parallelize the loop.  (If so, all cells and pools referenced within the loop must be treated as though they are shared.)  If {\PFAc seq} is present and {\PFAc true}, then the elements of the array are processed in order and the loop scope is not sealed-from-above.
+
+The ``forkey-forval'' special form iterates over key-value pairs of a map.  It has the following syntax.
+\begin{json}
+{"forkey": NAME1, "forval": NAME2, "in": MAP-EXPRESSION, "do": EXPRESSION-OR-EXPRESSIONS}
+\end{json}
+where {\PFAc NAME1} is a string naming a new symbol that iterates through map keys, {\PFAc NAME2} is a string naming a new symbol that iterates through map values, {\PFAc MAP-EXPRESSION} is a single expression whose type is a {\bf map}, and the {\PFAc do} expression or expressions is the body of the loop.
+
+The symbols declared by the {\PFAc forkey} and {\PFAc forval} clauses can be referenced only in the body of the loop.  The {\PFAc MAP-EXPRESSION} is sealed-from-above and sealed-within.  If the return type of the {\PFAc MAP-EXPRESSION} is a map of {\PFAtp X}, the symbol declared by {\PFAc forval} has type {\PFAtp X}.  The symbol declared by {\PFAc forkey} has type {\bf string}.
+
+The loop body is evaluated once for every key-value pair in the map specified by the {\PFAc in} clause.  Since the map might be empty, the loop body might never be evaluated.  The order of elements is not guaranteed, but the loop scope is unsealed.  An order-dependent calculation may yield different results every time it is evaluated, so it is good practice to only perform order-independent operations in a ``forkey-forval'' loop.
+
+{\bf TODO:} Add for-comprehensions for functional-style looping.
 
 \hypertarget{hsec:casting}{}
 \subsection{Type-safe casting}
