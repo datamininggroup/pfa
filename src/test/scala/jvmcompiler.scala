@@ -957,7 +957,7 @@ do:
   - {log: [n, v]}
 """, """"null"""")).toSet should be (Set((None, """"one" 1"""), (None, """"two" 2"""), (None, """"three" 3""")))
 
-    evaluating { compileExpression("""
+    compileExpression("""
 do:
   - {let: {x: 0}}
   - forkey: n
@@ -966,7 +966,7 @@ do:
     do:
       - {set: {x: v}}
   - x
-""", """"int"""") } should produce [PFASemanticException]
+""", """"int"""")
   }
 
   it must "do type-cast blocks" taggedAs(JVMCompilation) in {

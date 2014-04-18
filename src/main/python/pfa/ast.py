@@ -1700,7 +1700,7 @@ class Forkeyval(Expression):
 
     def walk(self, task, symbolTable, functionTable):
         calls = set()
-        loopScope = symbolTable.newScope(True, False)
+        loopScope = symbolTable.newScope(False, False)
 
         if symbolTable.get(self.forkey) is not None:
             raise PFASemanticException("symbol \"{}\" may not be redeclared or shadowed".format(self.forkey), self.pos)

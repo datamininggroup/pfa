@@ -1996,7 +1996,7 @@ package ast {
 
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val calls = mutable.Set[String]()
-      val loopScope = symbolTable.newScope(true, false)
+      val loopScope = symbolTable.newScope(false, false)
 
       if (symbolTable.get(forkey) != None)
         throw new PFASemanticException("symbol \"%s\" may not be redeclared or shadowed".format(forkey), pos)
