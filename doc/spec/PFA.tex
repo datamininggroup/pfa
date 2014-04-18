@@ -1280,6 +1280,8 @@ A ``do'' special form allows the PFA document author to insert a series of expre
 \end{json}
 where {\PFAc ARRAY-OF-EXPRESSIONS} is a JSON array of expressions and the whole form is one expression.  The return value is the value of the last expression in the JSON array, which must not be empty.
 
+It is also possible for {\PFAc ARRAY-OF-EXPRESSIONS} to be replaced with a single expression, though doing so would defeat the purpose of a ``do'' block.  This option exists for symmetry with other, similar forms.
+
 \begin{example}
 A ``do'' form is also useful for declaring symbols in a sealed-within scope (\hyperlink{hsec:symbol-scope}{see Sec.~\ref{sec:symbol-scope}}).  For instance, new symbols usually cannot be declared in a function's argument list, but sometimes it is useful to insert a mini-program as an argument (in a purely functional style).  For instance,
 \begin{json}
@@ -1308,14 +1310,45 @@ Although a ``do'' block can loosen a sealed-within scope, it cannot loosen its s
 because the scope of function arguments are sealed-from-above.
 \end{example}
 
+\begin{example}
+A ``do'' block does not apply any additional constraints on the scope of symbols.  The following attempt to modify an outside symbols is valid.
+\begin{json}
+{"let": {"outerSymbol": 0}},
+{"do": [
+     {"set": {"outerSymbol": 1}},
+     "outerSymbol"
+]}
+\end{json}
+\end{example}
+
 \hypertarget{hsec:conditionals}{}
 \subsection{Conditionals: if and cond}
 \label{sec:conditionals}
 
-        %% else if (keys == Set("if", "then"))                          If(_ifPredicate, _thenClause, None, Some(pos(dot, _at)))
-        %% else if (keys == Set("if", "then", "else"))                  If(_ifPredicate, _thenClause, Some(_elseClause), Some(pos(dot, _at)))
-        %% else if (keys == Set("cond"))                                Cond(_cond.map(_.asInstanceOf[If]), None, Some(pos(dot, _at)))
-        %% else if (keys == Set("cond", "else"))                        Cond(_cond.map(_.asInstanceOf[If]), Some(_elseClause), Some(pos(dot, _at)))
+Conditionals cause a branch in the program flow, in which the expressions that are evaluated depend on values at runtime.
+
+The ``if'' special form has the following syntax:
+\begin{json}
+{"if": CONDITION, "then": EXPRESSION-OR-EXPRESSIONS}
+\end{json}
+or
+\begin{json}
+{"if": CONDITION, "then": EXPRESSION-OR-EXPRESSIONS, "else": EXPRESSION-OR-EXPRESSIONS}
+\end{json}
+where {\PFAc CONDITION} is a single expression that evaluates to {\bf boolean} and {\PFAc EXPRESSION-OR-EXPRESSIONS} is either a single expression or a JSON array of expressions.  The form without an {\PFAc else} clause returns {\PFAc null}, but the form with an {\PFAc else} clause returns the \hyperlink{hsec:narrowest-supertype}{narrowest supertype} of the {\PFAc then} and {\PFAc else} clauses.
+
+The {\PFAc CONDITION} expression is evaluated in a sealed-from-above, sealed-within scope, but the {\PFAc then} and {\PFAc else} clauses are unsealed (\hyperlink{hsec:symbol-scope}{see Sec.~\ref{sec:symbol-scope}}).  That is, an outside symbol cannot be modified in the {\PFAc CONDITION}, but it can be modified in the {\PFAc then} and {\PFAc else} clauses.  In an imperative programming style, {\PFAc then} and {\PFAc else} are primarily used to assign values to symbols defined outside the ``if''.  In a functional programming style, the return value of the entire ``if'' form would be assigned to a symbol.
+
+The ``cond'' special form allows one to chain a series of conditionals.
+\begin{json}
+{"cond": [{"if": CONDITION1, "then": EXPRS1}, {"if": CONDITION2, "then": EXPRS2}, ...]}
+\end{json}
+or
+\begin{json}
+{"cond": [{"if": CONDITION1, "then": EXPRS1}, {"if": CONDITION2, "then": EXPRS2}, ...],
+ "else": EXPRS}
+\end{json}
+The ``if'' forms within a ``cond'' are like stand-alone ``if'' forms except that they cannot have {\PFAc else} clauses.  The ``cond'' form can have a single {\PFAc else} clause.  Much like an ``if'', the return value of ``cond'' is {\PFAc null} if {\PFAc else} is absent, and it is the narrowest supertype of all {\PFAc then} clauses and the {\PFAc else} clause if the {\PFAc else} is present.  A ``cond'' must have at least one ``if''.  The {\PFAc CONDITION1}, {\PFAc CONDITION2}, \ldots\ are all single expressions that are sealed-from-above and sealed-within, and the {\PFAc EXPRS1}, {\PFAc EXPRS2}, \ldots\ and {\PFAc EXPRS} are either single expressions or JSON arrays of expressions that are unsealed.
 
 \hypertarget{hsec:whileloops}{}
 \subsection{While loops: pretest and posttest}
