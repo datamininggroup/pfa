@@ -763,8 +763,7 @@ package reader {
 
         else if (keys == Set("while", "do"))                         While(_whilePredicate, _body, Some(pos(dot, _at)))
         else if (keys == Set("do", "until"))                         DoUntil(_body, _until, Some(pos(dot, _at)))
-        else if (keys == Set("for", "until", "step", "do")  ||
-                 keys == Set("for", "until", "step", "do", "seq"))   For(_forlet, _until, _forstep, _body, _seq, Some(pos(dot, _at)))
+        else if (keys == Set("for", "until", "step", "do"))          For(_forlet, _until, _forstep, _body, Some(pos(dot, _at)))
         else if (keys == Set("foreach", "in", "do")  ||
                  keys == Set("foreach", "in", "do", "seq"))          Foreach(_foreach, _in, _body, _seq, Some(pos(dot, _at)))
         else if (keys == Set("forkey", "forval", "in", "do"))        Forkeyval(_forkey, _forval, _in, _body, Some(pos(dot, _at)))

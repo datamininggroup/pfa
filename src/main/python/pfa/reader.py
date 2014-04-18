@@ -519,8 +519,7 @@ def _readArgument(data, dot, avroTypeBuilder):
 
         elif keys == set(["while", "do"]):                   return While(_whilePredicate, _body, dot)
         elif keys == set(["do", "until"]):                   return DoUntil(_body, _until, dot)
-        elif keys == set(["for", "until", "step", "do"]) or \
-             keys == set(["for", "until", "step", "do", "seq"]): return For(_forlet, _until, _forstep, _body, _seq, dot)
+        elif keys == set(["for", "until", "step", "do"]):    return For(_forlet, _until, _forstep, _body, dot)
 
         elif keys == set(["foreach", "in", "do"]) or \
              keys == set(["foreach", "in", "do", "seq"]):    return Foreach(_foreach, _in, _body, _seq, dot)

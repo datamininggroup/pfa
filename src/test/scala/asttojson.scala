@@ -430,8 +430,8 @@ class AstToJsonSuite extends FlatSpec with Matchers {
   }
 
   it must "for" taggedAs(AstToJson) in {
-    checkAstToJson(For(Map("i" -> LiteralInt(0)), Call("<", List(Ref("i"), LiteralInt(10))), Map("i" -> Call("+", List(Ref("i"), LiteralInt(1)))), List(Ref("i")), false),
-      """{"for":{"i":0},"until":{"<":["i",10]},"step":{"i":{"+":["i",1]}},"do":["i"],"seq":false}""")
+    checkAstToJson(For(Map("i" -> LiteralInt(0)), Call("<", List(Ref("i"), LiteralInt(10))), Map("i" -> Call("+", List(Ref("i"), LiteralInt(1)))), List(Ref("i"))),
+      """{"for":{"i":0},"until":{"<":["i",10]},"step":{"i":{"+":["i",1]}},"do":["i"]}""")
   }
 
   it must "foreach" taggedAs(AstToJson) in {

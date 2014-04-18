@@ -1570,14 +1570,14 @@ class DoUntil(Expression):
 
 @pfa.util.case
 class For(Expression):
-    def __init__(self, init, until, step, body, seq, pos=None): pass
+    def __init__(self, init, until, step, body, pos=None): pass
 
     def collect(self, pf):
         raise NotImplementedError
 
     def walk(self, task, symbolTable, functionTable):
         calls = set()
-        loopScope = symbolTable.newScope(not self.seq, False)
+        loopScope = symbolTable.newScope(False, False)
 
         if len(self.init) < 1:
             raise PFASemanticException("\"for\" must contain at least one declaration", self.pos)
@@ -1635,7 +1635,7 @@ class For(Expression):
 
     @property
     def jsonNode(self):
-        return {"for": dict((k, v.jsonNode) for k, v in self.init.items()), "until": self.until.jsonNode, "step": dict((k, v.jsonNode) for k, v in self.step.items()), "do": [x.jsonNode for x in self.body], "seq": self.seq}
+        return {"for": dict((k, v.jsonNode) for k, v in self.init.items()), "until": self.until.jsonNode, "step": dict((k, v.jsonNode) for k, v in self.step.items()), "do": [x.jsonNode for x in self.body]}
 
     desc = "for"
 

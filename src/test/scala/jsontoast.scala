@@ -1035,7 +1035,7 @@ class JsonToAstSuite extends FlatSpec with Matchers {
       AvroInt(),
       AvroString(),
       List(),
-      List(For(Map("i" -> LiteralInt(0)), Call("<", List(Ref("i"), LiteralInt(10))), Map("i" -> Call("+", List(Ref("i"), LiteralInt(1)))), List(Ref("i")), false)),
+      List(For(Map("i" -> LiteralInt(0)), Call("<", List(Ref("i"), LiteralInt(10))), Map("i" -> Call("+", List(Ref("i"), LiteralInt(1)))), List(Ref("i")))),
       List(),
       Map(),
       None,
@@ -1049,7 +1049,7 @@ class JsonToAstSuite extends FlatSpec with Matchers {
   "name": "test",
   "input": "int",
   "output": "string",
-  "action": [{"for":{"i":0},"until":{"<":["i",10]},"step":{"i":{"+":["i",1]}},"do":["i"],"seq":false}]
+  "action": [{"for":{"i":0},"until":{"<":["i",10]},"step":{"i":{"+":["i",1]}},"do":["i"]}]
 }""")
   }
 

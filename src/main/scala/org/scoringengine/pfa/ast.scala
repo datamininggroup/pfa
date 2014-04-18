@@ -1813,10 +1813,10 @@ package ast {
     case class Context(retType: AvroType, calls: Set[String], symbols: Map[String, AvroType], loopBody: Seq[TaskResult], predicate: TaskResult) extends ExpressionContext
   }
 
-  case class For(init: Map[String, Expression], until: Expression, step: Map[String, Expression], body: Seq[Expression], seq: Boolean, pos: Option[String] = None) extends Expression {
+  case class For(init: Map[String, Expression], until: Expression, step: Map[String, Expression], body: Seq[Expression], pos: Option[String] = None) extends Expression {
     override def equals(other: Any): Boolean = other match {
       case that: For =>
-        this.init == that.init  &&  this.until == that.until  &&  this.step == that.step  &&  this.body == that.body  &&  this.seq == that.seq  // but not pos
+        this.init == that.init  &&  this.until == that.until  &&  this.step == that.step  &&  this.body == that.body  // but not pos
       case _ => false
     }
 
@@ -1829,7 +1829,7 @@ package ast {
 
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val calls = mutable.Set[String]()
-      val loopScope = symbolTable.newScope(!seq, false)
+      val loopScope = symbolTable.newScope(false, false)
 
       if (init.size < 1)
         throw new PFASemanticException("\"for\" must contain at least one declaration", pos)
@@ -1909,7 +1909,6 @@ package ast {
         jsonBody.add(expr.jsonNode)
       out.put("do", jsonBody)
 
-      out.put("seq", if (seq) BooleanNode.getTrue else BooleanNode.getFalse)
       out
     }
   }

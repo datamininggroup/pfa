@@ -752,17 +752,6 @@ do:
   - x
 """, """"int"""") } should produce [PFASemanticException]
 
-    evaluating { compileExpression("""
-do:
-  - {let: {x: 0}}
-  - for: {dummy: null}
-    until: {==: [x, 5]}
-    step: {x: {+: [x, 1]}}
-    do:
-      - x
-  - x
-""", """"int"""") } should produce [PFASemanticException]
-
     compileExpression("""
 do:
   - {let: {x: 0}}
@@ -771,7 +760,6 @@ do:
     step: {x: {+: [x, 1]}}
     do:
       - x
-    seq: true
   - x
 """, """"int"""").apply should be (5)
 
@@ -842,7 +830,6 @@ do:
     step: {x: {+: [x, 1]}}
     do:
       - {set: {y: [after]}}
-    seq: true
   - y
 """, """"string"""").apply should be ("before")
   }

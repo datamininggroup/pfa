@@ -390,7 +390,7 @@ class TestAstToJson(unittest.TestCase):
 
     def testFor(self):
         self.assertEqual(For({"i": LiteralInt(0)}, Call("<", [Ref("i"), LiteralInt(10)]), {"i": Call("+", [Ref("i"), LiteralInt(1)])}, [Ref("i")], False).jsonNode,
-                         json.loads('''{"for":{"i":0},"until":{"<":["i",10]},"step":{"i":{"+":["i",1]}},"do":["i"],"seq":false}'''))
+                         json.loads('''{"for":{"i":0},"until":{"<":["i",10]},"step":{"i":{"+":["i",1]}},"do":["i"]}'''))
 
     def testForeach(self):
         self.assertEqual(Foreach("x", Literal(AvroArray(AvroInt()), '''[1, 2, 3]'''), [Ref("x")], False).jsonNode,
