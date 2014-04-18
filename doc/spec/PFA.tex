@@ -74,17 +74,17 @@ This document is an early draft that has not been endorsed for recommendation by
 
 \subsection{Motivation for PFA}
 
-The Portable Format for Analytics (PFA) is a mini-language for mathematical calculations.  It differs from most programming languages in that it is optimized for automatic code generation, rather than writing programs by hand.  The primary use-case is to represent the output of machine learning algorithms, such that they can be freely moved between systems.  Traditionally, this field has been dominated by special-purpose file formats, each representing only one type of statistical model.  The Predictive Model Markup Language (PMML) provides a means of unifing the most common model types into one file format.  However, PMML can only express a fixed set of pre-defined model types; new model types must be agreed upon by the Data Mining Group (DMG) and integrated into a new version of PMML, then that new version must be adopted by the community before it is widely usable.
+The Portable Format for Analytics (PFA) is a mini-language for mathematical calculations.  It differs from most programming languages in that it is optimized for automatic code generation, rather than writing programs by hand.  The primary use-case is to represent the output of machine learning algorithms, such that they can be freely moved between systems.  Traditionally, this field has been dominated by special-purpose file formats, each representing only one type of statistical model.  The Predictive Model Markup Language (PMML) provides a means of unifying the most common model types into one file format.  However, PMML can only express a fixed set of pre-defined model types; new model types must be agreed upon by the Data Mining Group (DMG) and integrated into a new version of PMML, then that new version must be adopted by the community before it is widely usable.
 
 PFA represents models and analytic procedures more generally by providing generic programming constructs, such as conditionals, loops, persistent state, and callback functions, in addition to a basic suite of statistical tools.  Conventional models like regression, decision trees, and clustering are expressed by referencing the appropriate library function, just as in PMML, but new models can be expressed by composing library functions or passing user-defined callbacks.  Most new statistical techniques are variants of old techniques, so a small number of functions with the appropriate hooks for inserting user code can represent a wide variety of methods, many of which have not been discovered yet.
 
 Given that flexibility is important, one might consider using a general purpose programming language, such as C, Java, Python, or especially R, which is specifically designed for statistics.  While this is often the easiest method for small problems that are explored, formulated, and solved on an analyst's computer, it is difficult to scale up to network-sized solutions or to deploy on production systems that need to be more carefully controlled than a personal laptop.  The special-purpose code may depend on libraries that cannot be deployed, or may even be hard to identify exhaustively.  In some cases, the custom code might be regarded as a stability or security threat that must be thoroughly reviewed before deployment.  If the analytic algorithm needs to be deployed multiple times before it is satisfactory and each deployment is reviewed for reasons unrelated to its analytic content, development would be delayed unnecessarily.  This problem is solved by decoupling the analytic workflow into a part that deals exclusively with mathematics (the PFA scoring engine) and the rest of the infrastructure (the PFA host).  A mathematical algorithm implemented in PFA can be updated frequently with minimal review, since PFA is incapable of raising most stability or security issues, due to its limited access.
 
-PFA is restricted to the following operations: mathematical functions on numbers, strings, raw bytes, homogeneous lists, homogeneous maps (also known as hash-tables, associative arrays, or dictionaries), heterogeneous records, and unions of the above, where mathematical functions include basic operations, special functions, data sturcture manipulations, missing data handling, descriptive statistics, and common model types such as regression, decision trees, and clustering, parameterized for flexibility.  PFA does not include any means of accessing the operating system, the file system, or the network, so a rouge PFA engine cannot expose or manipulate data other than that which is intentionally funneled into it by the host system.  The full PFA specification allows recursion and unterminated loops, but execution time is limited by a timeout.  PFA documents may need to be reviewed for mathematical correctness, but they do not need to be reviewed for safety.
+PFA is restricted to the following operations: mathematical functions on numbers, strings, raw bytes, homogeneous lists, homogeneous maps (also known as hash-tables, associative arrays, or dictionaries), heterogeneous records, and unions of the above, where mathematical functions include basic operations, special functions, data structure manipulations, missing data handling, descriptive statistics, and common model types such as regression, decision trees, and clustering, parameterized for flexibility.  PFA does not include any means of accessing the operating system, the file system, or the network, so a rouge PFA engine cannot expose or manipulate data other than that which is intentionally funneled into it by the host system.  The full PFA specification allows recursion and unterminated loops, but execution time is limited by a timeout.  PFA documents may need to be reviewed for mathematical correctness, but they do not need to be reviewed for safety.
 
 Another reason to use PFA as an intermediate model representation is for simplicity of code generation.  A machine learning algorithm generates an executable procedure, usually a simple, parameterized decider algorithm that categorizes or makes predictions based on new data.  Although the parameters might be encoded in a static file, some component must be executable.  A PFA document bundles the executable with its parameters, simplifying version control.
 
-The syntax of PFA is better suited to automatic code generation than most programming languages.  Many languages have complex syntax to accomodate the way people think while programming, including infix operators, a distinction between statements and expressions, and in some cases even meaningful whitespace.  Though useful when writing programs by hand, these features only complicate automatic code generation.  A PFA document is an expression tree rendered in JSON, and trees are easy to programmatically compose into larger trees without introducing syntax errors in the generated code.  This is well-known in the Lisp community, since the ease of writing code-modifying macros in Lisp is often credited to its exclusive use of expression trees, rendered as parenthesized lists (known as S-expressions).  PFA uses JSON, rather than S-expressions, because libraries for manipulating JSON objects are more widely available and JSON provides a convenient syntax for maps, but the transliteration between JSON and S-expressions is straight-forward.
+The syntax of PFA is better suited to automatic code generation than most programming languages.  Many languages have complex syntax to accommodate the way people think while programming, including infix operators, a distinction between statements and expressions, and in some cases even meaningful whitespace.  Though useful when writing programs by hand, these features only complicate automatic code generation.  A PFA document is an expression tree rendered in JSON, and trees are easy to programmatically compose into larger trees without introducing syntax errors in the generated code.  This is well-known in the Lisp community, since the ease of writing code-modifying macros in Lisp is often credited to its exclusive use of expression trees, rendered as parenthesized lists (known as S-expressions).  PFA uses JSON, rather than S-expressions, because libraries for manipulating JSON objects are more widely available and JSON provides a convenient syntax for maps, but the transliteration between JSON and S-expressions is straight-forward.
 
 Another benefit of PFA's simplicity relative to general programming languages is that it is more amenable to static analysis.  A PFA host can more thoroughly examine an incoming PFA document for undesirable features.  Although PFA makes use of callback functions to provide generic algorithms, functions are not first-class objects in the language, meaning that they cannot be dynamically assigned to variables.  The identity of every function call can be determined without running the engine, which makes it possible to statically generate a graph of function calls and identify recursive loops.  In very limited runtime environments, such as some GPUs, the compiler implicitly inlines all function calls, so recursion is not possible.  In cases like these, static analysis of the PFA document is a necessary step in generating the executable.
 
@@ -236,7 +236,7 @@ A cell-specification is a JSON object with the following fields.
 \item[\PFAc type:] {\it (required)} An Avro schema representing the data type of this cell.
 \item[\PFAc init:] {\it (required)} Embedded JSON whose type must match {\PFAc type}.  This is the initial value of the cell (or constant value if it is never modified).
 \item[\PFAc shared:] An optional boolean specifying whether this cell is thread-local to one scoring engine or shared among a battery of similar engines (\hyperlink{hsec:concurrent}{see Sec.~\ref{sec:concurrent}}).  The default is {\PFAc false}.
-\item[\PFAc rollback:] An optional boolean specifying whether this cell should be rolled back to the state it had at the beginning of an {\PFAc action} if an \hyperlink{hsec:exceptions}{exception} occurs during the {\PFAc action}.  The default is {\PFAc false}, and {\PFAc shared} and {\PFAc rollback} are mututally incompatible: they cannot both be {\PFAc true}.
+\item[\PFAc rollback:] An optional boolean specifying whether this cell should be rolled back to the state it had at the beginning of an {\PFAc action} if an \hyperlink{hsec:exceptions}{exception} occurs during the {\PFAc action}.  The default is {\PFAc false}, and {\PFAc shared} and {\PFAc rollback} are mutually incompatible: they cannot both be {\PFAc true}.
 \end{allowedfields}
 
 A pool-specification is a JSON object with the following fields.
@@ -244,7 +244,7 @@ A pool-specification is a JSON object with the following fields.
 \item[\PFAc type:] {\it (required)} An Avro schema representing the data type of this pool.
 \item[\PFAc init:] JSON object whose member values are embedded JSON that must match {\PFAc type}.  Unlike a cell, a pool may be empty on initialization, in which case {\PFAc init} is either unspecified or {\PFAc \{\}}.
 \item[\PFAc shared:] An optional boolean specifying whether this pool is thread-local to one scoring engine or shared among a battery of similar engines (\hyperlink{hsec:concurrent}{see Sec.~\ref{sec:concurrent}}).  The default is {\PFAc false}.
-\item[\PFAc rollback:] An optional boolean specifying whether this pool should be rolled back to the state it had at the beginning of an {\PFAc action} if an \hyperlink{hsec:exceptions}{exception} occurs during the {\PFAc action}.  The default is {\PFAc false}, and {\PFAc shared} and {\PFAc rollback} are mututally incompatible: they cannot both be {\PFAc true}.
+\item[\PFAc rollback:] An optional boolean specifying whether this pool should be rolled back to the state it had at the beginning of an {\PFAc action} if an \hyperlink{hsec:exceptions}{exception} occurs during the {\PFAc action}.  The default is {\PFAc false}, and {\PFAc shared} and {\PFAc rollback} are mutually incompatible: they cannot both be {\PFAc true}.
 \end{allowedfields}
 
 Cell and pool names must match the following pattern: {\PFAc [A-Za-z\_][A-Za-z0-9\_]*} (the first character must be a letter or underscore; subsequent characters, if they exist, may also be numbers).  Cells and pools do not share a namespace with each other or with symbols or functions.
@@ -347,7 +347,7 @@ Given that the input and output types are described by Avro schemae, the Avro bi
 
 PFA defines two mechanisms to maintain state: cells and pools.  Cells are global variables with a fixed name and type that must be initialized before the scoring engine's run begins.  A cell's value can change to a new value of the same type, but the cell cannot be deleted and new cells cannot be created during the scoring engine's run.  Pools are global namespaces with a fixed type.  New named values can be created within a pool at runtime, as long as they have the correct type, and old values can be deleted at runtime.
 
-A pool of type ``{\PFAtp X}'' would be equivalent to a cell whose type is ``map of {\PFAtp X}'' execpt for performance and concurrency issues.  All special forms and library functions in the PFA specification treat data structures as immutable objects (\hyperlink{hsec:immutable}{see Sec.~\ref{sec:immutable}}), but scoring engines often need to maintain very large key-value tables.  If pools were not available, a PFA implementation would either incur a performance penalty if it maintained a large map in a cell as an immutable object or if it maintained all temporary variables as mutable objects.  With both cells and pools, a PFA implementation may maintain all values as immutable objects, including cells, and maintain pools as mutable maps of immutable objects.  \hyperlink{hsec:concurrent}{See Sec.~\ref{sec:concurrent}} for a discussion of concurrency issues in cells and pools.
+A pool of type ``{\PFAtp X}'' would be equivalent to a cell whose type is ``map of {\PFAtp X}'' except for performance and concurrency issues.  All special forms and library functions in the PFA specification treat data structures as immutable objects (\hyperlink{hsec:immutable}{see Sec.~\ref{sec:immutable}}), but scoring engines often need to maintain very large key-value tables.  If pools were not available, a PFA implementation would either incur a performance penalty if it maintained a large map in a cell as an immutable object or if it maintained all temporary variables as mutable objects.  With both cells and pools, a PFA implementation may maintain all values as immutable objects, including cells, and maintain pools as mutable maps of immutable objects.  \hyperlink{hsec:concurrent}{See Sec.~\ref{sec:concurrent}} for a discussion of concurrency issues in cells and pools.
 
 Cells can only be accessed through the ``cell'' special form and can only be modified through the ``cell-to'' special form.  Pools can only be accessed through the ``pool'' special form and modified through the ``pool-to'' special form (\hyperlink{hsec:cell-pool-forms}{see Sec.~\ref{sec:cell-pool-forms}}).
 
@@ -477,7 +477,7 @@ An Avro type schema can be a JSON object or a string.  JSON objects construct pa
 
 Below is a summary of the schema syntax that is relevant for PFA.  All \hyperlink{http://avro.apache.org/docs/1.7.6/spec.html}{Avro schema elements} must be accepted by a PFA reader, but these are the only ones that influence PFA.
 
-The following strings are type primatives: ``null'', ``boolean'', ``int'', ``long'', ``float'', ``double'', ``string'', ``bytes''.  Other strings are either previously defined named types or they are invalid.  The form {\PFAc \{"type":$\!$ "X"\}} for string {\PFAtp X} is equivalent to the string on its own.
+The following strings are type primitives: ``null'', ``boolean'', ``int'', ``long'', ``float'', ``double'', ``string'', ``bytes''.  Other strings are either previously defined named types or they are invalid.  The form {\PFAc \{"type":$\!$ "X"\}} for string {\PFAtp X} is equivalent to the string on its own.
 
 A byte array with name {\PFAtp N} and fixed length {\PFAtp L} is specified by the form {\PFAc \{"type":$\!$ "fixed", "name":$\!$ "N", "namespace":$\!$ "NS", "size":$\!$ L\}}.  The namespace is optional, but the name is not.  The length {\PFAtp L} must be a JSON integer.  Avro fixed types have additional object members, but they are not relevant for PFA.
 
@@ -675,7 +675,7 @@ Record substructure can also be matched with wildcards.  Such a pattern has one 
 \item any record {\PFAp A}
 \item any record {\PFAp A} with \{{\PFApf name$_1$:} {\it type$_1$,} {\PFApf name$_2$:} {\it type$_2$,} \ldots\ {\PFApf name$_n$:} {\it type$_n$}\}
 \end{itemize}
-The first matches any record, regarless of what fields it contains, and the second matches a record with at least the specified fields.  Wildcards with and without specifying record substructure have labels in the same namespace.
+The first matches any record, regardless of what fields it contains, and the second matches a record with at least the specified fields.  Wildcards with and without specifying record substructure have labels in the same namespace.
 
 \begin{example}
 For example, the function ``stat.sample.mean'' computes a mean from a record containing components of the running sum.  Its signature requires that the record has double-valued fields {\PFApf sum\_w} and {\PFApf sum\_wx}, but it does not specify anything else about the record.  This {\PFAc runningSum} could be overloaded with additional, application-specific functionality.
@@ -1366,7 +1366,7 @@ The pre-test ``while'' special form has the following syntax.
 \end{json}
 where {\PFAc CONDITION} is a single expression that evaluates to {\bf boolean} and {\PFAc EXPRESSION-OR-EXPRESSIONS} is either a single expression or a JSON array of expressions.  The return value of the ``while'' form is {\PFAc null}: it can only be used to modify state.  The scope of the {\PFAc CONDITION} is sealed-from-above and sealed-within, but the scope of the {\PFAc EXPRESSION-OR-EXPRESSIONS} is unsealed (\hyperlink{hsec:symbol-scope}{see Sec.~\ref{sec:symbol-scope}}).
 
-The {\PFAc CONDITION} is evaulated before the {\PFAc EXPRESSION-OR-EXPRESSIONS} and the two are evaluated in alternation until {\PFAc CONDITION} returns {\PFAc false}.  If {\PFAc CONDITION} returns {\PFAc false} the first time it is called, the {\PFAc EXPRESSION-OR-EXPRESSIONS} would never be evaluated.
+The {\PFAc CONDITION} is evaluated before the {\PFAc EXPRESSION-OR-EXPRESSIONS} and the two are evaluated in alternation until {\PFAc CONDITION} returns {\PFAc false}.  If {\PFAc CONDITION} returns {\PFAc false} the first time it is called, the {\PFAc EXPRESSION-OR-EXPRESSIONS} would never be evaluated.
 
 The post-test ``do-until'' special form has the following syntax.
 \begin{json}
@@ -1542,93 +1542,95 @@ The {\PFAc STRING} is the text of the log message; the optional {\PFAc NAMESPACE
 \section{Core library}
 \label{sec:core-library}
 
+The core library contains functions that would, in most languages, be infix operators.  Following a LISP style of defining them as functions makes it easier to manipulate the expression tree with an automated algorithm.
+
 \subsection{Basic arithmetic}
 
 \subsubsection{Addition of two values ($+$)}
-% \libfcn{+}
+\libfcn{+}
 
 \subsubsection{Subtraction ($-$)}
-% \libfcn{-}
+\libfcn{-}
 
 \subsubsection{Multiplication of two values (*)}
-% \libfcn{*}
+\libfcn{*}
 
 \subsubsection{Floating-point division (/)}
-% \libfcn{/}
+\libfcn{/}
 
 \subsubsection{Integer division (//)}
-% \libfcn{//}
+\libfcn{//}
 
 \subsubsection{Negation (u$-$)}
-% \libfcn{u-}
+\libfcn{u-}
 
 \subsubsection{Modulo (\%)}
-% \libfcn{\%}
+\libfcn{\%}
 
 \subsubsection{Remainder (\%\%)}
-% \libfcn{\%\%}
+\libfcn{\%\%}
 
 \subsubsection{Raising to a power (**)}
-% \libfcn{**}
+\libfcn{**}
 
 \subsection{Comparison operators}
 
 Avro defines a \href{http://avro.apache.org/docs/1.7.6/spec.html#order}{sort order} for every pair of values with a compatible type, so any two objects of compatible type can be compared in PFA.
 
-\subsubsection{General comparision (cmp)}
-% \libfcn{cmp}
+\subsubsection{General comparison (cmp)}
+\libfcn{cmp}
 
 \subsubsection{Equality (==)}
-% \libfcn{==}
+\libfcn{==}
 
 \subsubsection{Inequality (!=)}
-% \libfcn{!=}
+\libfcn{!=}
 
 \subsubsection{Less than (<)}
-% \libfcn{<}
+\libfcn{<}
 
 \subsubsection{Less than or equal to (<=)}
-% \libfcn{<=}
+\libfcn{<=}
 
 \subsubsection{Greater than (>)}
-% \libfcn{>}
+\libfcn{>}
 
 \subsubsection{Greater than or equal to (>=)}
-% \libfcn{>=}
+\libfcn{>=}
 
 \subsubsection{Maximum of two values (max)}
-% \libfcn{max}
+\libfcn{max}
 
 \subsubsection{Minimum of two values (min)}
-% \libfcn{min}
+\libfcn{min}
 
 \subsection{Logical operators}
 
 \subsubsection{Logical and (and)}
-% \libfcn{and}
+\libfcn{and}
 
 \subsubsection{Logical or (or)}
-% \libfcn{or}
+\libfcn{or}
 
 \subsubsection{Logical xor (xor)}
-% \libfcn{xor}
+\libfcn{xor}
 
 \subsubsection{Logical not (not)}
-% \libfcn{not}
+\libfcn{not}
 
 \subsection{Bitwise arithmetic}
 
 \subsubsection{Bitwise and (\&)}
-% \libfcn{\&}
+\libfcn{\&}
 
 \subsubsection{Bitwise or (|)}
-% \libfcn{|}
+\libfcn{|}
 
 \subsubsection{Bitwise xor (\^{})}
-% \libfcn{\^{}}
+\libfcn{\^{}}
 
 \subsubsection{Bitwise not (\textasciitilde{})}
-% \libfcn{TILDE}
+\libfcn{TILDE}
 
 \pagebreak
 
@@ -1639,93 +1641,93 @@ Avro defines a \href{http://avro.apache.org/docs/1.7.6/spec.html#order}{sort ord
 Constants such as $\pi$ and $e$ are represented as stateless functions with no arguments.  Specific implementations may choose to replace the function call with its inline value.
 
 \subsubsection{Archimedes' constant $\pi$ (m.pi)}
-% \libfcn{m.pi}
+\libfcn{m.pi}
 
 \subsubsection{Euler's constant $e$ (m.e)}
-% \libfcn{m.e}
+\libfcn{m.e}
 
 \subsection{Common functions}
 
 \subsubsection{Square root (m.sqrt)}
-% \libfcn{m.sqrt}
+\libfcn{m.sqrt}
 
-\subsubsection{Hypotnuse (m.hypot)}
-% \libfcn{m.hypot}
+\subsubsection{Hypotenuse (m.hypot)}
+\libfcn{m.hypot}
 
 \subsubsection{Trigonometric sine (m.sin)}
-% \libfcn{m.sin}
+\libfcn{m.sin}
 
 \subsubsection{Trigonometric cosine (m.cos)}
-% \libfcn{m.cos}
+\libfcn{m.cos}
 
 \subsubsection{Trigonometric tangent (m.tan)}
-% \libfcn{m.tan}
+\libfcn{m.tan}
 
 \subsubsection{Inverse trigonometric sine (m.asin)}
-% \libfcn{m.asin}
+\libfcn{m.asin}
 
 \subsubsection{Inverse trigonometric cosine (m.acos)}
-% \libfcn{m.acos}
+\libfcn{m.acos}
 
 \subsubsection{Inverse trigonometric tangent (m.atan)}
-% \libfcn{m.atan}
+\libfcn{m.atan}
 
 \subsubsection{Robust inverse trigonometric tangent (m.atan2)}
-% \libfcn{m.atan2}
+\libfcn{m.atan2}
 
 \subsubsection{Hyperbolic sine (m.sinh)}
-% \libfcn{m.sinh}
+\libfcn{m.sinh}
 
 \subsubsection{Hyperbolic cosine (m.cosh)}
-% \libfcn{m.cosh}
+\libfcn{m.cosh}
 
 \subsubsection{Hyperbolic tangent (m.tanh)}
-% \libfcn{m.tanh}
+\libfcn{m.tanh}
 
 \subsubsection{Natural exponential (m.exp)}
-% \libfcn{m.exp}
+\libfcn{m.exp}
 
 \subsubsection{Natural exponential minus one (m.expm1)}
-% \libfcn{m.expm1}
+\libfcn{m.expm1}
 
 \subsubsection{Natural logarithm (m.ln)}
-% \libfcn{m.ln}
+\libfcn{m.ln}
 
 \subsubsection{Logarithm base 10 (m.log10)}
-% \libfcn{m.log10}
+\libfcn{m.log10}
 
 \subsubsection{Arbitrary logarithm (m.log)}
-% \libfcn{m.log}
+\libfcn{m.log}
 
 \subsubsection{Natural logarithm of one plus square (m.ln1p)}
-% \libfcn{m.ln1p}
+\libfcn{m.ln1p}
 
 \subsection{Rounding}
 
 \subsubsection{Absolute value (m.abs)}
-% \libfcn{m.abs}
+\libfcn{m.abs}
 
 \subsubsection{Floor (m.floor)}
-% \libfcn{m.floor}
+\libfcn{m.floor}
 
 \subsubsection{Ceiling (m.ceil)}
-% \libfcn{m.ceil}
+\libfcn{m.ceil}
 
 \subsubsection{Simple rounding (m.round)}
-% \libfcn{m.round}
+\libfcn{m.round}
 
 \subsubsection{Unbiased rounding (m.rint)}
-% \libfcn{m.rint}
+\libfcn{m.rint}
 
 \subsubsection{Threshold function (m.signum)}
-% \libfcn{m.signum}
+\libfcn{m.signum}
 
 \subsubsection{Copy sign (m.copysign)}
-% \libfcn{m.copysign}
+\libfcn{m.copysign}
 
 \subsection{Linear algebra}
 
-including named row/col matrices
+{\bf TODO:} Define linear algebra functions.  In addition to the standard operations on numerically indexed vectors and matrices, there should be ways to manipulate vectors and matrices whose rows and columns are named with strings (maps, rather than arrays).
 
 \pagebreak
 
@@ -1736,222 +1738,225 @@ Strings are immutable, so none of the following functions modifies a string in-p
 \subsection{Basic access}
 
 \subsubsection{Length (s.len)}
-% \libfcn{s.len}
+\libfcn{s.len}
 
 \subsubsection{Extract substring (s.substr)}
-% \libfcn{s.substr}
+\libfcn{s.substr}
 
 \subsubsection{Modify substring (s.substrto)}
-% \libfcn{s.substrto}
+\libfcn{s.substrto}
 
 \subsection{Search and replace}
 
+Search and replace functions in the basic string library do not use regular expressions.
+
 \subsubsection{Contains (s.contains)}
-% \libfcn{s.contains}
+\libfcn{s.contains}
 
 \subsubsection{Count instances (s.count)}
-% \libfcn{s.count}
+\libfcn{s.count}
 
 \subsubsection{Find first index (s.index)}
-% \libfcn{s.index}
+\libfcn{s.index}
 
 \subsubsection{Find last index (s.rindex)}
-% \libfcn{s.rindex}
+\libfcn{s.rindex}
 
 \subsubsection{Check start (s.startswith)}
-% \libfcn{s.startswith}
+\libfcn{s.startswith}
 
 \subsubsection{Check end (s.endswith)}
-% \libfcn{s.endswith}
+\libfcn{s.endswith}
 
 \subsection{Conversions to or from other types}
 
 \subsubsection{Join an array of strings (s.join)}
-% \libfcn{s.join}
+\libfcn{s.join}
 
 \subsubsection{Split into an array of strings (s.split)}
-% \libfcn{s.split}
+\libfcn{s.split}
 
 \subsection{Conversions to or from other strings}
 
 \subsubsection{Concatenate two strings (s.concat)}
-% \libfcn{s.concat}
+\libfcn{s.concat}
 
 \subsubsection{Repeat pattern (s.repeat)}
-% \libfcn{s.repeat}
+\libfcn{s.repeat}
 
 \subsubsection{Lowercase (s.lower)}
-% \libfcn{s.lower}
+\libfcn{s.lower}
 
 \subsubsection{Uppercase (s.upper)}
-% \libfcn{s.upper}
+\libfcn{s.upper}
 
 \subsubsection{Left-strip (s.lstrip)}
-% \libfcn{s.lstrip}
+\libfcn{s.lstrip}
 
 \subsubsection{Right-strip (s.rstrip)}
-% \libfcn{s.rstrip}
+\libfcn{s.rstrip}
 
 \subsubsection{Strip both ends (s.strip)}
-% \libfcn{s.strip}
+\libfcn{s.strip}
 
 \subsubsection{Replace all matches (s.replaceall)}
-% \libfcn{s.replaceall}
+\libfcn{s.replaceall}
 
 \subsubsection{Replace first match (s.replacefirst)}
-% \libfcn{s.replacefirst}
+\libfcn{s.replacefirst}
 
 \subsubsection{Replace last match (s.replacelast)}
-% \libfcn{s.replacelast}
+\libfcn{s.replacelast}
 
 \subsubsection{Translate characters (s.translate)}
-% \libfcn{s.translate}
+\libfcn{s.translate}
 
 \subsection{Regular Expressions}
 
-and stemming
+{\bf TODO:} Define regular expression functions.  Regular expressions should use the Perl-compatible (PCRE) syntax.  Perhaps there should be some basic stemming, too (similar to PMML 4.2).
 
 \pagebreak
 
 \section{Array Manipulation}
 
+Arrays are immutable, so none of the following functions modifies an array in-place.  Some return a modified version of the original array.
+
 \subsection{Basic access}
 
 \subsubsection{Length (a.len)}
-% \libfcn{a.len}
+\libfcn{a.len}
 
 \subsubsection{Extract subsequence (a.subseq)}
-% \libfcn{a.subseq}
+\libfcn{a.subseq}
 
 \subsubsection{Modify subsequence (a.subseqto)}
-% \libfcn{a.subseqto}
+\libfcn{a.subseqto}
 
 \subsection{Search and replace}
 
 \subsubsection{Contains (a.contains)}
-% \libfcn{a.contains}
+\libfcn{a.contains}
 
 \subsubsection{Count instances (a.count)}
-% \libfcn{a.count}
-
-\subsubsection{Count instances by predicate (a.countPredicate)}
-libfcn{a.countPredicate}
+\libfcn{a.count}
 
 \subsubsection{Find first index (a.index)}
-% \libfcn{a.index}
+\libfcn{a.index}
 
 \subsubsection{Find last index (a.rindex)}
-% \libfcn{a.rindex}
+\libfcn{a.rindex}
 
 \subsubsection{Check start (a.startswith)}
-% \libfcn{a.startswith}
+\libfcn{a.startswith}
 
 \subsubsection{Check end (a.endswith)}
-% \libfcn{a.endswith}
+\libfcn{a.endswith}
 
 \subsection{Manipulation}
 
 \subsubsection{Concatenate two arrays (a.concat)}
-% \libfcn{a.concat}
+\libfcn{a.concat}
 
 \subsubsection{Append (a.append)}
-% \libfcn{a.append}
+\libfcn{a.append}
 
 \subsubsection{Insert or prepend (a.insert)}
-% \libfcn{a.insert}
+\libfcn{a.insert}
 
 \subsubsection{Replace item (a.replace)}
-% \libfcn{a.replace}
+\libfcn{a.replace}
 
 \subsubsection{Remove item (a.remove)}
-% \libfcn{a.remove}
+\libfcn{a.remove}
 
 \subsection{Reordering}
 
 \subsubsection{Sort (a.sort)}
-% \libfcn{a.sort}
+\libfcn{a.sort}
 
 \subsubsection{Sort with a less-than function (a.sortLT)}
-% \libfcn{a.sortLT}
+\libfcn{a.sortLT}
 
 \subsubsection{Randomly shuffle array (a.shuffle)}
-% \libfcn{a.shuffle}
+\libfcn{a.shuffle}
 
 \subsubsection{Reverse order (a.reverse)}
-% \libfcn{a.reverse}
+\libfcn{a.reverse}
 
 \subsection{Extreme values}
 
+The functions listed here provide the Cartesian product of the following features: (1) minimization and maximization, (2) using the natural Avro sort order or a custom less-than function, (3) returning only the most extreme value or an array of the $N$ most extreme values, (4) returning the values themselves or the indexes of the values in the array.  Each combination is provided as a separate function to avoid complicating the type signatures of the functions.
+
 \subsubsection{Maximum of all values (a.max)}
-% \libfcn{a.max}
+\libfcn{a.max}
 
 \subsubsection{Minimum of all values (a.min)}
-% \libfcn{a.min}
+\libfcn{a.min}
 
 \subsubsection{Maximum with a less-than function (a.maxLT)}
-% \libfcn{a.maxLT}
+\libfcn{a.maxLT}
 
 \subsubsection{Minimum with a less-than function (a.minLT)}
-% \libfcn{a.minLT}
+\libfcn{a.minLT}
 
 \subsubsection{Maximum $N$ items (a.maxN)}
-% \libfcn{a.maxN}
+\libfcn{a.maxN}
 
 \subsubsection{Minimum $N$ items (a.minN)}
-% \libfcn{a.minN}
+\libfcn{a.minN}
 
 \subsubsection{Maximum $N$ with a less-than function (a.maxNLT)}
-% \libfcn{a.maxNLT}
+\libfcn{a.maxNLT}
 
 \subsubsection{Minimum $N$ with a less-than function (a.minNLT)}
-% \libfcn{a.minNLT}
+\libfcn{a.minNLT}
 
 \subsubsection{Argument maximum (a.argmax)}
-% \libfcn{a.argmax}
+\libfcn{a.argmax}
 
 \subsubsection{Argument minimum (a.argmin)}
-% \libfcn{a.argmin}
+\libfcn{a.argmin}
 
 \subsubsection{Argument maximum with a less-than function (a.argmaxLT)}
-% \libfcn{a.argmaxLT}
+\libfcn{a.argmaxLT}
 
 \subsubsection{Argument minimum with a less-than function (a.argminLT)}
-% \libfcn{a.argminLT}
+\libfcn{a.argminLT}
 
 \subsubsection{Maximum $N$ arguments (a.argmaxN)}
-% \libfcn{a.argmaxN}
+\libfcn{a.argmaxN}
 
 \subsubsection{Minimum $N$ arguments (a.argminN)}
-% \libfcn{a.argminN}
+\libfcn{a.argminN}
 
 \subsubsection{Maximum $N$ arguments with a less-than function (a.argmaxNLT)}
-% \libfcn{a.argmaxNLT}
+\libfcn{a.argmaxNLT}
 
 \subsubsection{Minimum $N$ arguments with a less-than function (a.argminNLT)}
-% \libfcn{a.argminNLT}
+\libfcn{a.argminNLT}
 
 \subsection{Numerical combinations}
 
 \subsubsection{Add all array values (a.sum)}
-% \libfcn{a.sum}
+\libfcn{a.sum}
 
 \subsubsection{Multiply all array values (a.product)}
-% \libfcn{a.product}
+\libfcn{a.product}
 
 \subsubsection{Sum of logarithms (a.lnsum)}
-% \libfcn{a.lnsum}
+\libfcn{a.lnsum}
 
 \subsubsection{Arithmetic mean (a.mean)}
-% \libfcn{a.mean}
+\libfcn{a.mean}
 
 \subsubsection{Geometric mean (a.geomean)}
-% \libfcn{a.geomean}
+\libfcn{a.geomean}
 
 \subsubsection{Median (a.median)}
-% \libfcn{a.median}
+\libfcn{a.median}
 
 \subsubsection{Mode, or most common value (a.mode)}
-% \libfcn{a.mode}
+\libfcn{a.mode}
 
 \hypertarget{hsec:set-like}{}
 \subsection{Set or set-like functions}
@@ -1960,88 +1965,90 @@ libfcn{a.countPredicate}
 PFA does not have a set datatype, but arrays can be interpreted as sets with the following functions.
 
 \subsubsection{Distinct items (a.distinct)}
-% \libfcn{a.distinct}
+\libfcn{a.distinct}
 
 \subsubsection{Set equality (a.seteq)}
-% \libfcn{a.seteq}
+\libfcn{a.seteq}
 
 \subsubsection{Union (a.union)}
-% \libfcn{a.union}
+\libfcn{a.union}
 
 \subsubsection{Intersection (a.intersect)}
-% \libfcn{a.intersect}
+\libfcn{a.intersect}
 
 \subsubsection{Set difference (a.diff)}
-% \libfcn{a.diff}
+\libfcn{a.diff}
 
 \subsubsection{Symmetric set difference (a.symdiff)}
-% \libfcn{a.symdiff}
+\libfcn{a.symdiff}
 
 \subsubsection{Subset check (a.subset)}
-% \libfcn{a.subset}
+\libfcn{a.subset}
 
 \subsubsection{Disjointness check (a.disjoint)}
-% \libfcn{a.disjoint}
+\libfcn{a.disjoint}
 
 \subsection{Functional programming}
 
+These are the standard functors found in most functional programming contexts.
+
 \subsubsection{Map array items with function (a.map)}
-% \libfcn{a.map}
+\libfcn{a.map}
 
 \subsubsection{Filter array items with function (a.filter)}
-% \libfcn{a.filter}
+\libfcn{a.filter}
 
 \subsubsection{Filter and map (a.filtermap)}
-% \libfcn{a.filtermap}
+\libfcn{a.filtermap}
 
 \subsubsection{Map and flatten (a.flatmap)}
-% \libfcn{a.flatmap}
+\libfcn{a.flatmap}
 
 \subsubsection{Reduce array items to a single value (a.reduce)}
-% \libfcn{a.reduce}
+\libfcn{a.reduce}
 
 \subsubsection{Right-to-left reduce (a.reduceright)}
-% \libfcn{a.reduceright}
+\libfcn{a.reduceright}
 
 \subsubsection{Fold array items to another type (a.fold)}
-% \libfcn{a.fold}
+\libfcn{a.fold}
 
 \subsubsection{Right-to-left fold (a.foldright)}
-% \libfcn{a.foldright}
+\libfcn{a.foldright}
 
 \subsubsection{Take items until predicate is false (a.takeWhile)}
-% \libfcn{a.takeWhile}
+\libfcn{a.takeWhile}
 
 \subsubsection{Drop items until predicate is true (a.dropWhile)}
-% \libfcn{a.dropWhile}
+\libfcn{a.dropWhile}
 
 \subsection{Functional tests}
 
 \subsubsection{Existential check, $\exists$ (a.any)}
-% \libfcn{a.any}
+\libfcn{a.any}
 
 \subsubsection{Univeral check, $\forall$ (a.all)}
-% \libfcn{a.all}
+\libfcn{a.all}
 
 \subsubsection{Pairwise check of two arrays (a.corresponds)}
-% \libfcn{a.corresponds}
+\libfcn{a.corresponds}
 
 \subsection{Restructuring}
 
 \subsubsection{Sliding window (a.slidingWindow)}
-% \libfcn{a.slidingWindow}
+\libfcn{a.slidingWindow}
 
 \subsubsection{Unique combinations of a fixed size (a.combinations)}
-% \libfcn{a.combinations}
+\libfcn{a.combinations}
 
 \subsubsection{Permutations (a.permutations)}
-% \libfcn{a.permutations}
+\libfcn{a.permutations}
 
 \subsubsection{Flatten array (a.flatten)}
-% \libfcn{a.flatten}
+\libfcn{a.flatten}
 
 \subsubsection{Group items by category (a.groupby)}
-% \libfcn{a.groupby}
+\libfcn{a.groupby}
 
 \pagebreak
 
@@ -2049,68 +2056,96 @@ PFA does not have a set datatype, but arrays can be interpreted as sets with the
 
 \subsection{Map}
 
+Maps are immutable, so none of the following functions modifies a map in-place.  Some return a modified version of the original map.
+
+{\bf TODO:} Define map manipulation functions.
+
 \subsection{Record}
+
+Records are immutable, so none of the following functions modifies a record in-place.  Some return a modified version of the original record.
+
+{\bf TODO:} Define record manipulation functions.
 
 \subsection{Enum}
 
-\subsection{Fixed}
+{\bf TODO:} Define enum manipulation functions.
+
+\subsection{Bytes and fixed}
+
+{\bf TODO:} Define bytes and fixed manipulation functions.
 
 \pagebreak
 
 \section{Missing data handling}
+
+Some methods for dealing with missing data are inseparable from the statistical model in question, such as adjustment factors for clustering or surrogate predicates for decision trees.  Those that can be separated have been collected here.
+
+``To impute'' means to \href{http://en.wikipedia.org/wiki/Imputation_(statistics)}{replace missing data with substituted values}.
 
 \hypertarget{hsec:impute}{}
 \subsection{Impute library}
 \label{sec:impute}
 
 \subsubsection{Skip record (impute.errorOnNull)}
-% \libfcn{impute.errorOnNull}
+\libfcn{impute.errorOnNull}
 
 \subsubsection{Replace with default (impute.defaultOnNull)}
-% \libfcn{impute.defaultOnNull}
+\libfcn{impute.defaultOnNull}
+
+{\bf TODO:} Define more imputers.
 
 \pagebreak
 
 \section{Aggregation}
 
-SQL-like functions
-
-group-by tables
-
-CUSUM
+{\bf TODO:} Define aggregation functions--- SQL-like functions, group-by tables, CUSUM, etc.
 
 \pagebreak
 
 \section{Descriptive statistics libraries}
 
+This library contains methods for characterizing a dataset empirically.  These are generally more lightweight than data mining models.
+
 \subsection{Sample statistics}
 
 \subsubsection{Update aggregated mean (stat.sample.updateMean)}
-% \libfcn{stat.sample.updateMean}
+\libfcn{stat.sample.updateMean}
 
 \subsubsection{Compute aggregated mean (stat.sample.mean)}
-% \libfcn{stat.sample.mean}
+\libfcn{stat.sample.mean}
 
-accumulated mean, median(?)
+{\bf TODO:} Define more functions, accumulated mean, median or medoid(?); Tony Finch's algorithms...
 
 \pagebreak
 
 \section{Data mining models}
 
+This library contains methods of analyzing data using trained models.  Many of these are usually the outputs of machine learning algorithms.
+
 \subsection{Decision and regression Trees}
 
 \subsubsection{Tree walk with simple predicates (model.tree.simpleWalk)}
-% \libfcn{model.tree.simpleWalk}
+\libfcn{model.tree.simpleWalk}
 
 \subsubsection{Tree walk with user-defined predicates (model.tree.predicateWalk)}
-% \libfcn{model.tree.predicateWalk}
+\libfcn{model.tree.predicateWalk}
+
+{\bf TODO:} Define more tree methods, including the integrated missing value methods from PMML (weightedConfidence, aggregateNodes).  Some of those will require ScoreDistributions on the nodes.
 
 \subsection{Cluster models}
 
+{\bf TODO:} Define cluster model functions.  The metrics should all be separate functions, possibly in the math library.
+
 \subsection{Regression}
+
+{\bf TODO:} Define regression functions.  The fit function could be one of a few special cases (linear, polynomial, logistic) or a completely arbitrary user-defined function.
 
 \subsection{Neural networks}
 
+{\bf TODO:} Define neural network functions.  Separate the functions for simple perceptrons from the functions for neural network topologies, so that they're interchangeable.  Backpropagation modifies a cell or pool in memory.
+
 \subsection{Support vector machines}
+
+{\bf TODO:} Define support vector machine functions.  The kernel trick can be implemented by passing a user-defined function.
 
 \end{document}
