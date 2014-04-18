@@ -1496,21 +1496,45 @@ The Avro type schema specified by {\PFAc as} should accept the return type of {\
 \subsection{Inline documentation}
 \label{sec:inline-doc}
 
-        %% else if (keys == Set("doc"))                                 Doc(_doc, Some(pos(dot, _at)))
+JSON has no means of including comments.  Auto-generated code usually doesn't need comments, but there may be occasions in which it is useful to embed inactive statements in a PFA document.
+
+The ``doc'' special form has the following syntax.
+\begin{json}
+{"doc": STRING}
+\end{json}
+Unlike a comment in a programming language, it occupies a slot in the syntax tree.  If inactive expressions are ever needed (the equivalent of Python's {\PFAc pass} keyword), one could use a ``doc'' with an empty {\PFAc STRING}.  This form returns {\PFAc null}.
 
 \hypertarget{hsec:exception-form}{}
 \subsection{User-defined exceptions}
 \label{sec:exception-form}
 
-        %% else if (keys == Set("error"))                               Error(_error, None, Some(pos(dot, _at)))
-        %% else if (keys == Set("error", "code"))                       Error(_error, Some(_code), Some(pos(dot, _at)))
+PFA provides non-local exits to stop the evaluation of a {\PFAc begin}, {\PFAc action}, or {\PFAc end} routine that behave like exceptions (\hyperlink{hsec:exceptions}{see Sec.~\ref{sec:exceptions}}).  Some library functions raise exceptions, but the PFA author can also raise user-defined exceptions.  The PFA engine is free to halt execution or just skip to the next input datum upon encountering an exception.
+
+The ``error'' special form raises user-defined exceptions.  It has the following syntax.
+\begin{json}
+{"error": STRING}
+\end{json}
+or
+\begin{json}
+{"error": STRING, "code": INTEGER}
+\end{json}
+The {\PFAc STRING} is the error message, and if a {\PFAc code} is provided, it provides a safer way to identify specific errors than a human-readable message.  The ``error'' form return type is {\bf null}.  Even though the ``error'' form can never return normally, this return type might be used to determine the type of an enclosing form, depending on its position.
 
 \hypertarget{hsec:logs}{}
 \subsection{Log messages}
 \label{sec:logs}
 
-        %% else if (keys == Set("log"))                                 Log(_log, None, Some(pos(dot, _at)))
-        %% else if (keys == Set("log", "namespace"))                    Log(_log, Some(_namespace), Some(pos(dot, _at)))
+The only three outputs that a PFA scoring engine can emit are (1) normal output, the result of a calculation, (2) an exception, and (3) log messages.  Log messages should not be used for normal output, as they are restricted to strings and may or may not be handled by the host PFA system.  The PFA system has full discretion to ignore, filter, collate, forward, or merge log messages.
+
+The ``log'' special form emits a log message.  It has the following syntax.
+\begin{json}
+{"log": STRING}
+\end{json}
+or
+\begin{json}
+{"log": STRING, "namespace": NAME}
+\end{json}
+The {\PFAc STRING} is the text of the log message; the optional {\PFAc NAMESPACE} is a token that may be used for filtering or collating.  The ``log'' form returns {\PFAc null}.
 
 \pagebreak
 
