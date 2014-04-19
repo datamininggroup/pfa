@@ -92,7 +92,7 @@ class TypeCheckSuite extends FlatSpec with Matchers {
     inferType(jsonToAst.expr("""{"do": [{"let": {"x": 12, "y": 12.4, "z": ["hello"]}}]}""")) should be (AvroNull())
     inferType(jsonToAst.expr("""{"let": {"x": 12, "y": 12.4, "z": ["hello"]}}""")) should be (AvroNull())
     inferType(jsonToAst.expr("""{"let": {"x": 12}}""")) should be (AvroNull())
-    evaluating { inferType(jsonToAst.expr("""{"let": {}}""")) } should produce [PFASemanticException]
+    evaluating { inferType(jsonToAst.expr("""{"let": {}}""")) } should produce [PFASyntaxException]
     evaluating { inferType(jsonToAst.expr("""{"let": {"y": {"let": {"x": 12}}}}""")) } should produce [PFASemanticException]
     inferType(jsonToAst.expr("""{"let": {"y": {"do": {"let": {"x": 12}}}}}"""))
     inferType(jsonToAst.expr("""{"do": [{"let": {"y": {"do": {"let": {"x": 12}}}}}, "y"]}""")) should be (AvroNull())
@@ -105,8 +105,8 @@ class TypeCheckSuite extends FlatSpec with Matchers {
     evaluating { inferType(jsonToAst.expr("""{"set": {"x": 999}}""")) } should produce [PFASemanticException]
     evaluating { inferType(jsonToAst.expr("""{"do": [{"set": {"x": 999}}]}""")) } should produce [PFASemanticException]
     evaluating { inferType(jsonToAst.expr("""{"do": [{"set": {"x": 999}}, {"let": {"x": 12}}]}""")) } should produce [PFASemanticException]
-    evaluating { inferType(jsonToAst.expr("""{"set": {}}""")) } should produce [PFASemanticException]
-    evaluating { inferType(jsonToAst.expr("""{"do": [{"let": {"x": 12}}, {"set": {}}]}""")) } should produce [PFASemanticException]
+    evaluating { inferType(jsonToAst.expr("""{"set": {}}""")) } should produce [PFASyntaxException]
+    evaluating { inferType(jsonToAst.expr("""{"do": [{"let": {"x": 12}}, {"set": {}}]}""")) } should produce [PFASyntaxException]
     inferType(jsonToAst.expr("""{"do": [{"let": {"x": 12.4}}, {"set": {"x": 999}}, "x"]}""")) should be (AvroDouble())
     evaluating { inferType(jsonToAst.expr("""{"do": [{"let": {"x": 12}}, {"set": {"x": 99.9}}, "x"]}""")) } should produce [PFASemanticException]
   }
@@ -117,7 +117,7 @@ class TypeCheckSuite extends FlatSpec with Matchers {
   }
 
   it must "test attr" taggedAs(TypeCheck) in {
-    evaluating { inferType(jsonToAst.expr("""{"attr": "x", "path": []}"""), Map("x" -> AvroArray(AvroInt()))) } should produce [PFASemanticException]
+    evaluating { inferType(jsonToAst.expr("""{"attr": "x", "path": []}"""), Map("x" -> AvroArray(AvroInt()))) } should produce [PFASyntaxException]
     inferType(jsonToAst.expr("""{"attr": "x", "path": [2]}"""), Map("x" -> AvroArray(AvroInt()))) should be (AvroInt())
     inferType(jsonToAst.expr("""{"attr": "x", "path": [1, 2, 3]}"""), Map("x" -> AvroArray(AvroArray(AvroArray(AvroInt()))))) should be (AvroInt())
     evaluating { inferType(jsonToAst.expr("""{"attr": "x", "path": [1]}"""), Map("x" -> AvroInt())) } should produce [PFASemanticException]
@@ -252,8 +252,8 @@ class TypeCheckSuite extends FlatSpec with Matchers {
     inferType(jsonToAst.expr("""{"cond": [{"if": true, "then": 12}, {"if": true, "then": {"string": "hello"}}, {"if": true, "then": {"base64": "aGVsbG8="}}]}""")) should be (AvroNull())
     inferType(jsonToAst.expr("""{"cond": [{"if": true, "then": 12}, {"if": true, "then": {"string": "hello"}}, {"if": true, "then": {"base64": "aGVsbG8="}}], "else": 999}""")) should be (AvroUnion(List(AvroInt(), AvroString(), AvroBytes())))
 
-    evaluating { inferType(jsonToAst.expr("""{"cond": []}""")) } should produce [PFASemanticException]
-    evaluating { inferType(jsonToAst.expr("""{"cond": [], "else": 999}""")) } should produce [PFASemanticException]
+    evaluating { inferType(jsonToAst.expr("""{"cond": []}""")) } should produce [PFASyntaxException]
+    evaluating { inferType(jsonToAst.expr("""{"cond": [], "else": 999}""")) } should produce [PFASyntaxException]
   }
 
   it must "test while" taggedAs(TypeCheck) in {
@@ -270,9 +270,9 @@ class TypeCheckSuite extends FlatSpec with Matchers {
     inferType(jsonToAst.expr("""{"for": {"x": 0}, "until": true, "step": {"x": 1}, "do": 12}""")) should be (AvroNull())
     inferType(jsonToAst.expr("""{"for": {"x": 0}, "until": true, "step": {"x": 1}, "do": "x"}""")) should be (AvroNull())
     evaluating { inferType(jsonToAst.expr("""{"for": {"x": 0}, "until": true, "step": {"x": 1}, "do": "y"}""")) } should produce [PFASemanticException]
-    evaluating { inferType(jsonToAst.expr("""{"for": {}, "until": true, "step": {"x": 1}, "do": 12}""")) } should produce [PFASemanticException]
+    evaluating { inferType(jsonToAst.expr("""{"for": {}, "until": true, "step": {"x": 1}, "do": 12}""")) } should produce [PFASyntaxException]
     evaluating { inferType(jsonToAst.expr("""{"for": {"x": 0}, "until": null, "step": {"x": 1}, "do": 12}""")) } should produce [PFASemanticException]
-    evaluating { inferType(jsonToAst.expr("""{"for": {"x": 0}, "until": true, "step": {}, "do": 12}""")) } should produce [PFASemanticException]
+    evaluating { inferType(jsonToAst.expr("""{"for": {"x": 0}, "until": true, "step": {}, "do": 12}""")) } should produce [PFASyntaxException]
     evaluating { inferType(jsonToAst.expr("""{"for": {"x": 0}, "until": true, "step": {"y": 1}, "do": 12}""")) } should produce [PFASemanticException]
     evaluating { inferType(jsonToAst.expr("""{"for": {"x": 0}, "until": true, "step": {"x": 2.2}, "do": 12}""")) } should produce [PFASemanticException]
     evaluating { inferType(jsonToAst.expr("""{"for": {"x": 0}, "until": true, "step": {"x": 1}, "do": 12}"""), Map("x" -> AvroInt())) } should produce [PFASemanticException]

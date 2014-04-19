@@ -13,6 +13,7 @@ import org.codehaus.jackson.node.NullNode
 import org.codehaus.jackson.node.TextNode
 import org.codehaus.jackson.node.BinaryNode
 
+import org.scoringengine.pfa.errors.PFASyntaxException
 import org.scoringengine.pfa.errors.PFASemanticException
 import org.scoringengine.pfa.jvmcompiler.JavaCode
 import org.scoringengine.pfa.jvmcompiler.JVMCompiler
@@ -265,6 +266,9 @@ package ast {
         cells.values.flatMap(_.collect(pf)) ++
         pools.values.flatMap(_.collect(pf))
 
+    if (action.size < 1)
+      throw new PFASyntaxException("\"action\" must contain least one expression", pos)
+
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val topWrapper = SymbolTable(Some(symbolTable), mutable.Map[String, AvroType](), cells, pools, true, false)
 
@@ -310,9 +314,6 @@ package ast {
       if (method == Method.FOLD)
         topWrapper.put("tally", output)  // note that this is after all user functions are defined, which keeps "tally" out of the user functions' scopes
       val actionScope = actionScopeWrapper.newScope(true, false)
-
-      if (action.size < 1)
-        throw new PFASemanticException("\"action\" must contain least one expression", pos)
 
       val actionContextResults: Seq[(ExpressionContext, TaskResult)] = action.map(_.walk(task, actionScope, withUserFunctions)) collect {case (x: ExpressionContext, y: TaskResult) => (x, y)}
       val actionCalls = actionContextResults.map(_._1.calls).flatten.toSet
@@ -565,12 +566,12 @@ package ast {
       super.collect(pf) ++
         body.flatMap(_.collect(pf))
 
+    if (body.size < 1)
+      throw new PFASyntaxException("function's \"do\" list must contain least one expression", pos)
+
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       if (paramsPlaceholder.size > 22)
         throw new PFASemanticException("function can have at most 22 parameters", pos)
-
-      if (body.size < 1)
-        throw new PFASemanticException("function's \"do\" list must contain least one expression", pos)
 
       val scope = symbolTable.newScope(true, false)
       for ((name, avroType) <- params) {
@@ -1061,10 +1062,10 @@ package ast {
       super.collect(pf) ++
         body.flatMap(_.collect(pf))
 
-    override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
-      if (body.size < 1)
-        throw new PFASemanticException("\"do\" block must contain at least one expression", pos)
+    if (body.size < 1)
+      throw new PFASyntaxException("\"do\" block must contain at least one expression", pos)
 
+    override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val scope = symbolTable.newScope(false, false)
       val results: Seq[(ExpressionContext, TaskResult)] = body.map(_.walk(task, scope, functionTable)) collect {case (x: ExpressionContext, y: TaskResult) => (x, y)}
       val context = Do.Context(results.last._1.retType, results.map(_._1.calls).flatten.toSet + Do.desc, scope.inThisScope, results map {_._2})
@@ -1097,10 +1098,10 @@ package ast {
       super.collect(pf) ++
         values.values.flatMap(_.collect(pf))
 
-    override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
-      if (values.size < 1)
-        throw new PFASemanticException("\"let\" must contain at least one declaration", pos)
+    if (values.size < 1)
+      throw new PFASyntaxException("\"let\" must contain at least one declaration", pos)
 
+    override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       if (symbolTable.sealedWithin)
         throw new PFASemanticException("new variable bindings are forbidden in this scope, but you can wrap your expression with \"do\" to make temporary variables", pos)
 
@@ -1153,10 +1154,10 @@ package ast {
       super.collect(pf) ++
         values.values.flatMap(_.collect(pf))
 
-    override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
-      if (values.size < 1)
-        throw new PFASemanticException("\"set\" must contain at least one assignment", pos)
+    if (values.size < 1)
+      throw new PFASyntaxException("\"set\" must contain at least one assignment", pos)
 
+    override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val calls = mutable.Set[String]()
 
       val nameExpr: Seq[(String, TaskResult)] =
@@ -1207,10 +1208,10 @@ package ast {
       super.collect(pf) ++
         path.flatMap(_.collect(pf))
 
-    override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
-      if (path.size < 1)
-        throw new PFASemanticException("attr path must have at least one key", pos)
+    if (path.size < 1)
+      throw new PFASyntaxException("attr path must have at least one key", pos)
 
+    override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val attrType = symbolTable.get(attr) match {
         case Some(x) => x.avroType
         case None => throw new PFASemanticException("unknown symbol \"%s\"".format(attr), pos)
@@ -1253,10 +1254,10 @@ package ast {
         path.flatMap(_.collect(pf)) ++
         to.collect(pf)
 
-    override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
-      if (path.size < 1)
-        throw new PFASemanticException("attr path must have at least one key", pos)
+    if (path.size < 1)
+      throw new PFASyntaxException("attr path must have at least one key", pos)
 
+    override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val attrType = symbolTable.get(attr) match {
         case Some(x) => x.avroType
         case None => throw new PFASemanticException("unknown symbol \"%s\"".format(attr), pos)
@@ -1421,10 +1422,10 @@ package ast {
       super.collect(pf) ++
         path.flatMap(_.collect(pf))
 
-    override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
-      if (path.size < 1)
-        throw new PFASemanticException("pool path must have at least one key", pos)
+    if (path.size < 1)
+      throw new PFASyntaxException("pool path must have at least one key", pos)
 
+    override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val (poolType, shared) = symbolTable.pool(pool) match {
         case Some(x) => (x.avroType, x.shared)
         case None => throw new PFASemanticException("no pool named \"%s\"".format(pool), pos)
@@ -1463,10 +1464,10 @@ package ast {
         to.collect(pf) ++
         (if (init == None) List[X]() else init.get.collect(pf))
 
-    override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
-      if (path.size < 1)
-        throw new PFASemanticException("pool path must have at least one key", pos)
+    if (path.size < 1)
+      throw new PFASyntaxException("pool path must have at least one key", pos)
 
+    override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val (poolType, shared) = symbolTable.pool(pool) match {
         case Some(x) => (x.avroType, x.shared)
         case None => throw new PFASemanticException("no pool named \"%s\"".format(pool), pos)
@@ -1542,6 +1543,12 @@ package ast {
         thenClause.flatMap(_.collect(pf)) ++
         (if (elseClause == None) List[X]() else elseClause.get.flatMap(_.collect(pf)))
 
+    if (thenClause.size < 1)
+      throw new PFASyntaxException("\"then\" clause must contain at least one expression", pos)
+
+    if (elseClause != None  &&  elseClause.size < 1)
+      throw new PFASyntaxException("\"else\" clause must contain at least one expression", pos)
+
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val calls = mutable.Set[String]()
 
@@ -1550,9 +1557,6 @@ package ast {
       if (!AvroBoolean().accepts(predContext.retType))
         throw new PFASemanticException("\"if\" predicate should be boolean, but is " + predContext.retType, pos)
       calls ++= predContext.calls
-
-      if (thenClause.size < 1)
-        throw new PFASemanticException("\"then\" clause must contain at least one expression", pos)
 
       val thenScope = symbolTable.newScope(false, false)
       val thenResults: Seq[(ExpressionContext, TaskResult)] = thenClause.map(_.walk(task, thenScope, functionTable)) collect {case (x: ExpressionContext, y: TaskResult) => (x, y)}
@@ -1563,8 +1567,6 @@ package ast {
         elseClause match {
           case Some(clause) => {
             val elseScope = symbolTable.newScope(false, false)
-            if (clause.size < 1)
-              throw new PFASemanticException("\"else\" clause must contain at least one expression", pos)
 
             val elseResults = clause.map(_.walk(task, elseScope, functionTable)) collect {case (x: ExpressionContext, y: TaskResult) => (x, y)}
             for ((exprCtx, _) <- elseResults)
@@ -1630,10 +1632,17 @@ package ast {
         ifthens.flatMap(_.collect(pf)) ++
         (if (elseClause == None) List[X]() else elseClause.get.flatMap(_.collect(pf)))
 
-    override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
-      if (ifthens.size < 1)
-        throw new PFASemanticException("\"cond\" must contain at least one predicate-block pair", pos)
+    if (ifthens.size < 1)
+      throw new PFASyntaxException("\"cond\" must contain at least one predicate-block pair", pos)
 
+    for (If(_, thenClause, _, ifpos) <- ifthens)
+      if (thenClause.size < 1)
+        throw new PFASyntaxException("\"then\" clause must contain at least one expression", ifpos)
+
+    if (elseClause != None  &&  elseClause.size < 1)
+      throw new PFASyntaxException("\"else\" clause must contain at least one expression", pos)
+
+    override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val calls = mutable.Set[String]()
 
       val withoutElse: Seq[Cond.WalkBlock] =
@@ -1643,9 +1652,6 @@ package ast {
           if (!AvroBoolean().accepts(predContext.retType))
             throw new PFASemanticException("\"if\" predicate should be boolean, but is " + predContext.retType, ifpos)
           calls ++= predContext.calls
-
-          if (thenClause.size < 1)
-            throw new PFASemanticException("\"then\" clause must contain at least one expression", pos)
 
           val thenScope = symbolTable.newScope(false, false)
           val thenResults: Seq[(ExpressionContext, TaskResult)] = thenClause.map(_.walk(task, thenScope, functionTable)) collect {case (x: ExpressionContext, y: TaskResult) => (x, y)}
@@ -1658,8 +1664,6 @@ package ast {
       val walkBlocks = elseClause match {
         case Some(clause) => {
           val elseScope = symbolTable.newScope(false, false)
-          if (clause.size < 1)
-            throw new PFASemanticException("\"else\" clause must contain at least one expression", pos)
 
           val elseResults = clause.map(_.walk(task, elseScope, functionTable)) collect {case (x: ExpressionContext, y: TaskResult) => (x, y)}
           for ((exprCtx, _) <- elseResults)
@@ -1725,6 +1729,9 @@ package ast {
         predicate.collect(pf) ++
         body.flatMap(_.collect(pf))
 
+    if (body.size < 1)
+      throw new PFASyntaxException("\"do\" block must contain at least one expression", pos)
+
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val calls = mutable.Set[String]()
       val loopScope = symbolTable.newScope(false, false)
@@ -1734,9 +1741,6 @@ package ast {
       if (!AvroBoolean().accepts(predContext.retType))
         throw new PFASemanticException("\"while\" predicate should be boolean, but is " + predContext.retType, pos)
       calls ++= predContext.calls
-
-      if (body.size < 1)
-        throw new PFASemanticException("\"do\" block must contain at least one expression", pos)
 
       val loopResults: Seq[(ExpressionContext, TaskResult)] = body.map(_.walk(task, loopScope, functionTable)) collect {case (x: ExpressionContext, y: TaskResult) => (x, y)}
       for ((exprCtx, _) <- loopResults)
@@ -1775,13 +1779,13 @@ package ast {
         body.flatMap(_.collect(pf)) ++
         predicate.collect(pf)
 
+    if (body.size < 1)
+      throw new PFASyntaxException("\"do\" block must contain at least one expression", pos)
+
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val calls = mutable.Set[String]()
       val loopScope = symbolTable.newScope(false, false)
       val predScope = loopScope.newScope(true, true)
-
-      if (body.size < 1)
-        throw new PFASemanticException("\"do\" block must contain at least one expression", pos)
 
       val loopResults: Seq[(ExpressionContext, TaskResult)] = body.map(_.walk(task, loopScope, functionTable)) collect {case (x: ExpressionContext, y: TaskResult) => (x, y)}
       for ((exprCtx, _) <- loopResults)
@@ -1827,12 +1831,18 @@ package ast {
         step.values.flatMap(_.collect(pf)) ++
         body.flatMap(_.collect(pf))
 
+    if (init.size < 1)
+      throw new PFASyntaxException("\"for\" must contain at least one declaration", pos)
+
+    if (step.size < 1)
+      throw new PFASyntaxException("\"step\" must contain at least one assignment", pos)
+
+    if (body.size < 1)
+      throw new PFASyntaxException("\"do\" must contain at least one statement", pos)
+
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val calls = mutable.Set[String]()
       val loopScope = symbolTable.newScope(false, false)
-
-      if (init.size < 1)
-        throw new PFASemanticException("\"for\" must contain at least one declaration", pos)
 
       val initNameTypeExpr: Seq[(String, AvroType, TaskResult)] =
         for ((name, expr) <- init.toList) yield {
@@ -1856,9 +1866,6 @@ package ast {
         throw new PFASemanticException("\"until\" predicate should be boolean, but is " + untilContext.retType, pos)
       calls ++= untilContext.calls
 
-      if (step.size < 1)
-        throw new PFASemanticException("\"step\" must contain at least one assignment", pos)
-
       val stepNameExpr: Seq[(String, TaskResult)] =
         for ((name, expr) <- step.toList) yield {
           if (loopScope.get(name) == None)
@@ -1875,9 +1882,6 @@ package ast {
 
           (name, exprResult)
         }
-
-      if (body.size < 1)
-        throw new PFASemanticException("\"do\" must contain at least one statement", pos)
 
       val bodyScope = loopScope.newScope(false, false)
       val bodyResults: Seq[(ExpressionContext, TaskResult)] = body.map(_.walk(task, bodyScope, functionTable)) collect {case (x: ExpressionContext, y: TaskResult) => (x, y)}
@@ -1929,6 +1933,9 @@ package ast {
         array.collect(pf) ++
         body.flatMap(_.collect(pf))
 
+    if (body.size < 1)
+      throw new PFASyntaxException("\"do\" must contain at least one statement", pos)
+
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val calls = mutable.Set[String]()
       val loopScope = symbolTable.newScope(!seq, false)
@@ -1949,9 +1956,6 @@ package ast {
       }
 
       loopScope.put(name, elementType)
-
-      if (body.size < 1)
-        throw new PFASemanticException("\"do\" must contain at least one statement", pos)
 
       val bodyScope = loopScope.newScope(false, false)
       val bodyResults: Seq[(ExpressionContext, TaskResult)] = body.map(_.walk(task, bodyScope, functionTable)) collect {case (x: ExpressionContext, y: TaskResult) => (x, y)}
@@ -1994,6 +1998,9 @@ package ast {
         map.collect(pf) ++
         body.flatMap(_.collect(pf))
 
+    if (body.size < 1)
+      throw new PFASyntaxException("\"do\" must contain at least one statement", pos)
+
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val calls = mutable.Set[String]()
       val loopScope = symbolTable.newScope(false, false)
@@ -2019,9 +2026,6 @@ package ast {
 
       loopScope.put(forkey, AvroString())
       loopScope.put(forval, elementType)
-
-      if (body.size < 1)
-        throw new PFASemanticException("\"do\" must contain at least one statement", pos)
 
       val bodyScope = loopScope.newScope(false, false)
       val bodyResults: Seq[(ExpressionContext, TaskResult)] = body.map(_.walk(task, bodyScope, functionTable)) collect {case (x: ExpressionContext, y: TaskResult) => (x, y)}
@@ -2064,15 +2068,15 @@ package ast {
       super.collect(pf) ++
         body.flatMap(_.collect(pf))
 
+    if (body.size < 1)
+      throw new PFASyntaxException("\"do\" block must contain at least one expression", pos)
+
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       if (!validSymbolName(named))
         throw new PFASemanticException("\"%s\" is not a valid symbol name".format(named), pos)
 
       val scope = symbolTable.newScope(false, false)
       scope.put(named, avroType)
-
-      if (body.size < 1)
-        throw new PFASemanticException("\"do\" block must contain at least one expression", pos)
 
       val results: Seq[(ExpressionContext, TaskResult)] = body.map(_.walk(task, scope, functionTable)) collect {case (x: ExpressionContext, y: TaskResult) => (x, y)}
       val context = CastCase.Context(results.last._1.retType, named, avroType, results.map(_._1.calls).flatten.toSet, scope.inThisScope, results map {_._2})
@@ -2110,6 +2114,15 @@ package ast {
         expr.collect(pf) ++
         castCases.flatMap(_.collect(pf))
 
+    if (partial) {
+      if (castCases.size < 1)
+        throw new PFASyntaxException("\"cases\" must contain at least one case", pos)
+    }
+    else {
+      if (castCases.size < 2)
+        throw new PFASyntaxException("\"cases\" must contain at least two cases", pos)
+    }
+
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val calls = mutable.Set[String]()
 
@@ -2131,15 +2144,10 @@ package ast {
         calls ++= castCtx.calls
 
       val retType =
-        if (partial) {
-          if (cases.size < 1)
-            throw new PFASemanticException("\"cases\" must contain at least one case", pos)
+        if (partial)
           AvroNull()
-        }
-        else {
-          if (cases.size < 2)
-            throw new PFASemanticException("\"cases\" must contain at least two cases", pos)
 
+        else {
           // are you missing anything necessary?
           val mustFindThese = exprType match {
             case x: AvroUnion => x.types

@@ -178,7 +178,7 @@ package reader {
       "JSON start line,col %d,%d".format(parser.getCurrentLocation.getLineNr, parser.getCurrentLocation.getColumnNr)
 
     private def readEngineConfig(parser: JsonParser, token: JsonToken, avroTypeBuilder: AvroTypeBuilder): EngineConfig = token match {
-      case null => throw new PFASyntaxException("empty input", "", "")
+      case null => throw new PFASyntaxException("empty input", Some(pos("", "")))
       case JsonToken.START_OBJECT => {
         var _at = jsonAt(parser)
 
@@ -212,7 +212,7 @@ package reader {
                 case "map" =>     _method = Method.MAP
                 case "emit" =>    _method = Method.EMIT
                 case "fold" =>    _method = Method.FOLD
-                case x => throw new PFASyntaxException("expected one of \"map\", \"emit\", \"fold\", not \"%s\"".format(x), key, _at)
+                case x => throw new PFASyntaxException("expected one of \"map\", \"emit\", \"fold\", not \"%s\"".format(x), Some(pos(key, _at)))
               }
               case "input" =>     _input = readAvroPlaceholder(parser, parser.nextToken(), key, _at, avroTypeBuilder)
               case "output" =>    _output = readAvroPlaceholder(parser, parser.nextToken(), key, _at, avroTypeBuilder)
@@ -236,7 +236,7 @@ package reader {
               case "doc" =>       _doc = Some(readString(parser, parser.nextToken(), key, _at))
               case "metadata" =>  _metadata = Some(readJsonNode(parser, parser.nextToken(), key, _at))
               case "options" =>   _options = readJsonNodeMap(parser, parser.nextToken(), key, _at)
-              case x => throw new PFASyntaxException("unexpected top-level field: %s".format(x), "", _at)
+              case x => throw new PFASyntaxException("unexpected top-level field: %s".format(x), Some(pos("", _at)))
             }
           }
           subtoken = parser.nextToken()
@@ -246,15 +246,15 @@ package reader {
           _name = uniqueEngineName()
 
         if (_method == Method.FOLD  &&  !keys.contains("zero"))
-          throw new PFASyntaxException("folding engines must include a \"zero\" to begin the calculation", "", _at)
+          throw new PFASyntaxException("folding engines must include a \"zero\" to begin the calculation", Some(pos("", _at)))
 
         val required = Set("action", "input", "output")
         if ((keys intersect required) != required)
-          throw new PFASyntaxException("missing top-level fields: %s".format((required diff keys).mkString(", ")), "", _at)
+          throw new PFASyntaxException("missing top-level fields: %s".format((required diff keys).mkString(", ")), Some(pos("", _at)))
         else
           EngineConfig(_name, _method, _input, _output, _begin, _action, _end, _fcns, _zero, _cells, _pools, _randseed, _doc, _metadata, _options, Some(pos("", _at)))
       }
-      case x => throw new PFASyntaxException("PFA engine must be a JSON object, not %s".format(tokenMessage.getOrElse(x, x.toString)), "", jsonAt(parser))
+      case x => throw new PFASyntaxException("PFA engine must be a JSON object, not %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos("", jsonAt(parser))))
     }
 
     private def ingestJson(parser: JsonParser, token: JsonToken, dot: String, stringBuilder: StringBuilder): Unit = token match {
@@ -331,7 +331,7 @@ package reader {
         }
         items.toMap
       }
-      case x => throw new PFASyntaxException("expected map of JSON objects, found %s".format(tokenMessage.getOrElse(x, x.toString)), dot, at)
+      case x => throw new PFASyntaxException("expected map of JSON objects, found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }
 
     private def readJsonToStringMap(parser: JsonParser, token: JsonToken, dot: String, at: String): Map[String, String] = token match {
@@ -346,33 +346,33 @@ package reader {
         }
         items.toMap
       }
-      case x => throw new PFASyntaxException("expected map of JSON objects, found %s".format(tokenMessage.getOrElse(x, x.toString)), dot, at)
+      case x => throw new PFASyntaxException("expected map of JSON objects, found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }
 
     private def readBoolean(parser: JsonParser, token: JsonToken, dot: String, at: String): Boolean = token match {
       case JsonToken.VALUE_TRUE => true
       case JsonToken.VALUE_FALSE => false
-      case x => throw new PFASyntaxException("expected boolean, found %s".format(tokenMessage.getOrElse(x, x.toString)), dot, at)
+      case x => throw new PFASyntaxException("expected boolean, found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }
 
     private def readInt(parser: JsonParser, token: JsonToken, dot: String, at: String): Int = token match {
       case JsonToken.VALUE_NUMBER_INT => parser.getIntValue
-      case x => throw new PFASyntaxException("expected whole number (32-bit precision), found %s".format(tokenMessage.getOrElse(x, x.toString)), dot, at)
+      case x => throw new PFASyntaxException("expected whole number (32-bit precision), found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }
 
     private def readLong(parser: JsonParser, token: JsonToken, dot: String, at: String): Long = token match {
       case JsonToken.VALUE_NUMBER_INT => parser.getLongValue
-      case x => throw new PFASyntaxException("expected whole number, found %s".format(tokenMessage.getOrElse(x, x.toString)), dot, at)
+      case x => throw new PFASyntaxException("expected whole number, found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }
 
     private def readFloat(parser: JsonParser, token: JsonToken, dot: String, at: String): Float = token match {
       case JsonToken.VALUE_NUMBER_INT | JsonToken.VALUE_NUMBER_FLOAT => parser.getFloatValue
-      case x => throw new PFASyntaxException("expected number (32-bit precision), found %s".format(tokenMessage.getOrElse(x, x.toString)), dot, at)
+      case x => throw new PFASyntaxException("expected number (32-bit precision), found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }
 
     private def readDouble(parser: JsonParser, token: JsonToken, dot: String, at: String): Double = token match {
       case JsonToken.VALUE_NUMBER_INT | JsonToken.VALUE_NUMBER_FLOAT => parser.getDoubleValue
-      case x => throw new PFASyntaxException("expected number, found %s".format(tokenMessage.getOrElse(x, x.toString)), dot, at)
+      case x => throw new PFASyntaxException("expected number, found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }
 
     private def readStringArray(parser: JsonParser, token: JsonToken, dot: String, at: String): Seq[String] = token match {
@@ -386,12 +386,12 @@ package reader {
         }
         items.reverse
       }
-      case x => throw new PFASyntaxException("expected array of strings, found %s".format(tokenMessage.getOrElse(x, x.toString)), dot, at)
+      case x => throw new PFASyntaxException("expected array of strings, found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }
 
     private def readString(parser: JsonParser, token: JsonToken, dot: String, at: String): String = token match {
       case JsonToken.VALUE_STRING => parser.getText
-      case x => throw new PFASyntaxException("expected string, found %s".format(tokenMessage.getOrElse(x, x.toString)), dot, at)
+      case x => throw new PFASyntaxException("expected string, found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }
 
     private def readBase64(parser: JsonParser, token: JsonToken, dot: String, at: String): Array[Byte] = token match {
@@ -399,9 +399,9 @@ package reader {
         parser.getBinaryValue
       }
       catch {
-        case err: JsonParseException => throw new PFASyntaxException("expected base64 data, found \"%s\"".format(parser.getText), dot, at)
+        case err: JsonParseException => throw new PFASyntaxException("expected base64 data, found \"%s\"".format(parser.getText), Some(pos(dot, at)))
       }
-      case x => throw new PFASyntaxException("expected base64 data, found %s".format(tokenMessage.getOrElse(x, x.toString)), dot, at)
+      case x => throw new PFASyntaxException("expected base64 data, found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }
 
     private def readExpressionArray(parser: JsonParser, token: JsonToken, dot: String, at: String, avroTypeBuilder: AvroTypeBuilder): Seq[Expression] = token match {
@@ -415,7 +415,7 @@ package reader {
         }
         items.reverse
       }
-      case x => throw new PFASyntaxException("expected array of expressions, found %s".format(tokenMessage.getOrElse(x, x.toString)), dot, at)
+      case x => throw new PFASyntaxException("expected array of expressions, found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }
 
     private def readExpressionMap(parser: JsonParser, token: JsonToken, dot: String, at: String, avroTypeBuilder: AvroTypeBuilder): Map[String, Expression] = token match {
@@ -431,12 +431,12 @@ package reader {
           else if (validSymbolName(key))
             items = (key, readExpression(parser, parser.nextToken(), dot + "." + key, _at, avroTypeBuilder)) :: items
           else
-            throw new PFASyntaxException("\"%s\" is not a valid symbol name".format(key), dot, at)
+            throw new PFASyntaxException("\"%s\" is not a valid symbol name".format(key), Some(pos(dot, at)))
           subtoken = parser.nextToken()
         }
         items.toMap
       }
-      case x => throw new PFASyntaxException("expected map of expressions, found %s".format(tokenMessage.getOrElse(x, x.toString)), dot, at)
+      case x => throw new PFASyntaxException("expected map of expressions, found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }
 
     private def readCastCaseArray(parser: JsonParser, token: JsonToken, dot: String, at: String, avroTypeBuilder: AvroTypeBuilder): Seq[CastCase] = token match {
@@ -450,7 +450,7 @@ package reader {
         }
         items.reverse
       }
-      case x => throw new PFASyntaxException("expected array of cast-cases, found %s".format(tokenMessage.getOrElse(x, x.toString)), dot, at)
+      case x => throw new PFASyntaxException("expected array of cast-cases, found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }
 
     private def readCastCase(parser: JsonParser, token: JsonToken, dot: String, at: String, avroTypeBuilder: AvroTypeBuilder): CastCase = token match {
@@ -476,28 +476,28 @@ package reader {
                 case x @ JsonToken.START_ARRAY => _body = readExpressionArray(parser, x, dot + "." + key, _at, avroTypeBuilder)
                 case x => _body = List(readExpression(parser, x, dot + "." + key, _at, avroTypeBuilder))
               }
-              case x => throw new PFASyntaxException("unexpected field in cast-case: %s".format(x), dot, _at)
+              case x => throw new PFASyntaxException("unexpected field in cast-case: %s".format(x), Some(pos(dot, _at)))
             }
           }
           subtoken = parser.nextToken()
         }
 
         if (_named != null  &&  !validSymbolName(_named))
-          throw new PFASyntaxException("\"%s\" is not a valid symbol name".format(_named), dot, at)
+          throw new PFASyntaxException("\"%s\" is not a valid symbol name".format(_named), Some(pos(dot, at)))
 
         val required = Set("as", "named", "do")
         if (keys != required)
-          throw new PFASyntaxException("wrong set of fields for a cast-case: %s".format(keys.mkString(", ")), dot, _at)
+          throw new PFASyntaxException("wrong set of fields for a cast-case: %s".format(keys.mkString(", ")), Some(pos(dot, _at)))
         else
           CastCase(_as, _named, _body, Some(pos(dot, _at)))
       }
-      case x => throw new PFASyntaxException("expected cast-case, found %s".format(tokenMessage.getOrElse(x, x.toString)), dot, at)
+      case x => throw new PFASyntaxException("expected cast-case, found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }
 
     private def readExpression(parser: JsonParser, token: JsonToken, dot: String, at: String, avroTypeBuilder: AvroTypeBuilder): Expression =
       readArgument(parser, token, dot, at, avroTypeBuilder) match {
         case expr: Expression => expr
-        case arg: Argument => throw new PFASyntaxException("argument appears outside of argument list", dot, at)
+        case arg: Argument => throw new PFASyntaxException("argument appears outside of argument list", Some(pos(dot, at)))
       }
 
     private def readArgumentArray(parser: JsonParser, token: JsonToken, dot: String, at: String, avroTypeBuilder: AvroTypeBuilder): Seq[Argument] = token match {
@@ -511,7 +511,7 @@ package reader {
         }
         items.reverse
       }
-      case x => throw new PFASyntaxException("expected array of arguments, found %s".format(tokenMessage.getOrElse(x, x.toString)), dot, at)
+      case x => throw new PFASyntaxException("expected array of arguments, found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }
 
     private def readArgument(parser: JsonParser, token: JsonToken, dot: String, at: String, avroTypeBuilder: AvroTypeBuilder): Argument = token match {
@@ -525,7 +525,7 @@ package reader {
         else if (value.compareTo(java.math.BigInteger.valueOf(java.lang.Long.MIN_VALUE)) >= 0  &&  value.compareTo(java.math.BigInteger.valueOf(java.lang.Long.MAX_VALUE)) <= 0)
           LiteralLong(parser.getLongValue, Some(pos(dot, at)))
         else
-          throw new PFASyntaxException("integer out of range: " + value.toString, dot, at)
+          throw new PFASyntaxException("integer out of range: " + value.toString, Some(pos(dot, at)))
       }
       case JsonToken.VALUE_NUMBER_FLOAT => LiteralDouble(parser.getDoubleValue, Some(pos(dot, at)))
       case JsonToken.VALUE_STRING => parser.getText.split("""\.""").toList match {
@@ -533,7 +533,7 @@ package reader {
           if (validSymbolName(item))
             Ref(item, Some(pos(dot, at)))
           else
-            throw new PFASyntaxException("\"%s\" is not a valid symbol name".format(item), dot, at)
+            throw new PFASyntaxException("\"%s\" is not a valid symbol name".format(item), Some(pos(dot, at)))
 
         case base :: path =>
           if (validSymbolName(base))
@@ -542,7 +542,7 @@ package reader {
               case _ => LiteralString(x, Some(pos(dot, at)))
             }), Some(pos(dot, at)))
           else
-            throw new PFASyntaxException("\"%s\" is not a valid symbol name".format(base), dot, at)
+            throw new PFASyntaxException("\"%s\" is not a valid symbol name".format(base), Some(pos(dot, at)))
       }
 
       case JsonToken.START_ARRAY => {
@@ -557,7 +557,7 @@ package reader {
           else
             null
         if (result == null)
-          throw new PFASyntaxException("expecting expression, which may be [\"string\"], but no other array can be used as an expression", dot, at)
+          throw new PFASyntaxException("expecting expression, which may be [\"string\"], but no other array can be used as an expression", Some(pos(dot, at)))
         LiteralString(result, Some(pos(dot, at)))
       }
 
@@ -672,7 +672,7 @@ package reader {
               case "cond" => {
                 _cond = readExpressionArray(parser, parser.nextToken(), dot + "." + key, _at, avroTypeBuilder)
                 if (!_cond.forall({case If(_, _, None, _) => true; case _ => false}))
-                  throw new PFASyntaxException("cond expression must only contain else-less if expressions", dot, _at)
+                  throw new PFASyntaxException("cond expression must only contain else-less if expressions", Some(pos(dot, _at)))
               }
 
               case "cases" =>     _cases = readCastCaseArray(parser, parser.nextToken(), dot + "." + key, _at, avroTypeBuilder)
@@ -701,7 +701,7 @@ package reader {
               case "new" => parser.nextToken() match {
                 case x @ JsonToken.START_OBJECT => _newObject = readExpressionMap(parser, x, dot + "." + key, _at, avroTypeBuilder);  _newArray = null
                 case x @ JsonToken.START_ARRAY => _newArray = readExpressionArray(parser, x, dot + "." + key, _at, avroTypeBuilder);  _newObject = null
-                case x => throw new PFASyntaxException("\"new\" must be an object (map, record) or an array, not " + x.toString, dot, at)
+                case x => throw new PFASyntaxException("\"new\" must be an object (map, record) or an array, not " + x.toString, Some(pos(dot, at)))
               }
 
               case "params" =>    _params = readParams(parser, parser.nextToken(), dot + "." + key, _at, avroTypeBuilder)
@@ -723,13 +723,13 @@ package reader {
         }
 
         if (keys.contains("foreach")  &&  !validSymbolName(_foreach))
-          throw new PFASyntaxException("\"%s\" is not a valid symbol name".format(_foreach), dot, at)
+          throw new PFASyntaxException("\"%s\" is not a valid symbol name".format(_foreach), Some(pos(dot, at)))
         if (keys.contains("forkey")  &&  !validSymbolName(_forkey))
-          throw new PFASyntaxException("\"%s\" is not a valid symbol name".format(_forkey), dot, at)
+          throw new PFASyntaxException("\"%s\" is not a valid symbol name".format(_forkey), Some(pos(dot, at)))
         if (keys.contains("forval")  &&  !validSymbolName(_forval))
-          throw new PFASyntaxException("\"%s\" is not a valid symbol name".format(_forval), dot, at)
+          throw new PFASyntaxException("\"%s\" is not a valid symbol name".format(_forval), Some(pos(dot, at)))
         if (keys.contains("fcnref")  &&  !validFunctionName(_fcnref))
-          throw new PFASyntaxException("\"%s\" is not a valid function name".format(_fcnref), dot, at)
+          throw new PFASyntaxException("\"%s\" is not a valid function name".format(_fcnref), Some(pos(dot, at)))
 
         if (keys == Set("int"))                                      LiteralInt(_int, Some(pos(dot, _at)))
         else if (keys == Set("long"))                                LiteralLong(_long, Some(pos(dot, _at)))
@@ -791,9 +791,9 @@ package reader {
                       "to", "type", "upcast", "until", "value", "while").contains(keys.head))
                                                                      Call(_callName, _callArgs, Some(pos(dot, _at)))
 
-        else throw new PFASyntaxException("not enough arguments for special form: %s".format(keys.mkString(" ")), dot, _at)
+        else throw new PFASyntaxException("not enough arguments for special form: %s".format(keys.mkString(" ")), Some(pos(dot, _at)))
       }
-      case x => throw new PFASyntaxException("expected expression, found %s".format(tokenMessage.getOrElse(x, x.toString)), dot, at)
+      case x => throw new PFASyntaxException("expected expression, found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }
 
     private def readFcnDefMap(parser: JsonParser, token: JsonToken, dot: String, at: String, avroTypeBuilder: AvroTypeBuilder): Map[String, FcnDef] = token match {
@@ -809,12 +809,12 @@ package reader {
           else if (validFunctionName(key))
             items = (key, readFcnDef(parser, parser.nextToken(), dot + "." + key, _at, avroTypeBuilder)) :: items
           else
-            throw new PFASyntaxException("\"%s\" is not a valid function name".format(key), dot, at)
+            throw new PFASyntaxException("\"%s\" is not a valid function name".format(key), Some(pos(dot, at)))
           subtoken = parser.nextToken()
         }
         items.toMap
       }
-      case x => throw new PFASyntaxException("expected map of function definitions, found %s".format(tokenMessage.getOrElse(x, x.toString)), dot, at)
+      case x => throw new PFASyntaxException("expected map of function definitions, found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }
 
     private def readFcnDef(parser: JsonParser, token: JsonToken, dot: String, at: String, avroTypeBuilder: AvroTypeBuilder): FcnDef = token match {
@@ -840,7 +840,7 @@ package reader {
                 case x @ JsonToken.START_ARRAY => _body = readExpressionArray(parser, x, dot + "." + key, _at, avroTypeBuilder)
                 case x => _body = List(readExpression(parser, x, dot + "." + key, _at, avroTypeBuilder))
               }
-              case x => throw new PFASyntaxException("unexpected field in function definition: %s".format(x), dot, _at)
+              case x => throw new PFASyntaxException("unexpected field in function definition: %s".format(x), Some(pos(dot, _at)))
             }
           }
           subtoken = parser.nextToken()
@@ -848,11 +848,11 @@ package reader {
 
         val required = Set("params", "ret", "do")
         if (keys != required)
-          throw new PFASyntaxException("wrong set of fields for a function definition: %s".format(keys.mkString(", ")), dot, _at)
+          throw new PFASyntaxException("wrong set of fields for a function definition: %s".format(keys.mkString(", ")), Some(pos(dot, _at)))
         else
           FcnDef(_params, _ret, _body, Some(pos(dot, _at)))
       }
-      case x => throw new PFASyntaxException("expected function definition, found %s".format(tokenMessage.getOrElse(x, x.toString)), dot, at)
+      case x => throw new PFASyntaxException("expected function definition, found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }
 
     private def readParams(parser: JsonParser, token: JsonToken, dot: String, at: String, avroTypeBuilder: AvroTypeBuilder): Seq[(String, AvroPlaceholder)] = token match {
@@ -866,7 +866,7 @@ package reader {
         }
         items.reverse
       }
-      case x => throw new PFASyntaxException("expected array of function parameters, found %s".format(tokenMessage.getOrElse(x, x.toString)), dot, at)
+      case x => throw new PFASyntaxException("expected array of function parameters, found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }
 
     private def readParam(parser: JsonParser, token: JsonToken, dot: String, at: String, avroTypeBuilder: AvroTypeBuilder): (String, AvroPlaceholder) = token match {
@@ -882,16 +882,16 @@ package reader {
           else if (validSymbolName(key))
             items = (key, readAvroPlaceholder(parser, parser.nextToken(), dot + "." + key, _at, avroTypeBuilder)) :: items
           else
-            throw new PFASyntaxException("\"%s\" is not a valid symbol name".format(key), dot, at)
+            throw new PFASyntaxException("\"%s\" is not a valid symbol name".format(key), Some(pos(dot, at)))
           subtoken = parser.nextToken()
         }
 
         if (items.size == 1)
           items(0)
         else
-          throw new PFASyntaxException("function parameter name-type map should have only one pair", dot, _at)
+          throw new PFASyntaxException("function parameter name-type map should have only one pair", Some(pos(dot, _at)))
       }
-      case x => throw new PFASyntaxException("expected function parameter name-type singleton map, found %s".format(tokenMessage.getOrElse(x, x.toString)), dot, at)
+      case x => throw new PFASyntaxException("expected function parameter name-type singleton map, found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }
 
     private def readCells(parser: JsonParser, token: JsonToken, dot: String, at: String, avroTypeBuilder: AvroTypeBuilder): Map[String, Cell] = token match {
@@ -907,12 +907,12 @@ package reader {
           else if (validSymbolName(key))
             items = (key, readCell(parser, parser.nextToken(), dot + "." + key, _at, avroTypeBuilder)) :: items
           else
-            throw new PFASyntaxException("\"%s\" is not a valid symbol name".format(key), dot, at)
+            throw new PFASyntaxException("\"%s\" is not a valid symbol name".format(key), Some(pos(dot, at)))
           subtoken = parser.nextToken()
         }
         items.toMap
       }
-      case x => throw new PFASyntaxException("expected map of cells, found %s".format(tokenMessage.getOrElse(x, x.toString)), dot, at)
+      case x => throw new PFASyntaxException("expected map of cells, found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }
 
     private def readCell(parser: JsonParser, token: JsonToken, dot: String, at: String, avroTypeBuilder: AvroTypeBuilder): Cell = token match {
@@ -935,18 +935,18 @@ package reader {
               case "type" => _avroType = readAvroPlaceholder(parser, parser.nextToken(), dot + "." + key, _at, avroTypeBuilder)
               case "init" => _init = readJsonToString(parser, parser.nextToken(), dot + "." + key, _at)
               case "shared" => _shared = readBoolean(parser, parser.nextToken(), dot + "." + key, _at)
-              case x => throw new PFASyntaxException("unexpected cell property: %s".format(x), dot, _at)
+              case x => throw new PFASyntaxException("unexpected cell property: %s".format(x), Some(pos(dot, _at)))
             }
           }
           subtoken = parser.nextToken()
         }
         
         if (keys != Set("type", "init")  &&  keys != Set("type", "init", "shared"))
-          throw new PFASyntaxException("wrong set of fields for cell: %s".format(keys.mkString(", ")), dot, _at)
+          throw new PFASyntaxException("wrong set of fields for cell: %s".format(keys.mkString(", ")), Some(pos(dot, _at)))
         else
           Cell(_avroType, _init, _shared, Some(pos(dot, _at)))
       }
-      case x => throw new PFASyntaxException("expected cell, found %s".format(tokenMessage.getOrElse(x, x.toString)), dot, at)
+      case x => throw new PFASyntaxException("expected cell, found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }
 
     private def readPools(parser: JsonParser, token: JsonToken, dot: String, at: String, avroTypeBuilder: AvroTypeBuilder): Map[String, Pool] = token match {
@@ -962,12 +962,12 @@ package reader {
           else if (validSymbolName(key))
             items = (key, readPool(parser, parser.nextToken(), dot + "." + key, _at, avroTypeBuilder)) :: items
           else
-            throw new PFASyntaxException("\"%s\" is not a valid symbol name".format(key), dot, at)
+            throw new PFASyntaxException("\"%s\" is not a valid symbol name".format(key), Some(pos(dot, at)))
           subtoken = parser.nextToken()
         }
         items.toMap
       }
-      case x => throw new PFASyntaxException("expected map of pools, found %s".format(tokenMessage.getOrElse(x, x.toString)), dot, at)
+      case x => throw new PFASyntaxException("expected map of pools, found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }
 
     private def readPool(parser: JsonParser, token: JsonToken, dot: String, at: String, avroTypeBuilder: AvroTypeBuilder): Pool = token match {
@@ -990,18 +990,18 @@ package reader {
               case "type" => _avroType = readAvroPlaceholder(parser, parser.nextToken(), dot + "." + key, _at, avroTypeBuilder)
               case "init" => _init = readJsonToStringMap(parser, parser.nextToken(), dot + "." + key, _at)
               case "shared" => _shared = readBoolean(parser, parser.nextToken(), dot + "." + key, _at)
-              case x => throw new PFASyntaxException("unexpected pool property: %s".format(x), dot, _at)
+              case x => throw new PFASyntaxException("unexpected pool property: %s".format(x), Some(pos(dot, _at)))
             }
           }
           subtoken = parser.nextToken()
         }
         
         if (keys != Set("type")  &&  keys != Set("type", "init")  &&  keys != Set("type", "init", "shared"))
-          throw new PFASyntaxException("wrong set of fields for pool: %s".format(keys.mkString(", ")), dot, _at)
+          throw new PFASyntaxException("wrong set of fields for pool: %s".format(keys.mkString(", ")), Some(pos(dot, _at)))
         else
           Pool(_avroType, _init, _shared, Some(pos(dot, _at)))
       }
-      case x => throw new PFASyntaxException("expected pool, found %s".format(tokenMessage.getOrElse(x, x.toString)), dot, at)
+      case x => throw new PFASyntaxException("expected pool, found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }
   }
 }

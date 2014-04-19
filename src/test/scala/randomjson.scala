@@ -192,7 +192,7 @@ class RandomJsonSuite extends FlatSpec with Matchers {
     else {
       val params = a((for (j <- 0 until rng.nextInt(3)) yield m(name(10) -> avroType())): _*)
       val ret = avroType()
-      m("params" -> params, "ret" -> ret, "do" -> expressions(rng.nextInt(3)))
+      m("params" -> params, "ret" -> ret, "do" -> expressions(1 + rng.nextInt(2)))
     }
 
   def nameExprPairs(length: Int): ObjectNode = m((for (i <- 0 until length) yield name(10) -> expression()): _*)
@@ -213,25 +213,25 @@ class RandomJsonSuite extends FlatSpec with Matchers {
       out
     }))
     case 10 => m("type" -> avroType(), "value" -> data())
-    case 11 => m("do" -> expressions(rng.nextInt(3)))
-    case 12 => m("let" -> nameExprPairs(rng.nextInt(3)))
-    case 13 => m("set" -> nameExprPairs(rng.nextInt(3)))
+    case 11 => m("do" -> expressions(1 + rng.nextInt(2)))
+    case 12 => m("let" -> nameExprPairs(1 + rng.nextInt(2)))
+    case 13 => m("set" -> nameExprPairs(1 + rng.nextInt(2)))
     case 14 => m("attr" -> name(10), "path" -> expressions(1 + rng.nextInt(2)))
     case 15 => m("attr" -> name(10), "path" -> expressions(1 + rng.nextInt(2)), "to" -> expression())
     case 16 => m("cell" -> name(10), "path" -> expressions(rng.nextInt(3)))
     case 17 => m("cell" -> name(10), "path" -> expressions(rng.nextInt(3)), "to" -> expression())
     case 18 => m("pool" -> name(10), "path" -> expressions(1 + rng.nextInt(2)))
     case 19 => m("pool" -> name(10), "path" -> expressions(1 + rng.nextInt(2)), "to" -> expression())
-    case 20 => m("if" -> expression(), "then" -> expressions(rng.nextInt(3)))
-    case 21 => m("if" -> expression(), "then" -> expressions(rng.nextInt(3)), "else" -> expressions(rng.nextInt(3)))
-    case 22 => m("cond" -> a((for (i <- 0 until rng.nextInt(3)) yield m("if" -> expression(), "then" -> expressions(rng.nextInt(3)))): _*))
-    case 23 => m("cond" -> a((for (i <- 0 until rng.nextInt(3)) yield m("if" -> expression(), "then" -> expressions(rng.nextInt(3)))): _*), "else" -> expressions(rng.nextInt(3)))
-    case 24 => m("while" -> expression(), "do" -> expressions(rng.nextInt(3)))
-    case 25 => m("do" -> expressions(rng.nextInt(3)), "until" -> expression())
-    case 26 => m("for" -> nameExprPairs(rng.nextInt(3)), "until" -> expression(), "step" -> nameExprPairs(rng.nextInt(3)), "do" -> expressions(rng.nextInt(3)))
-    case 27 => m("foreach" -> name(10), "in" -> expression(), "do" -> expressions(rng.nextInt(3)), "seq" -> rng.nextBoolean())
-    case 28 => m("forkey" -> name(10), "forval" -> name(10), "in" -> expression(), "do" -> expressions(rng.nextInt(3)))
-    case 29 => m("cast" -> expression(), "cases" -> a((for (i <- 0 until rng.nextInt(3)) yield m("as" -> avroType(), "named" -> name(10), "do" -> expressions(rng.nextInt(3)))): _*))
+    case 20 => m("if" -> expression(), "then" -> expressions(1 + rng.nextInt(2)))
+    case 21 => m("if" -> expression(), "then" -> expressions(1 + rng.nextInt(2)), "else" -> expressions(rng.nextInt(3)))
+    case 22 => m("cond" -> a((for (i <- 0 until (1 + rng.nextInt(2))) yield m("if" -> expression(), "then" -> expressions(1 + rng.nextInt(2)))): _*))
+    case 23 => m("cond" -> a((for (i <- 0 until (1 + rng.nextInt(2))) yield m("if" -> expression(), "then" -> expressions(1 + rng.nextInt(2)))): _*), "else" -> expressions(rng.nextInt(3)))
+    case 24 => m("while" -> expression(), "do" -> expressions(1 + rng.nextInt(2)))
+    case 25 => m("do" -> expressions(1 + rng.nextInt(2)), "until" -> expression())
+    case 26 => m("for" -> nameExprPairs(rng.nextInt(3)), "until" -> expression(), "step" -> nameExprPairs(rng.nextInt(3)), "do" -> expressions(1 + rng.nextInt(2)))
+    case 27 => m("foreach" -> name(10), "in" -> expression(), "do" -> expressions(1 + rng.nextInt(2)), "seq" -> rng.nextBoolean())
+    case 28 => m("forkey" -> name(10), "forval" -> name(10), "in" -> expression(), "do" -> expressions(1 + rng.nextInt(2)))
+    case 29 => m("cast" -> expression(), "cases" -> a((for (i <- 0 until (1 + rng.nextInt(2))) yield m("as" -> avroType(), "named" -> name(10), "do" -> expressions(1 + rng.nextInt(2)))): _*))
     case 30 => m("doc" -> string(30))
     case 31 => m("error" -> string(10))
     case 32 => m("error" -> string(10), "code" -> rng.nextInt())
@@ -243,7 +243,7 @@ class RandomJsonSuite extends FlatSpec with Matchers {
     (for (i <- 0 until length) yield {
       val params = a((for (j <- 0 until rng.nextInt(3)) yield m(name(10) -> avroType())): _*)
       val ret = avroType()
-      name(10) -> m("params" -> params, "ret" -> ret, "do" -> expressions(rng.nextInt(3)))
+      name(10) -> m("params" -> params, "ret" -> ret, "do" -> expressions(1 + rng.nextInt(2)))
     }): _*)
 
   def cells(length: Int): ObjectNode = m(
@@ -261,7 +261,7 @@ class RandomJsonSuite extends FlatSpec with Matchers {
       m("name" -> name(10),
         "input" -> avroType(),
         "output" -> avroType(),
-        "action" -> expressions(rng.nextInt(3))
+        "action" -> expressions(1 + rng.nextInt(2))
       )
     val method =
     if (rng.nextBoolean())

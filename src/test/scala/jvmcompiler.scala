@@ -2018,7 +2018,7 @@ action:
   - input
 pools:
   notempty: {type: "null", init: {whatever: null}}
-""").head.action("hey") } should produce [PFASemanticException]
+""").head.action("hey") } should produce [PFASyntaxException]
 
     PFAEngine.fromYaml("""
 input: string
@@ -2160,7 +2160,7 @@ action:
   - input
 pools:
   notempty: {type: "null", init: {whatever: null}, shared: true}
-""").head.action("hey") } should produce [PFASemanticException]
+""").head.action("hey") } should produce [PFASyntaxException]
 
     PFAEngine.fromYaml("""
 input: string
