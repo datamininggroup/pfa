@@ -2,6 +2,7 @@ package org.scoringengine.pfa
 
 import scala.collection.mutable
 import scala.language.postfixOps
+import scala.runtime.ScalaRunTime
 
 import org.codehaus.jackson.JsonNode
 import org.codehaus.jackson.node.BooleanNode
@@ -212,6 +213,7 @@ package ast {
   trait Ast {
     def pos: Option[String]
     override def equals(other: Any): Boolean
+    override def hashCode(): Int
     def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       if (pf.isDefinedAt(this)) List(pf.apply(this)) else List[X]()
 
@@ -256,6 +258,7 @@ package ast {
         this.doc == that.doc  &&  this.metadata == that.metadata  &&  this.options == that.options  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode((name, method, inputPlaceholder.toString, outputPlaceholder.toString, begin, action, end, fcns, cells, pools, randseed, doc, metadata, options))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
@@ -448,6 +451,7 @@ package ast {
         this.avroPlaceholder.toString == that.avroPlaceholder.toString  &&  convertFromJson(this.init) == convertFromJson(that.init)  &&  this.shared == that.shared  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode((avroPlaceholder.toString, convertFromJson(this.init), shared))
 
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val context = Cell.Context()
@@ -477,6 +481,7 @@ package ast {
           this.shared == that.shared  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode((avroPlaceholder.toString, this.init map {case (k, v) => (k, convertFromJson(v))}, shared))
 
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val context = Pool.Context()
@@ -561,6 +566,7 @@ package ast {
         this.paramsPlaceholder.corresponds(that.paramsPlaceholder)({case ((k1, v1), (k2, v2)) => k1 == k2  &&  v1.toString == v2.toString})  &&  this.ret == that.ret  &&  this.body == that.body  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode((paramsPlaceholder.map({case (k1, v1) => (k1, v1.toString)})), ret, body)
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
@@ -620,6 +626,7 @@ package ast {
       case that: FcnRef => this.name == that.name  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode(Tuple1[String](name))
 
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val fcn = functionTable.functions.get(name) match {
@@ -652,6 +659,7 @@ package ast {
       case that: Call => this.name == that.name  &&  this.args == that.args  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode((name, args))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
@@ -715,6 +723,7 @@ package ast {
       case that: Ref => this.name == that.name  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode(Tuple1[String](name))
 
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       if (symbolTable.get(name) == None)
@@ -734,6 +743,7 @@ package ast {
       case that: LiteralNull => true  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode(Tuple1[Null](null))
 
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val context = LiteralNull.Context(AvroNull(), Set[String](LiteralNull.desc))
@@ -752,6 +762,7 @@ package ast {
       case that: LiteralBoolean => this.value == that.value  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode(Tuple1[Boolean](value))
 
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val context = LiteralBoolean.Context(AvroBoolean(), Set[String](LiteralBoolean.desc), value)
@@ -770,6 +781,7 @@ package ast {
       case that: LiteralInt => this.value == that.value  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode(Tuple1[Int](value))
 
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val context = LiteralInt.Context(AvroInt(), Set[String](LiteralInt.desc), value)
@@ -788,6 +800,7 @@ package ast {
       case that: LiteralLong => this.value == that.value  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode(Tuple1[Long](value))
 
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val context = LiteralLong.Context(AvroLong(), Set[String](LiteralLong.desc), value)
@@ -814,6 +827,7 @@ package ast {
       case that: LiteralFloat => this.value == that.value  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode(Tuple1[Float](value))
 
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val context = LiteralFloat.Context(AvroFloat(), Set[String](LiteralFloat.desc), value)
@@ -837,6 +851,7 @@ package ast {
       case that: LiteralDouble => this.value == that.value  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode(Tuple1[Double](value))
 
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val context = LiteralDouble.Context(AvroDouble(), Set[String](LiteralDouble.desc), value)
@@ -855,6 +870,7 @@ package ast {
       case that: LiteralString => this.value == that.value  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode(Tuple1[String](value))
 
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val context = LiteralString.Context(AvroString(), Set[String](LiteralString.desc), value)
@@ -878,6 +894,7 @@ package ast {
       case that: LiteralBase64 => this.value.sameElements(that.value)  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode(Tuple1[Array[Byte]](value))
 
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val context = LiteralBase64.Context(AvroBytes(), Set[String](LiteralBase64.desc), value)
@@ -903,6 +920,7 @@ package ast {
       case that: Literal => this.avroPlaceholder.toString == that.avroPlaceholder.toString  &&  convertFromJson(this.value) == convertFromJson(that.value)  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode((avroPlaceholder.toString, convertFromJson(value)))
 
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val context = Literal.Context(avroType, Set[String](Literal.desc), value)
@@ -929,6 +947,7 @@ package ast {
       case that: NewObject => this.fields == that.fields  &&  this.avroType == that.avroType  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode((fields, avroType))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
@@ -997,6 +1016,7 @@ package ast {
       case that: NewArray => this.items == that.items  &&  this.avroType == that.avroType  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode((items, avroType))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
@@ -1057,6 +1077,7 @@ package ast {
       case that: Do => this.body == that.body  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode(Tuple1[Seq[Expression]](body))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
@@ -1093,6 +1114,7 @@ package ast {
       case that: Let => this.values == that.values  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode(Tuple1[Map[String, Expression]](values))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
@@ -1149,6 +1171,7 @@ package ast {
       case that: SetVar => this.values == that.values  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode(Tuple1[Map[String, Expression]](values))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
@@ -1203,6 +1226,7 @@ package ast {
       case that: AttrGet => this.attr == that.attr  &&  this.path == that.path  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode((attr, path))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
@@ -1248,6 +1272,7 @@ package ast {
       case that: AttrTo => this.attr == that.attr  &&  this.path == that.path  &&  this.to == that.to  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode((attr, path, to))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
@@ -1317,6 +1342,7 @@ package ast {
       case that: CellGet => this.cell == that.cell  &&  this.path == that.path  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode((cell, path))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
@@ -1356,6 +1382,7 @@ package ast {
       case that: CellTo => this.cell == that.cell  &&  this.path == that.path  &&  this.to == that.to  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode((cell, path, to))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
@@ -1417,6 +1444,7 @@ package ast {
       case that: PoolGet => this.pool == that.pool  &&  this.path == that.path  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode((pool, path))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
@@ -1457,6 +1485,7 @@ package ast {
       case that: PoolTo => this.pool == that.pool  &&  this.path == that.path  &&  this.to == that.to  &&  this.init == that.init  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode((pool, path, to, init))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
@@ -1536,6 +1565,7 @@ package ast {
         this.predicate == that.predicate  &&  this.thenClause == that.thenClause  &&  this.elseClause == that.elseClause  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode((predicate, thenClause, elseClause))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
@@ -1626,6 +1656,7 @@ package ast {
         this.ifthens == that.ifthens  &&  this.elseClause == that.elseClause  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode((ifthens, elseClause))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
@@ -1723,6 +1754,7 @@ package ast {
         this.predicate == that.predicate  &&  this.body == that.body  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode((predicate, body))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
@@ -1773,6 +1805,7 @@ package ast {
         this.body == that.body  &&  this.predicate == that.predicate  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode((body, predicate))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
@@ -1823,6 +1856,7 @@ package ast {
         this.init == that.init  &&  this.until == that.until  &&  this.step == that.step  &&  this.body == that.body  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode((init, until, step, body))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
@@ -1927,6 +1961,7 @@ package ast {
         this.name == that.name  &&  this.array == that.array  &&  this.body == that.body  &&  this.seq == that.seq  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode((name, array, body, seq))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
@@ -1992,6 +2027,7 @@ package ast {
         this.forkey == that.forkey  &&  this.forval == that.forval  &&  this.map == that.map  &&  this.body == that.body  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode((forkey, forval, map, body))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
@@ -2063,6 +2099,7 @@ package ast {
         this.avroPlaceholder.toString == that.avroPlaceholder.toString  &&  this.named == that.named  &&  this.body == that.body  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode((avroPlaceholder.toString, named, body))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
@@ -2108,6 +2145,7 @@ package ast {
         this.expr == that.expr  &&  this.castCases == that.castCases  &&  this.partial == that.partial  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode((expr, castCases, partial))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
@@ -2197,6 +2235,7 @@ package ast {
         this.expr == that.expr  &&  this.avroPlaceholder.toString == that.avroPlaceholder.toString  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode((expr, avroPlaceholder))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
@@ -2232,6 +2271,7 @@ package ast {
         this.comment == that.comment  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode(Tuple1[String](comment))
 
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val context = Doc.Context(AvroNull(), Set[String](Doc.desc))
@@ -2256,6 +2296,7 @@ package ast {
         this.message == that.message  &&  this.code == that.code  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode((message, code))
 
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val context = Error.Context(AvroNull(), Set[String](Error.desc), message, code)
@@ -2285,6 +2326,7 @@ package ast {
         this.exprs == that.exprs  &&  this.namespace == that.namespace  // but not pos
       case _ => false
     }
+    override def hashCode(): Int = ScalaRunTime._hashCode((exprs, namespace))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++

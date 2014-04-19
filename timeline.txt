@@ -97,12 +97,10 @@
 2014-04-16:
 2014-04-17:
 2014-04-18:   Expressions through attr and attr-to.
-2014-04-19:   Finished first draft of the specification and the number of items fix.
+2014-04-19:   Finished first draft of the specification, the items fix, and gave a hashCode to every class with equals in ast.py.
 
 
 Implement cell and pool roll-back on exception!!!
-
-Do you need to implement hashCode functions on all your AST nodes?  Or is it okay because they're already case classes?
 
 
 
