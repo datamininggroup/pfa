@@ -78,7 +78,7 @@ class TestTypeCheck(unittest.TestCase):
         self.assertTrue(self.typeEquality(inferType(jsonToAst.expr('''{"do": [{"let": {"x": 12, "y": 12.4, "z": ["hello"]}}]}''')), AvroNull()))
         self.assertTrue(self.typeEquality(inferType(jsonToAst.expr('''{"let": {"x": 12, "y": 12.4, "z": ["hello"]}}''')), AvroNull()))
         self.assertTrue(self.typeEquality(inferType(jsonToAst.expr('''{"let": {"x": 12}}''')), AvroNull()))
-        with self.assertRaises(PFASemanticException):
+        with self.assertRaises(PFASyntaxException):
             inferType(jsonToAst.expr('''{"let": {}}'''))
         with self.assertRaises(PFASemanticException):
             inferType(jsonToAst.expr('''{"let": {"y": {"let": {"x": 12}}}}'''))
@@ -96,9 +96,9 @@ class TestTypeCheck(unittest.TestCase):
             inferType(jsonToAst.expr('''{"do": [{"set": {"x": 999}}]}'''))
         with self.assertRaises(PFASemanticException):
             inferType(jsonToAst.expr('''{"do": [{"set": {"x": 999}}, {"let": {"x": 12}}]}'''))
-        with self.assertRaises(PFASemanticException):
+        with self.assertRaises(PFASyntaxException):
             inferType(jsonToAst.expr('''{"set": {}}'''))
-        with self.assertRaises(PFASemanticException):
+        with self.assertRaises(PFASyntaxException):
             inferType(jsonToAst.expr('''{"do": [{"let": {"x": 12}}, {"set": {}}]}'''))
         self.assertTrue(self.typeEquality(inferType(jsonToAst.expr('''{"do": [{"let": {"x": 12.4}}, {"set": {"x": 999}}, "x"]}''')), AvroDouble()))
         with self.assertRaises(PFASemanticException):
@@ -110,7 +110,7 @@ class TestTypeCheck(unittest.TestCase):
         self.assertTrue(self.typeEquality(inferType(jsonToAst.expr('''"x"'''), {"x": AvroInt()}), AvroInt()))
 
     def testAttr(self):
-        with self.assertRaises(PFASemanticException):
+        with self.assertRaises(PFASyntaxException):
             inferType(jsonToAst.expr('''{"attr": "x", "path": []}'''), {"x": AvroArray(AvroInt())})
         self.assertTrue(self.typeEquality(inferType(jsonToAst.expr('''{"attr": "x", "path": [2]}'''), {"x": AvroArray(AvroInt())}), AvroInt()))
         self.assertTrue(self.typeEquality(inferType(jsonToAst.expr('''{"attr": "x", "path": [1, 2, 3]}'''), {"x": AvroArray(AvroArray(AvroArray(AvroInt())))}), AvroInt()))
@@ -217,7 +217,7 @@ class TestTypeCheck(unittest.TestCase):
 
     def testPool(self):
         for shared in True, False:
-            with self.assertRaises(PFASemanticException):
+            with self.assertRaises(PFASyntaxException):
                 inferType(jsonToAst.expr('''{"pool": "x", "path": []}'''), pools={"x": Pool(AvroArray(AvroInt()), "", shared)})
             self.assertTrue(self.typeEquality(inferType(jsonToAst.expr('''{"pool": "x", "path": [["p"]]}'''), pools={"x": Pool(AvroArray(AvroInt()), "", shared)}), AvroArray(AvroInt())))
             self.assertTrue(self.typeEquality(inferType(jsonToAst.expr('''{"pool": "x", "path": [["p"], 2]}'''), pools={"x": Pool(AvroArray(AvroInt()), "", shared)}), AvroInt()))
@@ -296,9 +296,9 @@ class TestTypeCheck(unittest.TestCase):
         self.assertTrue(self.typeEquality(inferType(jsonToAst.expr('''{"cond": [{"if": true, "then": 12}, {"if": true, "then": {"string": "hello"}}, {"if": true, "then": {"base64": "aGVsbG8="}}]}''')), AvroNull()))
         self.assertTrue(self.typeEquality(inferType(jsonToAst.expr('''{"cond": [{"if": true, "then": 12}, {"if": true, "then": {"string": "hello"}}, {"if": true, "then": {"base64": "aGVsbG8="}}], "else": 999}''')), AvroUnion([AvroInt(), AvroString(), AvroBytes()])))
 
-        with self.assertRaises(PFASemanticException):
+        with self.assertRaises(PFASyntaxException):
             inferType(jsonToAst.expr('''{"cond": []}'''))
-        with self.assertRaises(PFASemanticException):
+        with self.assertRaises(PFASyntaxException):
             inferType(jsonToAst.expr('''{"cond": [], "else": 999}'''))
 
     def testWhile(self):
@@ -316,11 +316,11 @@ class TestTypeCheck(unittest.TestCase):
         self.assertTrue(self.typeEquality(inferType(jsonToAst.expr('''{"for": {"x": 0}, "until": true, "step": {"x": 1}, "do": "x"}''')), AvroNull()))
         with self.assertRaises(PFASemanticException):
             inferType(jsonToAst.expr('''{"for": {"x": 0}, "until": true, "step": {"x": 1}, "do": "y"}'''))
-        with self.assertRaises(PFASemanticException):
+        with self.assertRaises(PFASyntaxException):
             inferType(jsonToAst.expr('''{"for": {}, "until": true, "step": {"x": 1}, "do": 12}'''))
         with self.assertRaises(PFASemanticException):
             inferType(jsonToAst.expr('''{"for": {"x": 0}, "until": null, "step": {"x": 1}, "do": 12}'''))
-        with self.assertRaises(PFASemanticException):
+        with self.assertRaises(PFASyntaxException):
             inferType(jsonToAst.expr('''{"for": {"x": 0}, "until": true, "step": {}, "do": 12}'''))
         with self.assertRaises(PFASemanticException):
             inferType(jsonToAst.expr('''{"for": {"x": 0}, "until": true, "step": {"y": 1}, "do": 12}'''))

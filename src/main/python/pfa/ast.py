@@ -20,6 +20,7 @@ import pfa.P as P
 import pfa.util
 
 from pfa.errors import PFASemanticException
+from pfa.errors import PFASyntaxException
 from pfa.fcn import Fcn
 from pfa.signature import IncompatibleTypes
 from pfa.signature import LabelData
@@ -243,7 +244,9 @@ class EngineConfig(Ast):
                  doc,
                  metadata,
                  options,
-                 pos=None): pass
+                 pos=None):
+        if len(self.action) < 1:
+            raise PFASyntaxException("\"action\" must contain least one expression", self.pos)
 
     def toString(self):
         return '''EngineConfig(name={name},
@@ -327,9 +330,6 @@ class EngineConfig(Ast):
         if self.method == Method.FOLD:
             topWrapper.put("tally", self.output)  # note that this is after all user functions are defined, which keeps "tally" out of the user functions' scopes
         actionScope = actionScopeWrapper.newScope(True, False)
-
-        if len(self.action) < 1:
-            raise PFASemanticException("\"action\" must contain least one expression", self.pos)
 
         actionContextResults = [x.walk(task, actionScope, withUserFunctions) for x in self.action]
         actionCalls = set(pfa.util.flatten([x[0].calls for x in actionContextResults]))
@@ -546,7 +546,9 @@ class HasPath(object):
 
 @pfa.util.case
 class FcnDef(Argument):
-    def __init__(self, paramsPlaceholder, retPlaceholder, body, pos=None): pass
+    def __init__(self, paramsPlaceholder, retPlaceholder, body, pos=None):
+        if len(self.body) < 1:
+            raise PFASyntaxException("function's \"do\" list must contain least one expression", self.pos)
 
     @property
     def paramNames(self):
@@ -566,9 +568,6 @@ class FcnDef(Argument):
     def walk(self, task, symbolTable, functionTable):
         if len(self.paramsPlaceholder) > 22:
             raise PFASemanticException("function can have at most 22 parameters", self.pos)
-
-        if len(self.body) < 1:
-            raise PFASemanticException("function's \"do\" list must contain least one expression", self.pos)
 
         scope = symbolTable.newScope(True, False)
         for name, avroType in self.params.items():
@@ -1007,15 +1006,14 @@ class NewArray(Expression):
 
 @pfa.util.case
 class Do(Expression):
-    def __init__(self, body, pos=None): pass
+    def __init__(self, body, pos=None):
+        if len(self.body) < 1:
+            raise PFASyntaxException("\"do\" block must contain at least one expression", self.pos)
 
     def collect(self, pf):
         raise NotImplementedError
 
     def walk(self, task, symbolTable, functionTable):
-        if len(self.body) < 1:
-            raise PFASemanticException("\"do\" block must contain at least one expression", self.pos)
-
         scope = symbolTable.newScope(False, False)
         results = [x.walk(task, scope, functionTable) for x in self.body]
         context = self.Context(results[-1][0].retType, set(pfa.util.flatten([x[0].calls for x in results])).union(set([self.desc])), scope.inThisScope, [x[1] for x in results])
@@ -1033,15 +1031,14 @@ class Do(Expression):
 
 @pfa.util.case
 class Let(Expression):
-    def __init__(self, values, pos=None): pass
+    def __init__(self, values, pos=None):
+        if len(self.values) < 1:
+            raise PFASyntaxException("\"let\" must contain at least one declaration", self.pos)
 
     def collect(self, pf):
         raise NotImplementedError
 
     def walk(self, task, symbolTable, functionTable):
-        if len(self.values) < 1:
-            raise PFASemanticException("\"let\" must contain at least one declaration", self.pos)
-
         if symbolTable.sealedWithin:
             raise PFASemanticException("new variable bindings are forbidden in this scope, but you can wrap your expression with \"do\" to make temporary variables", self.pos)
 
@@ -1077,15 +1074,14 @@ class Let(Expression):
 
 @pfa.util.case
 class SetVar(Expression):
-    def __init__(self, values, pos=None): pass
+    def __init__(self, values, pos=None):
+        if len(self.values) < 1:
+            raise PFASyntaxException("\"set\" must contain at least one assignment", self.pos)
 
     def collect(self, pf):
         raise NotImplementedError
 
     def walk(self, task, symbolTable, functionTable):
-        if len(self.values) < 1:
-            raise PFASemanticException("\"set\" must contain at least one assignment", self.pos)
-
         calls = set()
 
         nameExpr = []
@@ -1119,15 +1115,14 @@ class SetVar(Expression):
 
 @pfa.util.case
 class AttrGet(Expression, HasPath):
-    def __init__(self, attr, path, pos=None): pass
+    def __init__(self, attr, path, pos=None):
+        if len(self.path) < 1:
+            raise PFASyntaxException("attr path must have at least one key", self.pos)
 
     def collect(self, pf):
         raise NotImplementedError
 
     def walk(self, task, symbolTable, functionTable):
-        if len(self.path) < 1:
-            raise PFASemanticException("attr path must have at least one key", self.pos)
-
         a = symbolTable.get(self.attr)
         if a is None:
             raise PFASemanticException("unknown symbol \"{}\"".format(self.attr), self.pos)
@@ -1152,15 +1147,14 @@ class AttrGet(Expression, HasPath):
 
 @pfa.util.case
 class AttrTo(Expression, HasPath):
-    def __init__(self, attr, path, to, pos=None): pass
+    def __init__(self, attr, path, to, pos=None):
+        if len(self.path) < 1:
+            raise PFASyntaxException("attr path must have at least one key", self.pos)
 
     def collect(self, pf):
         raise NotImplementedError
 
     def walk(self, task, symbolTable, functionTable):
-        if len(self.path) < 1:
-            raise PFASemanticException("attr path must have at least one key", self.pos)
-
         a = symbolTable.get(self.attr)
         if a is None:
             raise PFASemanticException("unknown symbol \"{}\"".format(self.attr), self.pos)
@@ -1279,15 +1273,14 @@ class CellTo(Expression, HasPath):
 
 @pfa.util.case
 class PoolGet(Expression, HasPath):
-    def __init__(self, pool, path, pos=None): pass
+    def __init__(self, pool, path, pos=None):
+        if len(self.path) < 1:
+            raise PFASyntaxException("pool path must have at least one key", self.pos)
 
     def collect(self, pf):
         raise NotImplementedError
 
     def walk(self, task, symbolTable, functionTable):
-        if len(self.path) < 1:
-            raise PFASemanticException("pool path must have at least one key", self.pos)
-
         p = symbolTable.pool(self.pool)
         if p is None:
             raise PFASemanticException("no pool named \"{}\"".format(self.pool), self.pos)
@@ -1309,15 +1302,14 @@ class PoolGet(Expression, HasPath):
 
 @pfa.util.case
 class PoolTo(Expression, HasPath):
-    def __init__(self, pool, path, to, init, pos=None): pass
+    def __init__(self, pool, path, to, init, pos=None):
+        if len(self.path) < 1:
+            raise PFASyntaxException("pool path must have at least one key", self.pos)
 
     def collect(self, pf):
         raise NotImplementedError
 
     def walk(self, task, symbolTable, functionTable):
-        if len(self.path) < 1:
-            raise PFASemanticException("pool path must have at least one key", self.pos)
-
         p = symbolTable.pool(self.pool)
         if p is None:
             raise PFASemanticException("no pool named \"{}\"".format(self.pool), self.pos)
@@ -1371,7 +1363,9 @@ class PoolTo(Expression, HasPath):
 
 @pfa.util.case
 class If(Expression):
-    def __init__(self, predicate, thenClause, elseClause, pos=None): pass
+    def __init__(self, predicate, thenClause, elseClause, pos=None):
+        if self.elseClause is not None and len(self.elseClause) < 1:
+            raise PFASyntaxException("\"else\" clause must contain at least one expression", self.pos)
 
     def collect(self, pf):
         raise NotImplementedError
@@ -1392,8 +1386,6 @@ class If(Expression):
 
         if self.elseClause is not None:
             elseScope = symbolTable.newScope(False, False)
-            if len(self.elseClause) < 1:
-                raise PFASemanticException("\"else\" clause must contain at least one expression", self.pos)
 
             elseResults = [x.walk(task, elseScope, functionTable) for x in self.elseClause]
             for exprCtx, exprRes in elseResults:
@@ -1428,15 +1420,21 @@ class If(Expression):
 
 @pfa.util.case
 class Cond(Expression):
-    def __init__(self, ifthens, elseClause, pos=None): pass
+    def __init__(self, ifthens, elseClause, pos=None):
+        if len(self.ifthens) < 1:
+            raise PFASyntaxException("\"cond\" must contain at least one predicate-block pair", self.pos)
+
+        for it in ifthens:
+            if len(it.thenClause) < 1:
+                raise PFASyntaxException("\"then\" clause must contain at least one expression", self.pos)
+
+        if self.elseClause is not None and len(self.elseClause) < 1:
+            raise PFASyntaxException("\"else\" clause must contain at least one expression", self.pos)
 
     def collect(self, pf):
         raise NotImplementedError
 
     def walk(self, task, symbolTable, functionTable):
-        if len(self.ifthens) < 1:
-            raise PFASemanticException("\"cond\" must contain at least one predicate-block pair", self.pos)
-
         calls = set()
 
         walkBlocks = []
@@ -1451,9 +1449,6 @@ class Cond(Expression):
                 raise PFASemanticException("\"if\" predicate should be boolean, but is " + predContext.retType, ifpos)
             calls = calls.union(predContext.calls)
 
-            if len(thenClause) < 1:
-                raise PFASemanticException("\"then\" clause must contain at least one expression", self.pos)
-
             thenScope = symbolTable.newScope(False, False)
             thenResults = [x.walk(task, thenScope, functionTable) for x in thenClause]
             for exprCtx, exprRes in thenResults:
@@ -1463,8 +1458,6 @@ class Cond(Expression):
 
         if self.elseClause is not None:
             elseScope = symbolTable.newScope(False, False)
-            if len(self.elseClause) < 1:
-                raise PFASemanticException("\"else\" clause must contain at least one expression", self.pos)
 
             elseResults = [x.walk(task, elseScope, functionTable) for x in self.elseClause]
             for exprCtx, exprRes in elseResults:
@@ -1570,7 +1563,15 @@ class DoUntil(Expression):
 
 @pfa.util.case
 class For(Expression):
-    def __init__(self, init, until, step, body, pos=None): pass
+    def __init__(self, init, until, step, body, pos=None):
+        if len(self.init) < 1:
+            raise PFASyntaxException("\"for\" must contain at least one declaration", self.pos)
+
+        if len(self.step) < 1:
+            raise PFASyntaxException("\"step\" must contain at least one assignment", self.pos)
+
+        if len(self.body) < 1:
+            raise PFASyntaxException("\"do\" must contain at least one statement", self.pos)
 
     def collect(self, pf):
         raise NotImplementedError
@@ -1578,9 +1579,6 @@ class For(Expression):
     def walk(self, task, symbolTable, functionTable):
         calls = set()
         loopScope = symbolTable.newScope(False, False)
-
-        if len(self.init) < 1:
-            raise PFASemanticException("\"for\" must contain at least one declaration", self.pos)
 
         initNameTypeExpr = []
         for name, expr in self.init.items():
@@ -1603,9 +1601,6 @@ class For(Expression):
             raise PFASemanticException("\"until\" predicate should be boolean, but is " + repr(untilContext.retType), self.pos)
         calls = calls.union(untilContext.calls)
 
-        if len(self.step) < 1:
-            raise PFASemanticException("\"step\" must contain at least one assignment", self.pos)
-
         stepNameExpr = []
         for name, expr in self.step.items():
             if loopScope.get(name) is None:
@@ -1621,9 +1616,6 @@ class For(Expression):
                 raise PFASemanticException("symbol \"{}\" was declared as {}; it cannot be re-assigned as {}".format(name, loopScope(name), exprContext.retType), self.pos)
 
             stepNameExpr.append((name, exprResult))
-
-        if len(self.body) < 1:
-            raise PFASemanticException("\"do\" must contain at least one statement", self.pos)
 
         bodyScope = loopScope.newScope(False, False)
         bodyResults = [x.walk(task, bodyScope, functionTable) for x in self.body]
@@ -1645,7 +1637,9 @@ class For(Expression):
 
 @pfa.util.case
 class Foreach(Expression):
-    def __init__(self, name, array, body, seq, pos=None): pass
+    def __init__(self, name, array, body, seq, pos=None):
+        if len(self.body) < 1:
+            raise PFASyntaxException("\"do\" must contain at least one statement", self.pos)
 
     def collect(self, pf):
         raise NotImplementedError
@@ -1670,9 +1664,6 @@ class Foreach(Expression):
 
         loopScope.put(self.name, elementType)
 
-        if len(self.body) < 1:
-            raise PFASemanticException("\"do\" must contain at least one statement", self.pos)
-
         bodyScope = loopScope.newScope(False, False)
         bodyResults = [x.walk(task, bodyScope, functionTable) for x in self.body]
         for exprCtx, exprRes in bodyResults:
@@ -1693,7 +1684,9 @@ class Foreach(Expression):
 
 @pfa.util.case
 class Forkeyval(Expression):
-    def __init__(self, forkey, forval, map, body, pos=None): pass
+    def __init__(self, forkey, forval, map, body, pos=None):
+        if len(self.body) < 1:
+            raise PFASyntaxException("\"do\" must contain at least one statement", self.pos)
 
     def collect(self, pf):
         raise NotImplementedError
@@ -1723,9 +1716,6 @@ class Forkeyval(Expression):
         loopScope.put(self.forkey, AvroString())
         loopScope.put(self.forval, elementType)
 
-        if len(self.body) < 1:
-            raise PFASemanticException("\"do\" must contain at least one statement", self.pos)
-
         bodyScope = loopScope.newScope(False, False)
         bodyResults = [x.walk(task, bodyScope, functionTable) for x in self.body]
         for exprCtx, exprRes in bodyResults:
@@ -1746,7 +1736,12 @@ class Forkeyval(Expression):
 
 @pfa.util.case
 class CastCase(Ast):
-    def __init__(self, avroPlaceholder, named, body, pos=None): pass
+    def __init__(self, avroPlaceholder, named, body, pos=None):
+        if len(self.body) < 1:
+            raise PFASyntaxException("\"do\" must contain at least one statement", self.pos)
+
+        if not validSymbolName(self.named):
+            raise PFASyntaxException("\"{}\" is not a valid symbol name".format(self.named), self.pos)
 
     @property
     def avroType(self):
@@ -1756,14 +1751,8 @@ class CastCase(Ast):
         raise NotImplementedError
 
     def walk(self, task, symbolTable, functionTable):
-        if not validSymbolName(self.named):
-            raise PFASemanticException("\"{}\" is not a valid symbol name".format(self.named), self.pos)
-
         scope = symbolTable.newScope(False, False)
         scope.put(self.named, self.avroType)
-
-        if len(self.body) < 1:
-            raise PFASemanticException("\"do\" must contain at least one statement", self.pos)
 
         results = [x.walk(task, scope, functionTable) for x in self.body]
         context = self.Context(results[-1][0].retType, self.named, self.avroType, set(pfa.util.flatten([x[0].calls for x in results])), scope.inThisScope, [x[1] for x in results])
