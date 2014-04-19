@@ -433,6 +433,9 @@ class Cell(Ast):
         else:
             return False
 
+    def __hash__(self):
+        return hash((self.avroPlaceholder, json.loads(self.init), self.shared))
+
     @property
     def avroType(self):
         return self.avroPlaceholder.avroType
@@ -461,6 +464,9 @@ class Pool(Ast):
             return self.avroPlaceholder == other.avroPlaceholder and self.init.keys() == other.init.keys() and all(json.loads(self.init[k]) == json.loads(other.init[k]) for k in self.init.keys()) and self.shared == other.shared
         else:
             return False
+
+    def __hash__(self):
+        return hash((self.avroPlaceholder, json.loads(self.init), self.shared))
 
     @property
     def avroType(self):
@@ -873,6 +879,9 @@ class Literal(LiteralValue):
         else:
             return False
 
+    def __hash__(self):
+        return hash((self.avroPlaceholder, json.loads(self.value)))
+
     @property
     def avroType(self):
         return self.avroPlaceholder.avroType
@@ -903,6 +912,9 @@ class NewObject(Expression):
             return self.fields == other.fields and self.avroPlaceholder == other.avroPlaceholder
         else:
             return False
+
+    def __hash__(self):
+        return hash((self.fields, avroPlaceholder))
 
     @property
     def avroType(self):
@@ -962,6 +974,9 @@ class NewArray(Expression):
             return self.items == other.items and self.avroPlaceholder == other.avroPlaceholder
         else:
             return False
+
+    def __hash__(self):
+        return hash((self.items, self.avroPlaceholder))
 
     @property
     def avroType(self):
