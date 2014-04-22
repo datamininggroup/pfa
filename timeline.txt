@@ -98,6 +98,9 @@
 2014-04-17:
 2014-04-18:   Expressions through attr and attr-to.
 2014-04-19:   Finished first draft of the specification, the items fix, and gave a hashCode to every class with equals in ast.py.
+2014-04-20:
+2014-04-21:
+2014-04-22:   Created pfa-gae project and scoringengine.org website.
 
 
 Implement cell and pool roll-back on exception!!!
