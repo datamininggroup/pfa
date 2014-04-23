@@ -101,6 +101,8 @@
 2014-04-20:
 2014-04-21:
 2014-04-22:   Created pfa-gae project and scoringengine.org website.
+2014-04-23:   Generated Avro data stream from exoplanet dataset.
+
 
 
 Implement cell and pool roll-back on exception!!!
@@ -120,11 +122,6 @@ And then:     Regression
 Wish list:
     There needs to be a {"pool": NAME, "del": ITEM-NAME} to delete one item and {"pool": NAME, "del": null} to clear all items atomically.
     For-comprehensions to make new data structures functionally.
-
-Documentation:
-    GAE website on http://pfa.scoringengine.org
-    Auto-generate reference from the code
-    Live scoring engine running on 120,000 stars (http://astronexus.com/node/34) and/or 1,000 planets (http://exoplanet.eu/)
 
 Embedding:
     (big projects)
