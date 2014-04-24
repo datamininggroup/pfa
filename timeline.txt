@@ -102,6 +102,7 @@
 2014-04-21:
 2014-04-22:   Created pfa-gae project and scoringengine.org website.
 2014-04-23:   Generated Avro data stream from exoplanet dataset.
+2014-04-24:   Layout of scoring engine page.
 
 
 
