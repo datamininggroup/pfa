@@ -103,10 +103,13 @@
 2014-04-22:   Created pfa-gae project and scoringengine.org website.
 2014-04-23:   Generated Avro data stream from exoplanet dataset.
 2014-04-24:   Layout of scoring engine page.
+2014-04-25:
+2014-04-26:   PFA is submittable through a webpage, but that doesn't work on the online version of GAE because of ClassLoader errors.  Filed bug JANINO-175 (http://jira.codehaus.org/browse/JANINO-175).
 
 
 
 Implement cell and pool roll-back on exception!!!
+Add a simpler way to cast a bunch of [X, null]s as X, possibly by shadowing the original variable names in the successful branch.  It would have to be a new special form.
 
 
 

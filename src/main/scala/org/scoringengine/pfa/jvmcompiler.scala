@@ -580,7 +580,7 @@ package jvmcompiler {
     def fcn22(name: String): Function22[AnyRef, AnyRef, AnyRef, AnyRef, AnyRef, AnyRef, AnyRef, AnyRef, AnyRef, AnyRef, AnyRef, AnyRef, AnyRef, AnyRef, AnyRef, AnyRef, AnyRef, AnyRef, AnyRef, AnyRef, AnyRef, AnyRef, AnyRef]
   }
   object PFAEngine {
-    def fromAst(engineConfig: EngineConfig, options: Map[String, JsonNode] = Map[String, JsonNode](), sharedState: Option[SharedState] = None, multiplicity: Int = 1, debug: Boolean = false): Seq[PFAEngine[AnyRef, AnyRef]] = {
+    def fromAst(engineConfig: EngineConfig, options: Map[String, JsonNode] = Map[String, JsonNode](), sharedState: Option[SharedState] = None, multiplicity: Int = 1, parentClassLoader: Option[ClassLoader] = None, debug: Boolean = false): Seq[PFAEngine[AnyRef, AnyRef]] = {
       val engineOptions = new EngineOptions(engineConfig.options, options)
 
       val (context: EngineConfig.Context, code) =
@@ -611,7 +611,10 @@ package jvmcompiler {
         }
       }
 
-      val javaSourceClassLoader = new JavaSourceClassLoader(getClass.getClassLoader, resourceFinder, null)
+      val javaSourceClassLoader = new JavaSourceClassLoader(parentClassLoader match {
+        case Some(cl) => cl
+        case None => getClass.getClassLoader
+      }, resourceFinder, null)
 
       val clazz = javaSourceClassLoader.loadClass(engineName)
       val constructor = clazz.getConstructor(classOf[EngineConfig], classOf[EngineOptions], classOf[Option[SharedState]], classOf[EngineConfig.Context])
@@ -624,11 +627,11 @@ package jvmcompiler {
       }
     }
 
-    def fromJson(src: String, options: Map[String, JsonNode] = Map[String, JsonNode](), sharedState: Option[SharedState] = None, multiplicity: Int = 1, debug: Boolean = false): Seq[PFAEngine[AnyRef, AnyRef]] =
-      fromAst(jsonToAst(src), options, sharedState, multiplicity, debug)
+    def fromJson(src: String, options: Map[String, JsonNode] = Map[String, JsonNode](), sharedState: Option[SharedState] = None, multiplicity: Int = 1, parentClassLoader: Option[ClassLoader] = None, debug: Boolean = false): Seq[PFAEngine[AnyRef, AnyRef]] =
+      fromAst(jsonToAst(src), options, sharedState, multiplicity, parentClassLoader, debug)
 
-    def fromYaml(src: String, options: Map[String, JsonNode] = Map[String, JsonNode](), sharedState: Option[SharedState] = None, multiplicity: Int = 1, debug: Boolean = false): Seq[PFAEngine[AnyRef, AnyRef]] =
-      fromJson(yamlToJson(src), options, sharedState, multiplicity, debug)
+    def fromYaml(src: String, options: Map[String, JsonNode] = Map[String, JsonNode](), sharedState: Option[SharedState] = None, multiplicity: Int = 1, parentClassLoader: Option[ClassLoader] = None, debug: Boolean = false): Seq[PFAEngine[AnyRef, AnyRef]] =
+      fromJson(yamlToJson(src), options, sharedState, multiplicity, parentClassLoader, debug)
   }
 
   trait PFAMapEngine[INPUT <: AnyRef, OUTPUT <: AnyRef] extends PFAEngine[INPUT, OUTPUT]
