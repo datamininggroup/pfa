@@ -5,12 +5,14 @@ import scala.util.Random
 
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.InputStream
 
 import org.codehaus.jackson.JsonNode
 import org.codehaus.janino.JavaSourceClassLoader
 import org.codehaus.janino.util.resource.Resource
 import org.codehaus.janino.util.resource.ResourceFinder
 
+import org.apache.avro.file.DataFileStream
 import org.apache.avro.io.DecoderFactory
 import org.apache.avro.io.EncoderFactory
 import org.apache.avro.io.JsonEncoder
@@ -518,6 +520,12 @@ package jvmcompiler {
     def fromAvro(avro: Array[Byte], avroType: AvroType): AnyRef = fromAvro(avro, avroType.schema)
     def toJson(obj: AnyRef, avroType: AvroType): String         = toJson(obj, avroType.schema)
     def toAvro(obj: AnyRef, avroType: AvroType): Array[Byte]    = toAvro(obj, avroType.schema)
+
+    def avroInputReader[X](inputStream: InputStream): DataFileStream[X] = {
+      val reader = new PFADatumReader[X](specificData)
+      reader.setSchema(inputType.schema)
+      new DataFileStream[X](inputStream, reader)
+    }
   }
 
   trait PFAEngine[INPUT <: AnyRef, OUTPUT <: AnyRef] {
@@ -543,6 +551,7 @@ package jvmcompiler {
     def fromAvro(avro: Array[Byte], avroType: AvroType): AnyRef
     def toJson(obj: AnyRef, avroType: AvroType): String
     def toAvro(obj: AnyRef, avroType: AvroType): Array[Byte]
+    def avroInputReader[X](inputStream: InputStream): DataFileStream[X]
 
     def randomGenerator: Random
 

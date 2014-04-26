@@ -22,7 +22,7 @@ package errors {
       extends PFAException("PFA runtime error: " + message, cause)
 
   class PFAUserException(val message: String, val code: Option[Int])
-      extends PFAException("PFA user-invoked error: " +
+      extends PFAException("PFA user-defined error: " +
         (if (code == None) message else "%s (code %s)".format(message, code.get)), null)
 
   class PFATimeoutException(val message: String)
