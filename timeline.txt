@@ -105,6 +105,7 @@
 2014-04-24:   Layout of scoring engine page.
 2014-04-25:
 2014-04-26:   PFA is submittable through a webpage, but that doesn't work on the online version of GAE because of ClassLoader errors.  Filed bug JANINO-175 (http://jira.codehaus.org/browse/JANINO-175).
+2014-04-27:   Debugged Google App Engine; now we can run PFA engines on it.
 
 
 
