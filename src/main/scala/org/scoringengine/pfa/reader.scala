@@ -796,7 +796,7 @@ package reader {
                       "to", "type", "upcast", "until", "value", "while").contains(keys.head))
                                                                      Call(_callName, _callArgs, Some(pos(dot, _at)))
 
-        else throw new PFASyntaxException("not enough arguments for special form: %s".format(keys.mkString(" ")), Some(pos(dot, _at)))
+        else throw new PFASyntaxException("unrecognized special form: %s (not enough arguments? too many?)".format(keys.mkString(" ")), Some(pos(dot, _at)))
       }
       case x => throw new PFASyntaxException("expected expression, found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }

@@ -379,6 +379,13 @@ class TestTypeCheck(unittest.TestCase):
         with self.assertRaises(PFASemanticException):
             inferType(jsonToAst.expr('''{"upcast": "x", "as": "int"}'''), {"x": AvroDouble()})
 
+    def testIfNotNull(self):
+        self.assertTrue(self.typeEquality(inferType(jsonToAst.expr('''{"ifnotnull": {"x": "input"}, "then": "x", "else": 12.4}'''), {"input": AvroUnion([AvroDouble(), AvroNull()])}), AvroDouble()))
+        self.assertTrue(self.typeEquality(inferType(jsonToAst.expr('''{"ifnotnull": {"x": "input", "y": "input"}, "then": {"+": ["x", "y"]}, "else": 12.4}'''), {"input": AvroUnion([AvroDouble(), AvroNull()])}), AvroDouble()))
+        self.assertTrue(self.typeEquality(inferType(jsonToAst.expr('''{"ifnotnull": {"x": "input"}, "then": "x"}'''), {"input": AvroUnion([AvroDouble(), AvroNull()])}), AvroNull()))
+        self.assertTrue(self.typeEquality(inferType(jsonToAst.expr('''{"ifnotnull": {"x": "input"}, "then": "x", "else": 12.4}'''), {"input": AvroUnion([AvroDouble(), AvroString(), AvroNull()])}), AvroUnion([AvroDouble(), AvroString()])))
+        self.assertTrue(self.typeEquality(inferType(jsonToAst.expr('''{"ifnotnull": {"x": "input"}, "then": "x", "else": [["whatever"]]}'''), {"input": AvroUnion([AvroDouble(), AvroNull()])}), AvroUnion([AvroDouble(), AvroString()])))
+
     def testDocErrorLog(self):
         self.assertTrue(self.typeEquality(inferType(jsonToAst.expr('''{"doc": "hello"}''')), AvroNull()))
         self.assertTrue(self.typeEquality(inferType(jsonToAst.expr('''{"error": "hello"}''')), AvroNull()))

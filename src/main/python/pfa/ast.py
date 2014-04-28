@@ -1379,6 +1379,9 @@ class PoolTo(Expression, HasPath):
 @pfa.util.case
 class If(Expression):
     def __init__(self, predicate, thenClause, elseClause, pos=None):
+        if len(self.thenClause) < 1:
+            raise PFASyntaxException("\"then\" clause must contain at least one expression", self.pos)
+
         if self.elseClause is not None and len(self.elseClause) < 1:
             raise PFASyntaxException("\"else\" clause must contain at least one expression", self.pos)
 
@@ -1868,6 +1871,91 @@ class Upcast(Expression):
     @pfa.util.case
     class Context(ExpressionContext):
         def __init__(self, retType, calls, expr): pass
+
+@pfa.util.case
+class IfNotNull(Expression):
+    def __init__(self, exprs, thenClause, elseClause, pos=None):
+        if len(self.exprs) < 1:
+            raise PFASyntaxException("\"then\" clause must contain at least one expression", self.pos)
+
+        if len(self.thenClause) < 1:
+            raise PFASyntaxException("\"then\" clause must contain at least one expression", self.pos)
+
+        if self.elseClause is not None and len(self.elseClause) < 1:
+            raise PFASyntaxException("\"else\" clause must contain at least one expression", self.pos)
+
+    def collect(self, pf):
+        raise NotImplementedError
+
+    def walk(self, task, symbolTable, functionTable):
+        calls = set()
+
+        exprArgsScope = symbolTable.newScope(True, True)
+        assignmentScope = symbolTable.newScope(False, False)
+
+        symbolTypeResult = []
+        for name, expr in self.exprs.items():
+            if not validSymbolName(name):
+                raise PFASemanticException("\"{}\" is not a valid symbol name".format(name), self.pos)
+
+            exprCtx, exprRes = expr.walk(task, exprArgsScope, functionTable)
+
+            avroType = None
+            if isinstance(exprCtx.retType, AvroUnion) and any(isinstance(x, AvroNull) for x in exprCtx.retType.types):
+                if len(exprCtx.retType.types) > 2:
+                    avroType = AvroUnion([x for x in exprCtx.retType.types if not isinstance(x, AvroNull)])
+                elif len(exprCtx.retType.types) > 1:
+                    avroType = [x for x in exprCtx.retType.types if not isinstance(x, AvroNull)][0]
+            if avroType is None:
+                raise PFASemanticException("\"ifnotnull\" expressions must all be unions of something and null; case \"{}\" has type {}".format(name, exprCtx.retType))
+
+            assignmentScope.put(name, avroType)
+
+            calls = calls.union(exprCtx.calls)
+
+            symbolTypeResult.append((name, avroType, exprRes))
+
+        thenScope = assignmentScope.newScope(False, False)
+        thenResults = [x.walk(task, thenScope, functionTable) for x in self.thenClause]
+        for exprCtx, exprRes in thenResults:
+            calls = calls.union(exprCtx.calls)
+
+        if self.elseClause is not None:
+            elseScope = symbolTable.newScope(False, False)
+
+            elseResults = [x.walk(task, elseScope, functionTable) for x in self.elseClause]
+            for exprCtx, exprRes in elseResults:
+                calls = calls.union(exprCtx.calls)
+
+            thenType = thenResults[-1][0].retType
+            elseType = elseResults[-1][0].retType
+            try:
+                retType = LabelData.broadestType([thenType, elseType])
+            except IncompatibleTypes as err:
+                raise PFASemanticException(str(err))
+
+            retType, elseTaskResults, elseSymbols = retType, [x[1] for x in elseResults], elseScope.inThisScope
+        else:
+            retType, elseTaskResults, elseSymbols = AvroNull(), None, None
+
+        context = self.Context(retType, calls.union(set([self.desc])), symbolTypeResult, thenScope.inThisScope, [x[1] for x in thenResults], elseSymbols, elseTaskResults)
+        return context, task(context)
+
+    @property
+    def jsonNode(self):
+        jsonExprs = {}
+        for name, expr in self.exprs.items():
+            jsonExprs[name] = expr.jsonNode
+        out = {"ifnotnull": jsonExprs, "then": self.thenClause}
+        if self.elseClause is not None:
+            out["else"] = [x.jsonNode for x in self.elseClause]
+        return out
+
+    desc = "ifnotnull"
+
+    @pfa.util.case
+    class Context(ExpressionContext):
+        def __init__(self, retType, calls, symbolTypeResult, thenSymbols, thenClause, elseSymbols, elseClause): pass
 
 @pfa.util.case
 class Doc(Expression):

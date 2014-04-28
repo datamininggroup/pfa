@@ -320,6 +320,14 @@ class TypeCheckSuite extends FlatSpec with Matchers {
     evaluating { inferType(jsonToAst.expr("""{"upcast": "x", "as": "int"}"""), Map("x" -> AvroDouble())) } should produce [PFASemanticException]
   }
 
+  it must "test ifnotnull" taggedAs(TypeCheck) in {
+    inferType(jsonToAst.expr("""{"ifnotnull": {"x": "input"}, "then": "x", "else": 12.4}"""), Map("input" -> AvroUnion(List(AvroDouble(), AvroNull())))) should be (AvroDouble())
+    inferType(jsonToAst.expr("""{"ifnotnull": {"x": "input", "y": "input"}, "then": {"+": ["x", "y"]}, "else": 12.4}"""), Map("input" -> AvroUnion(List(AvroDouble(), AvroNull())))) should be (AvroDouble())
+    inferType(jsonToAst.expr("""{"ifnotnull": {"x": "input"}, "then": "x"}{}"""), Map("input" -> AvroUnion(List(AvroDouble(), AvroNull())))) should be (AvroNull())
+    inferType(jsonToAst.expr("""{"ifnotnull": {"x": "input"}, "then": "x", "else": 12.4}"""), Map("input" -> AvroUnion(List(AvroDouble(), AvroString(), AvroNull())))) should be (AvroUnion(List(AvroDouble(), AvroString())))
+    inferType(jsonToAst.expr("""{"ifnotnull": {"x": "input"}, "then": "x", "else": [["whatever"]]}"""), Map("input" -> AvroUnion(List(AvroDouble(), AvroNull())))) should be (AvroUnion(List(AvroDouble(), AvroString())))
+  }
+
   it must "test doc, error, log" taggedAs(TypeCheck) in {
     inferType(jsonToAst.expr("""{"doc": "hello"}""")) should be (AvroNull())
     inferType(jsonToAst.expr("""{"error": "hello"}""")) should be (AvroNull())

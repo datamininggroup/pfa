@@ -1576,7 +1576,7 @@ package ast {
     if (thenClause.size < 1)
       throw new PFASyntaxException("\"then\" clause must contain at least one expression", pos)
 
-    if (elseClause != None  &&  elseClause.size < 1)
+    if (elseClause != None  &&  elseClause.get.size < 1)
       throw new PFASyntaxException("\"else\" clause must contain at least one expression", pos)
 
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
@@ -1670,7 +1670,7 @@ package ast {
       if (thenClause.size < 1)
         throw new PFASyntaxException("\"then\" clause must contain at least one expression", ifpos)
 
-    if (elseClause != None  &&  elseClause.size < 1)
+    if (elseClause != None  &&  elseClause.get.size < 1)
       throw new PFASyntaxException("\"else\" clause must contain at least one expression", pos)
 
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
@@ -2280,6 +2280,12 @@ package ast {
 
     if (exprs.size < 1)
       throw new PFASyntaxException("\"ifnotnull\" must contain at least one symbol-expression mapping", pos)
+
+    if (thenClause.size < 1)
+        throw new PFASyntaxException("\"then\" clause must contain at least one expression", pos)
+
+    if (elseClause != None  &&  elseClause.size < 1)
+      throw new PFASyntaxException("\"else\" clause must contain at least one expression", pos)
 
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val calls = mutable.Set[String]()

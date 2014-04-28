@@ -54,6 +54,7 @@ from pfa.ast import Forkeyval
 from pfa.ast import CastCase
 from pfa.ast import CastBlock
 from pfa.ast import Upcast
+from pfa.ast import IfNotNull
 from pfa.ast import Doc
 from pfa.ast import Error
 from pfa.ast import Log
@@ -399,6 +400,7 @@ def _readArgument(data, dot, avroTypeBuilder):
             elif key == "set": _set = _readExpressionMap(data[key], dot + "." + key, avroTypeBuilder)
             elif key == "for": _forlet = _readExpressionMap(data[key], dot + "." + key, avroTypeBuilder)
             elif key == "step": _forstep = _readExpressionMap(data[key], dot + "." + key, avroTypeBuilder)
+            elif key == "ifnotnull": _ifnotnull = _readExpressionMap(data[key], dot + "." + key, avroTypeBuilder)
 
             elif key == "do":
                 if isinstance(data[key], (list, tuple)):
@@ -529,6 +531,9 @@ def _readArgument(data, dot, avroTypeBuilder):
              keys == set(["cast", "cases", "partial"]):      return CastBlock(_cast, _cases, _partial, dot)
         elif keys == set(["upcast", "as"]):                  return Upcast(_upcast, _as, dot)
 
+        elif keys == set(["ifnotnull", "then"]):             return IfNotNull(_ifnotnull, _thenClause, None, dot)
+        elif keys == set(["ifnotnull", "then", "else"]):     return IfNotNull(_ifnotnull, _thenClause, _elseClause, dot)
+
         elif keys == set(["doc"]):                           return Doc(_doc, dot)
 
         elif keys == set(["error"]):                         return Error(_error, None, dot)
@@ -541,12 +546,12 @@ def _readArgument(data, dot, avroTypeBuilder):
 
         elif len(keys) == 1 and list(keys)[0] not in \
              set(["as", "base64", "cases", "cast", "cell", "code", "cond", "do", "doc", "double", "else", "error", "fcnref",
-                  "float", "for", "foreach", "forkey", "forval", "if", "in", "init", "int", "let", "log", "long",
+                  "float", "for", "foreach", "forkey", "forval", "if", "ifnotnull", "in", "init", "int", "let", "log", "long",
                   "namespace", "new", "params", "partial", "path", "pool", "ret", "seq", "set", "step", "string", "then",
                   "to", "type", "upcast", "until", "value", "while"]):
                                                              return Call(_callName, _callArgs, dot)
 
-        else: raise PFASyntaxException("not enough arguments for special form: {}".format(", ".join(keys)), dot)
+        else: raise PFASyntaxException("unrecognized special form: {} (not enough arguments? too many?)".format(", ".join(keys)), dot)
 
     else:
         raise PFASyntaxException("expected expression, not " + _trunc(repr(data)), dot)
