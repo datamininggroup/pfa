@@ -854,6 +854,8 @@ These rules provide enough flexibility to implement callbacks in library functio
 
 User functions are declared with the ``fcndef'' special form.  If ``fcndef'' appears in an argument list, it defines an anonymous function.  If it appears as a member value for a name-value pair in the {\PFAc fcns} top-level field, it defines a named function.
 
+\subsubsection{Defining function: the ``fcndef'' special form}
+
 \hypertarget{hsec:fcndef}{}
 \label{form:fcndef}
 \begin{minipage}{\linewidth}
@@ -938,6 +940,8 @@ Named functions are referenced with the ``fcnref'' special form, and anonymous f
 
 \hypertarget{hsec:fcnref}{}
 \label{form:fcnref}
+
+\subsubsection{Referencing a globally defined function: the ``fcnref'' special form}
 
 \begin{minipage}{\linewidth}
 The ``fcnref'' special form has the following syntax.
@@ -1062,6 +1066,8 @@ Special forms, are expressions that take arguments, perform an operation, and re
 \subsection{Creating arrays, maps, and records}
 \label{sec:new-form}
 
+\subsubsection{Creating arrays/maps/records from expressions: the ``new'' special form}
+
 Arrays, maps, and records can be created with the {\PFAc \{"type":$\!$ TYPE, "value":$\!$ VALUE\}} literal form \hyperlink{hsec:literals}{described above}, but the {\PFAc VALUE} must be a JSON literal and not an expression.  Thus, the literal form cannot depend on any inputs.  The ``new'' special form exists to create arrays, maps, and records from expressions:
 \begin{json}
 {"new": ARRAY, "type": ARRAY-TYPE}
@@ -1098,6 +1104,8 @@ The following initializes a record of type {\PFAc R} with a {\bf string} stored 
 \subsection{Symbol assignment and reassignment}
 \label{sec:let-set}
 
+\subsubsection{Creating symbols: the ``let'' special form}
+
 The ``let'' special form creates new symbols and assigns an initial value.  The ``set'' special form changes the value associated with a set of symbols.  There are no type declarations for new symbols because its types are \hyperlink{hsec:type-inference}{inferred} from the initial value.
 
 A ``let'' has the following syntax:
@@ -1107,6 +1115,8 @@ A ``let'' has the following syntax:
 where {\PFAc VALUE1}, {\PFAc VALUE2}, etc. are expressions.  These expressions must not depend on symbols defined in the same ``let'' form, and they may be evaluated in any order.  (The symbols can be referenced after the end of the ``let'' form and before the end of its containing form.)  The {\PFAc VALUE} expressions are \hyperlink{hsec:symbol-scope}{sealed-within}: they may not declare new symbols unless wrapped in a ``do'' special form, and cannot change externally declared symbols.
 
 A ``let'' that only declares one symbol still requires a nested JSON object.  The ``let'' form has return type {\bf null}.  It must declare at least one symbol.
+
+\subsubsection{Changing symbol bindings: the ``set'' special form}
 
 A ``set'' has the following syntax:
 \begin{json}
@@ -1128,6 +1138,8 @@ Regardless of whether {\PFAc x} is reassigned first or {\PFAc y} is reassigned f
 \hypertarget{hsec:attr-form}{}
 \subsection{Extracting from and updating arrays, maps, and records}
 \label{sec:attr-form}
+
+\subsubsection{Retrieving nested values: the ``attr'' special form}
 
 The ``attr'' special form extracts a value from an array, a map, a record, or any combination of these three.  The ``attr-to'' special form returns an object with one element changed (leaving the original untouched).
 
@@ -1164,6 +1176,8 @@ then the example is valid and the return type is {\PFAtp X}.
 (Note: {\PFAc ["key"]} and {\PFAc ["field"]} are short-cuts for {\PFAc \{"string":$\!$ "key"\}} and {\PFAc \{"string":$\!$ "field"\}}, respectively; \hyperlink{hsec:literals}{see Sec.~\ref{sec:literals}}.)
 \end{example}
 
+\subsubsection{Copy with different nested values: the ``attr-to'' special form}
+
 The form of ``attr-to'' is:
 \begin{json}
 {"attr": SYMBOL, "path": INDEXES, "to": VALUE-OR-FUNCTION}
@@ -1198,6 +1212,8 @@ The first version represents the same path twice (the second time with dot-notat
 
 Cells and pools (\hyperlink{hsec:cells-pools}{see Sec.~\ref{sec:cells-pools}}) are referenced with ``cell'' and ``pool'' special forms and updated with ``cell-to'' and ``pool-to'' special forms.  Subelements in a cell or pool are referenced/updated with a path of the same form as ``\hyperlink{hsec:attr-form}{attr}'', though the ``cell'' and ``cell-to'' forms may be given without any path to specify the cell as a whole.
 
+\subsubsection{Retrieving cell values: the ``cell'' special form}
+
 The ``cell'' special form has the following syntax.
 \begin{json}
 {"cell": NAME}
@@ -1207,6 +1223,8 @@ or
 {"cell": NAME, "path": INDEXES}
 \end{json}
 where {\PFAc NAME} is the name of the cell and {\PFAc INDEXES} is a JSON array of {\bf int} and {\bf string} valued expressions (for arrays and maps) and {\bf string} literals (for records).  If a {\PFAc path} is not given, this form returns the value of the specified cell.  If a {\PFAc path} is given, then it walks down the {\PFAc INDEXES} of the {\PFAc path} in the same way as ``attr''.  Unlike ``attr'', {\PFAc INDEXES} may be an empty JSON array, in which case the behavior is the same as if {\PFAc path} had not been specified.
+
+\subsubsection{Changing cell values: the ``cell-to'' special form}
 
 The ``cell-to'' special form has the following syntax.
 \begin{json}
@@ -1255,11 +1273,15 @@ The same applies to subelements of a cell specified by a {\PFAc path}.  If a {\P
 
 The functions passed to ``cell-to'' are restricted: they should not be allowed to call any ``cell-to'' or ``path-to'' at any level of their call graphs.  (That is, they cannot modify cells or pools and the functions that they call cannot modify cells or pools, including any functions those functions call, etc.)  This constraint should be enforced by a PFA system that supports shared cells, since it excludes the possibility of deadlock.
 
+\subsubsection{Retrieving pool values: the ``pool'' special form}
+
 The ``pool'' special form is similar to ``cell'', except that a {\PFAc path} is always required.
 \begin{json}
 {"pool": NAME, "path": INDEXES}
 \end{json}
 The {\PFAc INDEXES} must not be empty, and the first item must be a literal string naming the desired object in the pool's namespace.
+
+\subsubsection{Creating or changing pool values: the ``pool-to'' special form}
 
 The ``pool-to'' special form is similar to ``cell-to'', except that a {\PFAc path} is always required and {\PFAc init} is required if and only if {\PFAc to} specifies a function.
 \begin{json}
@@ -1274,9 +1296,9 @@ The same concurrency issues apply to shared pools as to shared cells, except tha
 
 Some PFA systems may implement shared cells and pools with a networked database.  If so, they can take advantage of the {\PFAc path} in the ``cell'' special form or the ``pool'' special form to only transfer the relevant subelement of the cell or pool over the network, rather than sending the whole data structure and extracting the subelement afterward.
 
-\hypertarget{hsec:doblocks}{}
-\subsection{Do blocks}
-\label{sec:doblocks}
+\subsection{Tree-like structures in the program flow}
+
+\subsubsection{Expanding an expression into a mini-program: the ``do'' special form}
 
 A ``do'' special form allows the PFA document author to insert a series of expressions where one expression is expected.  It has the following syntax.
 \begin{json}
@@ -1325,11 +1347,11 @@ A ``do'' block does not apply any additional constraints on the scope of symbols
 \end{json}
 \end{example}
 
-\hypertarget{hsec:conditionals}{}
-\subsection{Conditionals: if and cond}
-\label{sec:conditionals}
+\subsection{Branching the program flow}
 
 Conditionals cause a branch in the program flow, in which the expressions that are evaluated depend on values at runtime.
+
+\subsubsection{Conditional with one or two cases: the ``if'' special form}
 
 The ``if'' special form has the following syntax:
 \begin{json}
@@ -1343,6 +1365,8 @@ where {\PFAc CONDITION} is a single expression that evaluates to {\bf boolean} a
 
 The {\PFAc CONDITION} expression is evaluated in a sealed-from-above, sealed-within scope, but the {\PFAc then} and {\PFAc else} clauses are unsealed (\hyperlink{hsec:symbol-scope}{see Sec.~\ref{sec:symbol-scope}}).  That is, an outside symbol cannot be modified in the {\PFAc CONDITION}, but it can be modified in the {\PFAc then} and {\PFAc else} clauses.  In an imperative programming style, {\PFAc then} and {\PFAc else} are primarily used to assign values to symbols defined outside the ``if''.  In a functional programming style, the return value of the entire ``if'' form would be assigned to a symbol.
 
+\subsubsection{Conditional with many cases: the ``cond'' special form}
+
 The ``cond'' special form allows one to chain a series of conditionals.
 \begin{json}
 {"cond": [{"if": CONDITION1, "then": EXPRS1}, {"if": CONDITION2, "then": EXPRS2}, ...]}
@@ -1354,11 +1378,11 @@ or
 \end{json}
 The ``if'' forms within a ``cond'' are like stand-alone ``if'' forms except that they cannot have {\PFAc else} clauses.  The ``cond'' form can have a single {\PFAc else} clause.  Much like an ``if'', the return value of ``cond'' is {\PFAc null} if {\PFAc else} is absent, and it is the narrowest supertype of all {\PFAc then} clauses and the {\PFAc else} clause if the {\PFAc else} is present.  A ``cond'' must have at least one ``if''.  The {\PFAc CONDITION1}, {\PFAc CONDITION2}, \ldots\ are all single expressions that are sealed-from-above and sealed-within, and the {\PFAc EXPRS1}, {\PFAc EXPRS2}, \ldots\ and {\PFAc EXPRS} are either single expressions or JSON arrays of expressions that are unsealed.  The {\PFAc then} clause corresponding to the first (and only the first) successful {\PFAc if} condition is evaluated, or the {\PFAc else} clause is evaluated if no {\PFAc if} conditions are successful.
 
-\hypertarget{hsec:whileloops}{}
-\subsection{While loops: pre-test and post-test}
-\label{sec:whileloops}
+\subsection{Loops in the program flow}
 
 Loops repeatedly evaluate a set of expressions until some condition is met at runtime.
+
+\subsubsection{Generic pre-test loop: the ``while'' special form}
 
 The pre-test ``while'' special form has the following syntax.
 \begin{json}
@@ -1368,15 +1392,15 @@ where {\PFAc CONDITION} is a single expression that evaluates to {\bf boolean} a
 
 The {\PFAc CONDITION} is evaluated before the {\PFAc EXPRESSION-OR-EXPRESSIONS} and the two are evaluated in alternation until {\PFAc CONDITION} returns {\PFAc false}.  If {\PFAc CONDITION} returns {\PFAc false} the first time it is called, the {\PFAc EXPRESSION-OR-EXPRESSIONS} would never be evaluated.
 
+\subsubsection{Generic post-test loop: the ``do-until'' special form}
+
 The post-test ``do-until'' special form has the following syntax.
 \begin{json}
 {"do": EXPRESSION-OR-EXPRESSIONS, "until": CONDITION}
 \end{json}
 Like ``while'', the {\PFAc CONDITION} is a single expression that evaluates to {\bf boolean} and {\PFAc EXPRESSION-OR-EXPRESSIONS} is either a single expression or a JSON array of expressions.  The return value is {\PFAc null}.  The difference is that the alternation between evaluating {\PFAc EXPRESSION-OR-EXPRESSIONS} and {\PFAc CONDITION} starts with the {\PFAc EXPRESSION-OR-EXPRESSIONS} and continues until {\PFAc CONDITION} is {\PFAc true}.  Thus, the {\PFAc EXPRESSION-OR-EXPRESSIONS} is evaluated at least once, even if {\PFAc CONDITION} is always {\PFAc true}.
 
-\hypertarget{hsec:forloops}{}
-\subsection{For loops: by symbol value, array element, and key-value pairs}
-\label{sec:forloops}
+\subsubsection{Iteration with dummy variables: the ``for'' special form}
 
 For loops are specialized loops that declare new symbols for use in the loop body.  There are three basic types: ``for'' loops, which are usually used to increment a numerical index, ``foreach'' loops, which iterate over values of an array, and ``forkey-forval'' loops, which iterate over key-value pairs of a map.
 
@@ -1407,6 +1431,8 @@ This is a basic for loop that indexes the loop iteration with an integer {\PFAc 
 The {\PFAc something} and {\PFAc somethingElse} functions are called with arguments from 0 (inclusive) until 10 (exclusive).
 \end{example}
 
+\subsubsection{Iteration over arrays: the ``foreach'' special form}
+
 The ``foreach'' special form iterates over elements of an array.  It has the following syntax.
 \begin{json}
 {"foreach": NAME, "in": ARRAY-EXPRESSION, "do": EXPRESSION-OR-EXPRESSIONS}
@@ -1421,6 +1447,8 @@ where {\PFAc NAME} is a string naming the new symbol to declare, {\PFAc ARRAY-EX
 The symbol declared by the {\PFAc foreach} clause can be referenced only in the body of the loop.  The {\PFAc ARRAY-EXPRESSION} is sealed-from-above and sealed-within.  If the return type of the {\PFAc ARRAY-EXPRESSION} is an array of {\PFAtp X}, the symbol declared by {\PFAc foreach} has type {\PFAc X}.
 
 The loop body is evaluated once for every element in the array specified by the {\PFAc in} clause.  Since the array might be empty, the loop body might never be evaluated.  If {\PFAc seq} is absent or {\PFAc false}, the order of elements is not guaranteed and the loop scope is sealed-from-above.  Some PFA implementations may take advantage of this fact to parallelize the loop.  (If so, all cells and pools referenced within the loop must be treated as though they are shared.)  If {\PFAc seq} is present and {\PFAc true}, then the elements of the array are processed in order and the loop scope is not sealed-from-above.
+
+\subsubsection{Iteration over maps: the ``forkey-forval'' special form}
 
 The ``forkey-forval'' special form iterates over key-value pairs of a map.  It has the following syntax.
 \begin{json}
@@ -1442,6 +1470,8 @@ The loop body is evaluated once for every key-value pair in the map specified by
 Unrestricted type-casting would invalidate the guarantees that a static type check provides.  It is allowed in many popular programming languages, and if an incorrect type-cast is encountered at runtime, an exception (Java) or undefined behavior (C++) ensues.
 
 However, it is possible to provide the advantages of type-casting without invalidating the static type check.  Instead of returning the type-cast object as a single expression, we split the program flow into branches, one for each possible down-cast type.  For instance, if a possibly-missing input datum has type {\bf union(null, double)}, we split the program flow into a branch that handles the {\bf null} case and a branch that handles the {\bf double} case.  Thus, the type-cast is a special kind of conditional.
+
+\subsubsection{Narrowing a type: the ``cast-cases'' special form}
 
 Down-casting (making a value's type more specific) is handled by the ``cast-cases'' special form, which has the following syntax.
 \begin{json}
@@ -1486,14 +1516,41 @@ Alternatively, we could use an imperative programming style and overwrite a defa
 \end{json}
 \end{example}
 
+\subsubsection{Widening a type: the ``upcast'' special form}
+
 It is sometimes (rarely) useful to up-cast a value, making it less specific.  This is handled by the ``upcast'' expression, which simply returns the casted value.
 \begin{json}
 {"upcast": EXPRESSION, "as": TYPE}
 \end{json}
 The Avro type schema specified by {\PFAc as} should accept the return type of {\PFAc EXPRESSION} and raise a semantic error if it does not.
 
+\subsubsection{Checking missing values: the ``ifnotnull'' special form}
+
+A special case that is frequently used in PFA is to cast a union of {\PFAtp X} and {\bf null} to {\PFAtp X}.  Null is used to represent missing values, so this would branch the program flow based on whether the value is missing or not.  Moreover, some datasets have many fields that could be missing and it is useful to isolate the case in which none of them are, in fact, missing.  This could be accomplished with nested ``cast-cases'' forms, but the nesting level would be very deep and unwieldy, even for automated processing.
+
+To simplify the PFA document, the ``ifnotnull'' special form only performs a {\bf null}-removing cast, but it applies to one or more symbols simultaneously.  It has the following syntax.
+\begin{json}
+{"ifnotnull": {SYM1: EXPR1, ... SYMN: EXPRN}, "then": EXPRESSION-OR-EXPRESSIONS}
+\end{json}
+or
+\begin{json}
+{"ifnotnull": {SYM1: EXPR1, ... SYMN: EXPRN}, "then": EXPRESSION-OR-EXPRESSIONS,
+ "else": EXPRESSION-OR-EXPRESSIONS}
+\end{json}
+where {\PFAc SYM1} \ldots\ {\PFAc SYMN} are as-yet undefined symbols, {\PFAc EXPR1} \ldots\ {\PFAc EXPRN} are single expressions, and \\ {\PFAc EXPRESSION-OR-EXPRESSIONS} are expressions or JSON arrays of expressions.
+
+All of the {\PFAc EXPR1} \ldots\ {\PFAc EXPRN} expressions are evaluated, in an unspecified order, with sealed-from-above and sealed-within scope.  Each of these expressions must have a union type that includes {\bf null}, though they may have different types from one another.
+
+If all of the {\PFAc EXPR1} \ldots\ {\PFAc EXPRN} expressions are not null, their values are assigned to new symbols {\PFAc SYM1} \ldots\ {\PFAc SYMN}, respectively.  If the type of some {\PFAc EXPR} is {\bf union(X, null)}, the corresponding {\PFAc SYM} has type {\bf X}.  If the type of some {\PFAc EXPR} is {\bf union(X, Y, \ldots\ null)}, the corresponding {\PFAc SYM} has type {\bf union(X, Y, \ldots)}.  These symbols are only defined in the scope of the {\PFAc then} clause.
+
+If all of the {\PFAc EXPR1} \ldots\ {\PFAc EXPRN} expressions are not null, the {\PFAc then} clause is executed with the new symbols in scope.  If any of the {\PFAc EXPR1} \ldots\ {\PFAc EXPRN} expressions are null and the {\PFAc else} clause exists, the {\PFAc else} clause is executed without any new symbols in scope.  The {\PFAc then} and {\PFAc else} clauses have no scope constraints.
+
+The ``ifnotnull'' form without an {\PFAc else} clause returns {\PFAc null}, but the form with an {\PFAc else} clause returns the \hyperlink{hsec:narrowest-supertype}{narrowest supertype} of the {\PFAc then} and {\PFAc else} clauses.
+
+\subsection{Miscellaneous special forms}
+
 \hypertarget{hsec:inline-doc}{}
-\subsection{Inline documentation}
+\subsubsection{Inline documentation: the ``doc'' special form}
 \label{sec:inline-doc}
 
 JSON has no means of including comments.  Auto-generated code usually doesn't need comments, but there may be occasions in which it is useful to embed inactive statements in a PFA document.
@@ -1505,7 +1562,7 @@ The ``doc'' special form has the following syntax.
 Unlike a comment in a programming language, it occupies a slot in the syntax tree.  If inactive expressions are ever needed (the equivalent of Python's {\PFAc pass} keyword), one could use a ``doc'' with an empty {\PFAc STRING}.  This form returns {\PFAc null}.
 
 \hypertarget{hsec:exception-form}{}
-\subsection{User-defined exceptions}
+\subsubsection{User-defined exceptions: the ``error'' special form}
 \label{sec:exception-form}
 
 PFA provides non-local exits to stop the evaluation of a {\PFAc begin}, {\PFAc action}, or {\PFAc end} routine that behave like exceptions (\hyperlink{hsec:exceptions}{see Sec.~\ref{sec:exceptions}}).  Some library functions raise exceptions, but the PFA author can also raise user-defined exceptions.  The PFA engine is free to halt execution or just skip to the next input datum upon encountering an exception.
@@ -1521,7 +1578,7 @@ or
 The {\PFAc STRING} is the error message, and if a {\PFAc code} is provided, it provides a safer way to identify specific errors than a human-readable message.  The ``error'' form return type is {\bf null}.  Even though the ``error'' form can never return normally, this return type might be used to determine the type of an enclosing form, depending on its position.
 
 \hypertarget{hsec:logs}{}
-\subsection{Log messages}
+\subsubsection{Log messages: the ``log'' special form}
 \label{sec:logs}
 
 The only three outputs that a PFA scoring engine can emit are (1) normal output, the result of a calculation, (2) an exception, and (3) log messages.  Log messages should not be used for normal output, as they are restricted to strings and may or may not be handled by the host PFA system.  The PFA system has full discretion to ignore, filter, collate, forward, or merge log messages.
