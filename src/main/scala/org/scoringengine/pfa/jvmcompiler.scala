@@ -75,6 +75,7 @@ import org.scoringengine.pfa.ast.Forkeyval
 import org.scoringengine.pfa.ast.CastCase
 import org.scoringengine.pfa.ast.CastBlock
 import org.scoringengine.pfa.ast.Upcast
+import org.scoringengine.pfa.ast.IfNotNull
 import org.scoringengine.pfa.ast.Doc
 import org.scoringengine.pfa.ast.Error
 import org.scoringengine.pfa.ast.Log
@@ -674,7 +675,13 @@ package jvmcompiler {
         (exprs map {"W.s(" + _.toString + ");"}).mkString("\n")
       case ReturnMethod.RETURN =>
         ((exprs.init map {"W.s(" + _.toString + ");"}) ++ List("return %s;".format(
-          "(" + javaType(retType, true, true, true) + ")" + exprs.last.toString
+          retType match {
+            case x: AvroInt => "Integer.valueOf(" + exprs.last.toString + ")"
+            case x: AvroLong => "Long.valueOf(" + exprs.last.toString + ")"
+            case x: AvroFloat => "Float.valueOf(" + exprs.last.toString + ")"
+            case x: AvroDouble => "Double.valueOf(" + exprs.last.toString + ")"
+            case x => "(" + javaType(x, true, true, true) + ")" + exprs.last.toString
+          }
         ))).mkString("\n")
     }
 
@@ -1408,6 +1415,7 @@ return null;
 
         case _ => throw new RuntimeException("inconsistent call to task(If.Context)")
       }
+
       case Cond.Context(retType, _, complete, walkBlocks) => {
         var first = true
         val stringBlocks =
@@ -1581,6 +1589,67 @@ obj = %s;
       
       case Upcast.Context(retType, _, expr) =>
         JavaCode("((%s)(%s))", javaType(retType, false, true, false), expr.toString)
+
+      case IfNotNull.Context(retType, calls, symbolTypeResult, thenSymbols, thenClause, elseSymbols, elseClause) => {
+        val toCheckSymbols =
+          (for ((symbol, avroType, _) <- symbolTypeResult) yield ("%s %s;".format(javaType(avroType, true, true, true), s(symbol)))).mkString("\n")
+
+        val toCheckExprs =
+          (for ((symbol, avroType, result) <- symbolTypeResult) yield "%s = (%s)%s;".format(s(symbol), javaType(avroType, true, true, true), result.toString)).mkString("\n")
+
+        val predicate =
+          (for ((symbol, _, _) <- symbolTypeResult) yield "(%s != null)".format(s(symbol))).mkString("&&")
+
+        (elseSymbols, elseClause) match {
+          case (Some(symbols), Some(clause)) =>
+            JavaCode("""(new Object() {
+%s
+public %s apply() {
+%s
+if (%s) {
+return (new Object() {
+%s
+public %s apply() {
+%s
+} }).apply();
+}
+else {
+return (new Object() {
+%s
+public %s apply() {
+%s
+} }).apply();
+}
+} }).apply()""".format(toCheckSymbols,
+                       javaType(retType, false, true, true),
+                       toCheckExprs,
+                       predicate,
+                       symbolFields(thenSymbols),
+                       javaType(retType, false, true, true),
+                       block(thenClause, ReturnMethod.RETURN, retType),
+                       symbolFields(symbols),
+                       javaType(retType, false, true, true),
+                       block(clause, ReturnMethod.RETURN, retType)))
+
+          case (None, None) =>
+            JavaCode("""(new Object() {
+%s
+%s
+public Void apply() {
+%s
+if (%s) {
+%s
+}
+return null;
+} }).apply()""".format(toCheckSymbols,
+                       symbolFields(thenSymbols),
+                       toCheckExprs,
+                       predicate,
+                       block(thenClause, ReturnMethod.NONE, retType)))
+
+          case _ => throw new RuntimeException("inconsistent call to task(IfNotNull.Context)")
+        }
+      }
 
       case Doc.Context(_, _) => {
         JavaCode("null")

@@ -56,6 +56,7 @@ import org.scoringengine.pfa.ast.Forkeyval
 import org.scoringengine.pfa.ast.CastCase
 import org.scoringengine.pfa.ast.CastBlock
 import org.scoringengine.pfa.ast.Upcast
+import org.scoringengine.pfa.ast.IfNotNull
 import org.scoringengine.pfa.ast.Doc
 import org.scoringengine.pfa.ast.Error
 import org.scoringengine.pfa.ast.Log
@@ -579,6 +580,7 @@ package reader {
         var _set: Map[String, Expression] = null
         var _forlet: Map[String, Expression] = null
         var _forstep: Map[String, Expression] = null
+        var _ifnotnull: Map[String, Expression] = null
         
         var _body: Seq[Expression] = null
         var _thenClause: Seq[Expression] = null
@@ -646,6 +648,7 @@ package reader {
               case "set" =>       _set = readExpressionMap(parser, parser.nextToken(), dot + "." + key, _at, avroTypeBuilder)
               case "for" =>       _forlet = readExpressionMap(parser, parser.nextToken(), dot + "." + key, _at, avroTypeBuilder)
               case "step" =>      _forstep = readExpressionMap(parser, parser.nextToken(), dot + "." + key, _at, avroTypeBuilder)
+              case "ifnotnull" => _ifnotnull = readExpressionMap(parser, parser.nextToken(), dot + "." + key, _at, avroTypeBuilder)
 
               case "do" => parser.nextToken() match {
                 case x @ JsonToken.START_ARRAY => _body = readExpressionArray(parser, x, dot + "." + key, _at, avroTypeBuilder)
@@ -771,6 +774,8 @@ package reader {
         else if (keys == Set("cast", "cases")  ||
                  keys == Set("cast", "cases", "partial"))            CastBlock(_cast, _cases, _partial, Some(pos(dot, _at)))
         else if (keys == Set("upcast", "as"))                        Upcast(_upcast, _as, Some(pos(dot, _at)))
+        else if (keys == Set("ifnotnull", "then"))                   IfNotNull(_ifnotnull, _thenClause, None, Some(pos(dot, _at)))
+        else if (keys == Set("ifnotnull", "then", "else"))           IfNotNull(_ifnotnull, _thenClause, Some(_elseClause), Some(pos(dot, _at)))
 
         else if (keys == Set("doc"))                                 Doc(_doc, Some(pos(dot, _at)))
 
@@ -786,7 +791,7 @@ package reader {
         // function call is anything else
         else if (keys.size == 1  &&
                  !Set("as", "base64", "cases", "cast", "cell", "code", "cond", "do", "doc", "double", "else", "error", "fcnref",
-                      "float", "for", "foreach", "forkey", "forval", "if", "in", "init", "int", "let", "log", "long",
+                      "float", "for", "foreach", "forkey", "forval", "if", "ifnotnull", "in", "init", "int", "let", "log", "long",
                       "namespace", "new", "params", "partial", "path", "pool", "ret", "seq", "set", "step", "string", "then",
                       "to", "type", "upcast", "until", "value", "while").contains(keys.head))
                                                                      Call(_callName, _callArgs, Some(pos(dot, _at)))

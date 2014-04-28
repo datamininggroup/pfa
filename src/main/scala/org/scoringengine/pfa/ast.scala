@@ -2265,6 +2265,112 @@ package ast {
     case class Context(retType: AvroType, calls: Set[String], expr: TaskResult) extends ExpressionContext
   }
 
+  case class IfNotNull(exprs: Map[String, Expression], thenClause: Seq[Expression], elseClause: Option[Seq[Expression]], pos: Option[String] = None) extends Expression {
+    override def equals(other: Any): Boolean = other match {
+      case that: IfNotNull => this.exprs == that.exprs  &&  this.thenClause == that.thenClause  &&  this.elseClause == that.elseClause  // but not pos
+      case _ => false
+    }
+    override def hashCode(): Int = ScalaRunTime._hashCode((exprs, thenClause, elseClause))
+
+    override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
+      super.collect(pf) ++
+    exprs.values.flatMap(_.collect(pf)) ++
+    thenClause.flatMap(_.collect(pf)) ++
+    (if (elseClause == None) List[X]() else elseClause.get.flatMap(_.collect(pf)))
+
+    if (exprs.size < 1)
+      throw new PFASyntaxException("\"ifnotnull\" must contain at least one symbol-expression mapping", pos)
+
+    override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
+      val calls = mutable.Set[String]()
+
+      val exprArgsScope = symbolTable.newScope(true, true)
+      val assignmentScope = symbolTable.newScope(false, false)
+
+      val symbolTypeResult: Seq[(String, AvroType, TaskResult)] = exprs map {case (name, expr) =>
+        if (!validSymbolName(name))
+          throw new PFASemanticException("\"%s\" is not a valid symbol name".format(name), pos)
+
+        val (exprCtx: ExpressionContext, exprRes: TaskResult) = expr.walk(task, exprArgsScope, functionTable)
+
+        val avroType =
+          exprCtx.retType match {
+            case AvroUnion(types) if (types.size > 2  &&  types.contains(AvroNull())) => AvroUnion(types filter {_ != AvroNull()})
+            case AvroUnion(types) if (types.size > 1  &&  types.contains(AvroNull())) => types filter {_ != AvroNull()} head
+            case x => throw new PFASemanticException("\"ifnotnull\" expressions must all be unions of something and null; case \"%s\" has type %s".format(name, x.toString), pos)
+          }
+        assignmentScope.put(name, avroType)
+
+        calls ++= exprCtx.calls
+
+        (name, avroType, exprRes)
+      } toList
+
+      val thenScope = assignmentScope.newScope(false, false)
+      val thenResults: Seq[(ExpressionContext, TaskResult)] = thenClause.map(_.walk(task, thenScope, functionTable)) collect {case (x: ExpressionContext, y: TaskResult) => (x, y)}
+      for ((exprCtx, _) <- thenResults)
+        calls ++= exprCtx.calls
+
+      val (retType, elseTaskResults, elseSymbols) =
+        elseClause match {
+          case Some(clause) => {
+            val elseScope = symbolTable.newScope(false, false)
+
+            val elseResults = clause.map(_.walk(task, elseScope, functionTable)) collect {case (x: ExpressionContext, y: TaskResult) => (x, y)}
+            for ((exprCtx, _) <- elseResults)
+              calls ++= exprCtx.calls
+
+            val thenType = thenResults.last._1.retType
+            val elseType = elseResults.last._1.retType
+            val retType =
+              try {
+                P.mustBeAvro(LabelData.broadestType(List(thenType, elseType)))
+              }
+              catch {
+                case err: IncompatibleTypes => throw new PFASemanticException(err.getMessage, pos)
+              }
+
+            (retType, Some(elseResults map {_._2}), Some(elseScope.inThisScope))
+          }
+          case None => (AvroNull(), None, None)
+        }
+
+      val context = IfNotNull.Context(retType, calls.toSet + IfNotNull.desc, symbolTypeResult, thenScope.inThisScope, thenResults map {_._2}, elseSymbols, elseTaskResults)
+      (context, task(context))
+    }
+
+    override def jsonNode: JsonNode = {
+      val factory = JsonNodeFactory.instance
+      val out = factory.objectNode
+
+      val jsonExprs = factory.objectNode
+      for ((name, expr) <- exprs)
+        jsonExprs.put(name, expr.jsonNode)
+      out.put("ifnotnull", jsonExprs)
+
+      val jsonThenClause = factory.arrayNode
+      for (expr <- thenClause)
+        jsonThenClause.add(expr.jsonNode)
+      out.put("then", jsonThenClause)
+
+      elseClause match {
+        case Some(clause) => {
+          val jsonElseClause = factory.arrayNode
+          for (expr <- clause)
+            jsonElseClause.add(expr.jsonNode)
+          out.put("else", jsonElseClause)
+        }
+        case None =>
+      }
+
+      out
+    }
+  }
+  object IfNotNull {
+    val desc = "ifnotnull"
+    case class Context(retType: AvroType, calls: Set[String], symbolTypeResult: Seq[(String, AvroType, TaskResult)], thenSymbols: Map[String, AvroType], thenClause: Seq[TaskResult], elseSymbols: Option[Map[String, AvroType]], elseClause: Option[Seq[TaskResult]]) extends ExpressionContext
+  }
+
   case class Doc(comment: String, pos: Option[String] = None) extends Expression {
     override def equals(other: Any): Boolean = other match {
       case that: Doc =>

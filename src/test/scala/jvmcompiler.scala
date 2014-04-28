@@ -1089,6 +1089,77 @@ do:
 """, """["double", "string"]""").apply should be ("hello")
   }
 
+  it must "do ifnotnull" taggedAs(JVMCompilation) in {
+    val engine1 = PFAEngine.fromYaml("""
+input: [double, "null"]
+output: double
+action:
+  ifnotnull: {x: input}
+  then: x
+  else: 12
+""").head
+    engine1.action(java.lang.Double.valueOf(5)) should be (5.0)
+    engine1.action(null) should be (12.0)
+
+    val engine2 = PFAEngine.fromYaml("""
+input: [double, "null"]
+output: double
+action:
+  ifnotnull: {x: input, y: input}
+  then: {+: [x, y]}
+  else: 12
+""").head
+    engine2.action(java.lang.Double.valueOf(5)) should be (10.0)
+    engine2.action(null) should be (12.0)
+
+    val engine3 = PFAEngine.fromYaml("""
+input: [double, "null"]
+output: "null"
+action:
+  ifnotnull: {x: input, y: input}
+  then: {+: [x, y]}
+""").head
+    engine3.action(java.lang.Double.valueOf(5)) should be (null)
+    engine3.action(null) should be (null)
+
+    val engine4 = PFAEngine.fromYaml("""
+input: [double, "null"]
+output: double
+action:
+  - let: {z: -3.0}
+  - ifnotnull: {x: input, y: input}
+    then: {set: {z: {+: [x, y]}}}
+  - z
+""").head
+    engine4.action(java.lang.Double.valueOf(5)) should be (10.0)
+    engine4.action(null) should be (-3.0)
+
+    val engine5 = PFAEngine.fromYaml("""
+input: [double, "null"]
+output: double
+action:
+  - let: {z: -3.0}
+  - ifnotnull: {x: input, y: input}
+    then: {set: {z: {+: [x, y]}}}
+    else: {set: {z: 999.9}}
+  - z
+""").head
+    engine5.action(java.lang.Double.valueOf(5)) should be (10.0)
+    engine5.action(null) should be (999.9)
+
+    val engine6 = PFAEngine.fromYaml("""
+input: [double, string, "null"]
+output: [double, string]
+action:
+  - ifnotnull: {x: input}
+    then: x
+    else: [[whatever]]
+""").head
+    engine6.action(java.lang.Double.valueOf(5)) should be (5.0)
+    engine6.action("hello") should be ("hello")
+    engine6.action(null) should be ("whatever")
+  }
+
   it must "do doc" taggedAs(JVMCompilation) in {
     compileExpression("""{doc: "This is very nice"}""", """"null"""").apply should be (null.asInstanceOf[java.lang.Void])
 

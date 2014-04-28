@@ -1128,6 +1128,54 @@ class JsonToAstSuite extends FlatSpec with Matchers {
 }""")
   }
 
+  it must "ifnotnull" taggedAs(JsonToAst) in {
+    checkJsonToAst(EngineConfig(
+      "test",
+      Method.MAP,
+      AvroUnion(List(AvroInt(), AvroNull())),
+      AvroInt(),
+      List(),
+      List(IfNotNull(Map("x" -> Ref("input")), List(Ref("x")), Some(List(LiteralInt(12))))),
+      List(),
+      Map(),
+      None,
+      Map(),
+      Map(),
+      None,
+      None,
+      None,
+      Map()),
+      """{
+  "name": "test",
+  "input": ["int", "null"],
+  "output": "int",
+  "action": [{"ifnotnull": {"x": "input"}, "then": ["x"], "else": 12}]
+}""")
+
+    checkJsonToAst(EngineConfig(
+      "test",
+      Method.MAP,
+      AvroUnion(List(AvroInt(), AvroNull())),
+      AvroNull(),
+      List(),
+      List(IfNotNull(Map("x" -> Ref("input")), List(Ref("x")), None)),
+      List(),
+      Map(),
+      None,
+      Map(),
+      Map(),
+      None,
+      None,
+      None,
+      Map()),
+      """{
+  "name": "test",
+  "input": ["int", "null"],
+  "output": "null",
+  "action": [{"ifnotnull": {"x": "input"}, "then": ["x"]}]
+}""")
+  }
+
   it must "doc" taggedAs(JsonToAst) in {
     checkJsonToAst(EngineConfig(
       "test",

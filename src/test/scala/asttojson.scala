@@ -443,6 +443,13 @@ class AstToJsonSuite extends FlatSpec with Matchers {
     checkAstToJson(Forkeyval("k", "v", Literal(AvroMap(AvroInt()), """{"one": 1, "two": 2, "three": 3}"""), List(Ref("k"))),
       """{"forkey":"k","forval":"v","in":{"type":{"type":"map","values":"int"},"value":{"one":1,"two":2,"three":3}},"do":["k"]}""")
   }
+  
+  it must "ifnotnull" taggedAs(JsonToAst) in {
+    checkAstToJson(IfNotNull(Map("x" -> Ref("input")), List(Ref("x")), Some(List(LiteralInt(12)))),
+      """{"ifnotnull":{"x":"input"},"then":["x"],"else":[12]}""")
+    checkAstToJson(IfNotNull(Map("x" -> Ref("input")), List(Ref("x")), None),
+      """{"ifnotnull":{"x":"input"},"then":["x"]}""")
+  }
 
   it must "cast" taggedAs(AstToJson) in {
     checkAstToJson(CastBlock(LiteralInt(3), List(CastCase(AvroString(), "x", List(Ref("x"))), CastCase(AvroInt(), "x", List(Ref("x")))), false),
