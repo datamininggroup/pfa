@@ -620,17 +620,20 @@ def _readCells(data, dot, avroTypeBuilder):
 def _readCell(data, dot, avroTypeBuilder):
     if isinstance(data, dict):
         _shared = False
+        _rollback = False
         keys = set(x for x in data.keys() if x != "@")
         for key in keys:
             if key == "type": _avroType = _readAvroPlaceholder(data[key], dot + "." + key, avroTypeBuilder)
             elif key == "init": _init = _readJsonToString(data[key], dot + "." + key)
             elif key == "shared": _shared = _readBoolean(data[key], dot + "." + key)
+            elif key == "rollback": _rollback = _readBoolean(data[key], dot + "." + key)
+            else:
+                raise PFASyntaxException("unexpected cell property: \"{}\"".format(key), dot)
 
-        required = set(["type", "init"])
-        if keys.intersection(required) != required:
+        if ("type" not in keys) or ("init" not in keys) or (not keys.issubset(set(["type", "init", "shared", "rollback"]))):
             raise PFASyntaxException("wrong set of fields for a cell: " + ", ".join(keys), dot)
         else:
-            return Cell(_avroType, _init, _shared, dot)
+            return Cell(_avroType, _init, _shared, _rollback, dot)
     else:
         raise PFASyntaxException("expected cell, not " + _trunc(repr(data)), dot)
 
@@ -646,16 +649,17 @@ def _readPools(data, dot, avroTypeBuilder):
 def _readPool(data, dot, avroTypeBuilder):
     if isinstance(data, dict):
         _shared = False
+        _rollback = False
         keys = set(x for x in data.keys() if x != "@")
         for key in keys:
             if key == "type": _avroType = _readAvroPlaceholder(data[key], dot + "." + key, avroTypeBuilder)
             elif key == "init": _init = _readJsonToStringMap(data[key], dot + "." + key)
             elif key == "shared": _shared = _readBoolean(data[key], dot + "." + key)
+            elif key == "rollback": _rollback = _readBoolean(data[key], dot + "." + key)
 
-        required = set(["type", "init"])
-        if keys.intersection(required) != required:
+        if ("type" not in keys) or (not keys.issubset(set(["type", "init", "shared", "rollback"]))):
             raise PFASyntaxException("wrong set of fields for a pool: " + ", ".join(keys), dot)
         else:
-            return Pool(_avroType, _init, _shared, dot)
+            return Pool(_avroType, _init, _shared, _rollback, dot)
     else:
         raise PFASyntaxException("expected pool, not " + _trunc(repr(data)), dot)

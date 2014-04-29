@@ -182,9 +182,11 @@
         <configuration>
           <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
           <junitxml>.</junitxml>
-          <tagsToInclude>JVMCompilation</tagsToInclude>
+          <tagsToInclude>JVMCompilation, PythonTest</tagsToInclude>
           <tagsToExclude> AstToJson, Data, JsonToAst,
-Lib1Array, Lib1Bytes, Lib1Core, Lib1Enum, Lib1Fixed, Lib1Impute, Lib1Map, Lib1Math, Lib1ModelTree, Lib1Record, Lib1StatSample, Lib1String, MakeDocsLatex, MultiThreaded, PythonTest, RandomJson, Shared, SignatureMatch, TypeCheck, Types, Yaml</tagsToExclude>
+Lib1Array, Lib1Bytes, Lib1Core, Lib1Enum, Lib1Fixed, Lib1Impute, Lib1Map, Lib1Math, Lib1ModelTree, Lib1Record, Lib1StatSample, Lib1String, MakeDocsLatex, MultiThreaded, 
+
+RandomJson, Shared, SignatureMatch, TypeCheck, Types, Yaml</tagsToExclude>
         </configuration>
         <executions>
           <execution>

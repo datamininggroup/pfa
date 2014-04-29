@@ -1314,7 +1314,7 @@ class TreeModel(PmmlBinding, ModelElement):
                     ]}
 
                 if context.storageType == "cell":
-                    context.cells[context.storageName] = ast.Cell(context.avroTypeBuilder.makePlaceholder(json.dumps(modelType)), json.dumps(modelData), False)
+                    context.cells[context.storageName] = ast.Cell(context.avroTypeBuilder.makePlaceholder(json.dumps(modelType)), json.dumps(modelData), False, False)
                     return [ast.Call("model.tree.simpleWalk", [ast.Ref("input"), ast.CellGet(context.storageName, [])])]
 
                 elif context.storageType == "pool":

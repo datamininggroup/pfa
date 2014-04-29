@@ -120,8 +120,8 @@ class TestJsonToAst(unittest.TestCase):
             [],
             {},
             None,
-            {"private": Cell(AvroInt(), "0", False)},
-            {"private": Pool(AvroInt(), {}, False)},
+            {"private": Cell(AvroInt(), "0", False, False)},
+            {"private": Pool(AvroInt(), {}, False, False)},
             None,
             None,
             None,
@@ -131,8 +131,8 @@ class TestJsonToAst(unittest.TestCase):
   "input": "int",
   "output": "string",
   "action": [{"+": [2, 2]}],
-  "cells":{"private":{"type":"int","init":0,"shared":false}},
-  "pools":{"private":{"type":"int","init":{},"shared":false}}
+  "cells":{"private":{"type":"int","init":0,"shared":false,"rollback":false}},
+  "pools":{"private":{"type":"int","init":{},"shared":false,"rollback":false}}
 }'''))
 
         self.assertEqual(
@@ -175,8 +175,8 @@ class TestJsonToAst(unittest.TestCase):
             [Call("+", [LiteralInt(2), LiteralInt(2)])],
             {"f": FcnDef([{"x": AvroInt()}, {"y": AvroString()}], AvroNull(), [LiteralNull()])},
             None,
-            {"private": Cell(AvroInt(), "0", False)},
-            {"private": Pool(AvroInt(), {}, False)},
+            {"private": Cell(AvroInt(), "0", False, False)},
+            {"private": Pool(AvroInt(), {}, False, False)},
             12345,
             "hello",
             json.loads('''{"internal": "data"}'''),
@@ -190,8 +190,8 @@ class TestJsonToAst(unittest.TestCase):
   "action": [{"+": [2, 2]}],
   "end": [{"+": [2, 2]}],
   "fcns": {"f": {"params":[{"x":"int"},{"y":"string"}],"ret":"null","do":[null]}},
-  "cells":{"private":{"type":"int","init":0,"shared":false}},
-  "pools":{"private":{"type":"int","init":{},"shared":false}},
+  "cells":{"private":{"type":"int","init":0,"shared":false,"rollback":false}},
+  "pools":{"private":{"type":"int","init":{},"shared":false,"rollback":false}},
   "randseed":12345,
   "doc":"hello",
   "metadata":{"internal":"data"},
@@ -210,7 +210,7 @@ class TestJsonToAst(unittest.TestCase):
             [],
             {},
             None,
-            {"private": Cell(AvroArray(AvroString()), "[]", False)},
+            {"private": Cell(AvroArray(AvroString()), "[]", False, False)},
             {},
             None,
             None,
@@ -221,7 +221,7 @@ class TestJsonToAst(unittest.TestCase):
   "input": "int",
   "output": "string",
   "action": [{"+": [2, 2]}],
-  "cells":{"private":{"type":{"type": "array", "items": "string"},"init":[],"shared":false}}
+  "cells":{"private":{"type":{"type": "array", "items": "string"},"init":[],"shared":false,"rollback":false}}
 }'''))
 
     def testDefineFunction(self):

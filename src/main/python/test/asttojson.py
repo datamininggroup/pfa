@@ -102,7 +102,7 @@ class TestAstToJson(unittest.TestCase):
         [Call("+", [LiteralInt(2), LiteralInt(2)])],
         {"f": FcnDef([{"x": AvroInt()}, {"y": AvroString()}], AvroNull(), [LiteralNull()])},
         None,
-        {"private": Cell(AvroInt(), "0", False)},
+        {"private": Cell(AvroInt(), "0", False, False)},
         {},
         None,
         None,
@@ -117,7 +117,7 @@ class TestAstToJson(unittest.TestCase):
   "action": [{"+": [2, 2]}],
   "end": [{"+": [2, 2]}],
   "fcns": {"f": {"params":[{"x":"int"},{"y":"string"}],"ret":"null","do":[null]}},
-  "cells":{"private":{"type":"int","init":0,"shared":false}},
+  "cells":{"private":{"type":"int","init":0,"shared":false,"rollback":false}},
   "pools": {}, "options": {}
 }'''))
 
@@ -131,8 +131,8 @@ class TestAstToJson(unittest.TestCase):
          [Call("+", [LiteralInt(2), LiteralInt(2)])],
          {"f": FcnDef([{"x": AvroInt()}, {"y": AvroString()}], AvroNull(), [LiteralNull()])},
          None,
-         {"private": Cell(AvroInt(), "0", False)},
-         {"private": Pool(AvroInt(), {}, False)},
+         {"private": Cell(AvroInt(), "0", False, False)},
+         {"private": Pool(AvroInt(), {}, False, False)},
          None,
          None,
          None,
@@ -146,8 +146,8 @@ class TestAstToJson(unittest.TestCase):
   "action": [{"+": [2, 2]}],
   "end": [{"+": [2, 2]}],
   "fcns": {"f": {"params":[{"x":"int"},{"y":"string"}],"ret":"null","do":[null]}},
-  "cells":{"private":{"type":"int","init":0,"shared":false}},
-  "pools":{"private":{"type":"int","init":{},"shared":false}},
+  "cells":{"private":{"type":"int","init":0,"shared":false,"rollback":false}},
+  "pools":{"private":{"type":"int","init":{},"shared":false,"rollback":false}},
   "options": {}
 }'''))
 
@@ -161,8 +161,8 @@ class TestAstToJson(unittest.TestCase):
         [Call("+", [LiteralInt(2), LiteralInt(2)])],
         {"f": FcnDef([{"x": AvroInt()}, {"y": AvroString()}], AvroNull(), [LiteralNull()])},
         None,
-        {"private": Cell(AvroInt(), "0", False)},
-        {"private": Pool(AvroInt(), {}, False)},
+        {"private": Cell(AvroInt(), "0", False, False)},
+        {"private": Pool(AvroInt(), {}, False, False)},
         12345,
         None,
         None,
@@ -176,8 +176,8 @@ class TestAstToJson(unittest.TestCase):
   "action": [{"+": [2, 2]}],
   "end": [{"+": [2, 2]}],
   "fcns": {"f": {"params":[{"x":"int"},{"y":"string"}],"ret":"null","do":[null]}},
-  "cells":{"private":{"type":"int","init":0,"shared":false}},
-  "pools":{"private":{"type":"int","init":{},"shared":false}},
+  "cells":{"private":{"type":"int","init":0,"shared":false,"rollback":false}},
+  "pools":{"private":{"type":"int","init":{},"shared":false,"rollback":false}},
   "randseed":12345,
   "options": {}
 }'''))
@@ -192,8 +192,8 @@ class TestAstToJson(unittest.TestCase):
         [Call("+", [LiteralInt(2), LiteralInt(2)])],
         {"f": FcnDef([{"x": AvroInt()}, {"y": AvroString()}], AvroNull(), [LiteralNull()])},
         None,
-        {"private": Cell(AvroInt(), "0", False)},
-        {"private": Pool(AvroInt(), {}, False)},
+        {"private": Cell(AvroInt(), "0", False, False)},
+        {"private": Pool(AvroInt(), {}, False, False)},
         12345,
         "hello",
         None,
@@ -207,8 +207,8 @@ class TestAstToJson(unittest.TestCase):
   "action": [{"+": [2, 2]}],
   "end": [{"+": [2, 2]}],
   "fcns": {"f": {"params":[{"x":"int"},{"y":"string"}],"ret":"null","do":[null]}},
-  "cells":{"private":{"type":"int","init":0,"shared":false}},
-  "pools":{"private":{"type":"int","init":{},"shared":false}},
+  "cells":{"private":{"type":"int","init":0,"shared":false,"rollback":false}},
+  "pools":{"private":{"type":"int","init":{},"shared":false,"rollback":false}},
   "randseed":12345,
   "doc":"hello",
   "options": {}
@@ -224,8 +224,8 @@ class TestAstToJson(unittest.TestCase):
         [Call("+", [LiteralInt(2), LiteralInt(2)])],
         {"f": FcnDef([{"x": AvroInt()}, {"y": AvroString()}], AvroNull(), [LiteralNull()])},
         None,
-        {"private": Cell(AvroInt(), "0", False)},
-        {"private": Pool(AvroInt(), {}, False)},
+        {"private": Cell(AvroInt(), "0", False, False)},
+        {"private": Pool(AvroInt(), {}, False, False)},
         12345,
         "hello",
         json.loads('''{"internal": "data"}'''),
@@ -239,8 +239,8 @@ class TestAstToJson(unittest.TestCase):
   "action": [{"+": [2, 2]}],
   "end": [{"+": [2, 2]}],
   "fcns": {"f": {"params":[{"x":"int"},{"y":"string"}],"ret":"null","do":[null]}},
-  "cells":{"private":{"type":"int","init":0,"shared":false}},
-  "pools":{"private":{"type":"int","init":{},"shared":false}},
+  "cells":{"private":{"type":"int","init":0,"shared":false,"rollback":false}},
+  "pools":{"private":{"type":"int","init":{},"shared":false,"rollback":false}},
   "randseed":12345,
   "doc":"hello",
   "metadata":{"internal":"data"},
@@ -257,8 +257,8 @@ class TestAstToJson(unittest.TestCase):
         [Call("+", [LiteralInt(2), LiteralInt(2)])],
         {"f": FcnDef([{"x": AvroInt()}, {"y": AvroString()}], AvroNull(), [LiteralNull()])},
         None,
-        {"private": Cell(AvroInt(), "0", False)},
-        {"private": Pool(AvroInt(), {}, False)},
+        {"private": Cell(AvroInt(), "0", False, False)},
+        {"private": Pool(AvroInt(), {}, False, False)},
         12345,
         "hello",
         json.loads('''{"internal": "data"}'''),
@@ -272,8 +272,8 @@ class TestAstToJson(unittest.TestCase):
   "action": [{"+": [2, 2]}],
   "end": [{"+": [2, 2]}],
   "fcns": {"f": {"params":[{"x":"int"},{"y":"string"}],"ret":"null","do":[null]}},
-  "cells":{"private":{"type":"int","init":0,"shared":false}},
-  "pools":{"private":{"type":"int","init":{},"shared":false}},
+  "cells":{"private":{"type":"int","init":0,"shared":false,"rollback":false}},
+  "pools":{"private":{"type":"int","init":{},"shared":false,"rollback":false}},
   "randseed":12345,
   "doc":"hello",
   "metadata":{"internal":"data"},
@@ -281,11 +281,11 @@ class TestAstToJson(unittest.TestCase):
 }'''))
 
     def testCell(self):
-        self.assertEqual(Cell(AvroInt(), "0", False).jsonNode, json.loads('''{"type":"int","init":0,"shared":false}'''))
+        self.assertEqual(Cell(AvroInt(), "0", False, False).jsonNode, json.loads('''{"type":"int","init":0,"shared":false,"rollback":false}'''))
 
     def testPool(self):
-        self.assertEqual(Pool(AvroInt(), {}, False).jsonNode, json.loads('''{"type":"int","init":{},"shared":false}'''))
-        self.assertEqual(Pool(AvroInt(), {"one": "1"}, False).jsonNode, json.loads('''{"type":"int","init":{"one":1},"shared":false}'''))
+        self.assertEqual(Pool(AvroInt(), {}, False, False).jsonNode, json.loads('''{"type":"int","init":{},"shared":false,"rollback":false}'''))
+        self.assertEqual(Pool(AvroInt(), {"one": "1"}, False, False).jsonNode, json.loads('''{"type":"int","init":{"one":1},"shared":false,"rollback":false}'''))
 
     def testDefineFunction(self):
         self.assertEqual(FcnDef([{"x": AvroInt()}, {"y": AvroString()}], AvroNull(), [LiteralNull()]).jsonNode, json.loads('''{"params":[{"x":"int"},{"y":"string"}],"ret":"null","do":[null]}'''))

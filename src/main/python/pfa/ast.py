@@ -425,16 +425,18 @@ class EngineConfig(Ast):
 
 @pfa.util.case
 class Cell(Ast):
-    def __init__(self, avroPlaceholder, init, shared, pos=None): pass
+    def __init__(self, avroPlaceholder, init, shared, rollback, pos=None):
+        if shared and rollback:
+            raise PFASyntaxException("shared and rollback are mutually incompatible flags for a Cell", self.pos)
 
     def equals(self, other):
         if isinstance(other, Cell):
-            return self.avroPlaceholder == other.avroPlaceholder and json.loads(self.init) == json.loads(other.init) and self.shared == other.shared
+            return self.avroPlaceholder == other.avroPlaceholder and json.loads(self.init) == json.loads(other.init) and self.shared == other.shared and self.rollback == other.rollback
         else:
             return False
 
     def __hash__(self):
-        return hash((self.avroPlaceholder, json.loads(self.init), self.shared))
+        return hash((self.avroPlaceholder, json.loads(self.init), self.shared, self.rollback))
 
     @property
     def avroType(self):
@@ -449,7 +451,7 @@ class Cell(Ast):
 
     @property
     def jsonNode(self):
-        return {"type": json.loads(repr(self.avroPlaceholder)), "init": json.loads(self.init), "shared": self.shared}
+        return {"type": json.loads(repr(self.avroPlaceholder)), "init": json.loads(self.init), "shared": self.shared, "rollback": self.rollback}
 
     @pfa.util.case
     class Context(AstContext):
@@ -457,16 +459,18 @@ class Cell(Ast):
 
 @pfa.util.case
 class Pool(Ast):
-    def __init__(self, avroPlaceholder, init, shared, pos=None): pass
+    def __init__(self, avroPlaceholder, init, shared, rollback, pos=None):
+        if shared and rollback:
+            raise PFASyntaxException("shared and rollback are mutually incompatible flags for a Pool", self.pos)
 
     def equals(self, other):
         if isinstance(other, Pool):
-            return self.avroPlaceholder == other.avroPlaceholder and self.init.keys() == other.init.keys() and all(json.loads(self.init[k]) == json.loads(other.init[k]) for k in self.init.keys()) and self.shared == other.shared
+            return self.avroPlaceholder == other.avroPlaceholder and self.init.keys() == other.init.keys() and all(json.loads(self.init[k]) == json.loads(other.init[k]) for k in self.init.keys()) and self.shared == other.shared and self.rollback == other.rollback
         else:
             return False
 
     def __hash__(self):
-        return hash((self.avroPlaceholder, json.loads(self.init), self.shared))
+        return hash((self.avroPlaceholder, json.loads(self.init), self.shared, self.rollback))
 
     @property
     def avroType(self):
@@ -481,7 +485,7 @@ class Pool(Ast):
 
     @property
     def jsonNode(self):
-        return {"type": json.loads(repr(self.avroPlaceholder)), "init": dict((k, json.loads(v)) for k, v in self.init.items()), "shared": self.shared}
+        return {"type": json.loads(repr(self.avroPlaceholder)), "init": dict((k, json.loads(v)) for k, v in self.init.items()), "shared": self.shared, "rollback": self.rollback}
             
     @pfa.util.case
     class Context(AstContext):

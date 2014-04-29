@@ -479,7 +479,7 @@ package ast {
     def avroType: AvroType = avroPlaceholder.avroType
 
     if (shared && rollback)
-      throw new PFASyntaxException("shared and rollback are mutually incompatible flags for a Cell", pos)
+      throw new PFASyntaxException("shared and rollback are mutually incompatible flags for a Pool", pos)
 
     override def equals(other: Any): Boolean = other match {
       case that: Pool =>
