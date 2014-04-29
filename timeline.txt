@@ -107,7 +107,7 @@
 2014-04-26:   PFA is submittable through a webpage, but that doesn't work on the online version of GAE because of ClassLoader errors.  Filed bug JANINO-175 (http://jira.codehaus.org/browse/JANINO-175).
 2014-04-27:   Debugged Google App Engine; now we can run PFA engines on it.
 2014-04-28:   Implemented ifnotnull in Scala reader, type-check, execution, in Python reader, type-check, in documentation, and in pfa-gae.
-2014-04-29:   Implemented cell/pool rollback in Scala reader, type-check, execution, and in Python reader, type-check.
+2014-04-29:   Implemented cell/pool rollback in Scala reader, type-check, execution, and in Python reader, type-check.  Replaced streaming JSON with plain AJAX.
 
 
 
