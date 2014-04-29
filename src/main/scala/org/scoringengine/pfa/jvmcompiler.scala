@@ -1,5 +1,6 @@
 package org.scoringengine.pfa
 
+import scala.collection.mutable
 import scala.language.postfixOps
 import scala.util.Random
 
@@ -372,6 +373,11 @@ package jvmcompiler {
     private var _randomGenerator: Random = null
     def randomGenerator = _randomGenerator
 
+    val cellsToRollback = mutable.Map[String, java.lang.reflect.Field]()
+    val poolsToRollback = mutable.Map[String, java.lang.reflect.Field]()
+    val savedCells = mutable.Map[String, Any]()
+    val savedPools = mutable.Map[String, java.util.HashMap[String, AnyRef]]()
+
     def initialize(config: EngineConfig, options: EngineOptions, sharedState: Option[SharedState], thisClass: java.lang.Class[_], context: EngineConfig.Context): Unit = {
       _config = config
       _options = options
@@ -417,6 +423,8 @@ package jvmcompiler {
       // fill the unshared cells
       for ((cname, cell) <- config.cells if (!cell.shared)) {
         val field = thisClass.getDeclaredField(JVMNameMangle.c(cname))
+        field.setAccessible(true)
+
         val value = fromJson(cell.init, cell.avroType.schema)
         cell.avroType match {
           case _: AvroBoolean => field.setBoolean(this, value.asInstanceOf[java.lang.Boolean].booleanValue)
@@ -426,6 +434,9 @@ package jvmcompiler {
           case _: AvroDouble => field.setDouble(this, value.asInstanceOf[java.lang.Double].doubleValue)
           case _ => field.set(this, value)
         }
+
+        if (cell.rollback)
+          cellsToRollback(cname) = field
       }
 
       // fill the shared cells
@@ -442,11 +453,17 @@ package jvmcompiler {
 
       // fill the unshared pools
       for ((pname, pool) <- config.pools if (!pool.shared)) {
+        val field = thisClass.getDeclaredField(JVMNameMangle.p(pname))
+        field.setAccessible(true)
+
         val schema = pool.avroType.schema
         val hashMap = new java.util.HashMap[String, AnyRef]()
-        thisClass.getDeclaredField(JVMNameMangle.p(pname)).set(this, hashMap)
+        field.set(this, hashMap)
         for ((key, valueString) <- pool.init)
           hashMap.put(key, fromJson(valueString, schema))
+
+        if (pool.rollback)
+          poolsToRollback(pname) = field
       }
 
       // fill the shared pools
@@ -476,6 +493,45 @@ package jvmcompiler {
         case Some(x) => _randomGenerator = new Random(x)
         case None => _randomGenerator = new Random()
       }
+    }
+
+    def rollbackSave() {
+      savedCells.clear()
+      savedPools.clear()
+
+      // save the cells
+      for ((cname, field) <- cellsToRollback) {
+        config.cells(cname).avroType match {
+          case _: AvroBoolean => savedCells(cname) = field.getBoolean(this)
+          case _: AvroInt => savedCells(cname) = field.getInt(this)
+          case _: AvroLong => savedCells(cname) = field.getLong(this)
+          case _: AvroFloat => savedCells(cname) = field.getFloat(this)
+          case _: AvroDouble => savedCells(cname) = field.getDouble(this)
+          case _ => savedCells(cname) = field.get(this)
+        }
+      }
+
+      // save the pools
+      for ((pname, field) <- poolsToRollback)
+        savedPools(pname) = field.get(this).asInstanceOf[java.util.HashMap[String, AnyRef]].clone().asInstanceOf[java.util.HashMap[String, AnyRef]]
+    }
+
+    def rollback() {
+      // roll back the cells
+      for ((cname, field) <- cellsToRollback) {
+        config.cells(cname).avroType match {
+          case _: AvroBoolean => field.setBoolean(this, savedCells(cname).asInstanceOf[Boolean])
+          case _: AvroInt => field.setInt(this, savedCells(cname).asInstanceOf[Int])
+          case _: AvroLong => field.setLong(this, savedCells(cname).asInstanceOf[Long])
+          case _: AvroFloat => field.setFloat(this, savedCells(cname).asInstanceOf[Float])
+          case _: AvroDouble => field.setDouble(this, savedCells(cname).asInstanceOf[Double])
+          case _ => field.set(this, savedCells(cname))
+        }
+      }
+
+      // roll back the pools
+      for ((pname, field) <- poolsToRollback)
+        field.set(this, savedPools(pname))
     }
 
     def fromJsonHashMap(json: String, schema: Schema): AnyRef = {
@@ -902,14 +958,21 @@ startTime = System.currentTimeMillis();
           case Method.MAP =>
             ("PFAMapEngine<%s, %s>".format(javaType(input, true, true, true), javaType(output, true, true, true)),
               """%s
-    public %s action(%s input) { return (new Object() {
+    public %s action(%s input) {
+rollbackSave();
+try {
+return (new Object() {
 %s
 public %s apply(%s input) {
 timeout = options().timeout_action();
 startTime = System.currentTimeMillis();
 %s = input;
 %s
-} }).apply(input); }""".format(
+} }).apply(input); }
+catch (Throwable err) {
+rollback();
+throw err;
+} }""".format(
                 if (!input.isInstanceOf[AvroUnion]) """    public Object action(Object input) { return (Object)action((%s)input); }""".format(javaType(input, true, true, true)) else "",
                 javaType(output, true, true, true),
                 javaType(input, true, true, true),
@@ -928,7 +991,10 @@ startTime = System.currentTimeMillis();
     public Function1<%s, BoxedUnit> emit() { return %s; }
     public void emit_$eq(Function1<%s, BoxedUnit> newEmit) { %s = newEmit; }
 %s
-    public %s action(%s input) { return (new Object() {
+    public %s action(%s input) {
+rollbackSave();
+try {
+return (new Object() {
 %s
 public %s apply(%s input) {
 timeout = options().timeout_action();
@@ -936,7 +1002,11 @@ startTime = System.currentTimeMillis();
 %s = input;
 %s
 return null;
-} }).apply(input); }""".format(
+} }).apply(input); }
+catch (Throwable err) {
+rollback();
+throw err;
+} }""".format(
                 javaType(output, true, true, true),
                 f("emit"),
                 javaType(output, true, true, true),
@@ -971,7 +1041,10 @@ return null;
         }
     }
 %s
-    public %s action(%s input) { %s = (new Object() {
+    public %s action(%s input) {
+rollbackSave();
+try {
+%s = (new Object() {
 %s
 public %s apply(%s input) {
 timeout = options().timeout_action();
@@ -979,8 +1052,11 @@ startTime = System.currentTimeMillis();
 %s = input;
 %s
 } }).apply(input);
-return %s;
-}""".format(
+return %s; }
+catch (Throwable err) {
+rollback();
+throw err;
+} }""".format(
                 javaType(output, true, true, true),
                 s("tally"),
                 javaType(output, true, true, true),

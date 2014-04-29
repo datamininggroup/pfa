@@ -2509,4 +2509,118 @@ pools:
 
   }
 
+  "roll-backer" must "do cell rollback" taggedAs(JVMCompilation) in {
+    val engine = PFAEngine.fromYaml("""
+input: boolean
+output: int
+action:
+  - cell: x
+    to:
+      params: [{y: int}]
+      ret: int
+      do: {+: [y, 1]}
+  - if: input
+    then: {error: "crash!"}
+  - cell: x
+cells:
+  x: {type: int, init: 0, rollback: false}
+""").head
+
+    engine.action(java.lang.Boolean.valueOf(false)) should be (1)
+    engine.action(java.lang.Boolean.valueOf(false)) should be (2)
+    try { engine.action(java.lang.Boolean.valueOf(true)) } catch { case err: PFAUserException => }
+    engine.action(java.lang.Boolean.valueOf(false)) should be (4)
+    try { engine.action(java.lang.Boolean.valueOf(true)) } catch { case err: PFAUserException => }
+    try { engine.action(java.lang.Boolean.valueOf(true)) } catch { case err: PFAUserException => }
+    try { engine.action(java.lang.Boolean.valueOf(true)) } catch { case err: PFAUserException => }
+    engine.action(java.lang.Boolean.valueOf(false)) should be (8)
+    engine.action(java.lang.Boolean.valueOf(false)) should be (9)
+
+    val engineRB = PFAEngine.fromYaml("""
+input: boolean
+output: int
+action:
+  - cell: x
+    to:
+      params: [{y: int}]
+      ret: int
+      do: {+: [y, 1]}
+  - if: input
+    then: {error: "crash!"}
+  - cell: x
+cells:
+  x: {type: int, init: 0, rollback: true}
+""").head
+
+    engineRB.action(java.lang.Boolean.valueOf(false)) should be (1)
+    engineRB.action(java.lang.Boolean.valueOf(false)) should be (2)
+    try { engineRB.action(java.lang.Boolean.valueOf(true)) } catch { case err: PFAUserException => }
+    engineRB.action(java.lang.Boolean.valueOf(false)) should be (3)
+    try { engineRB.action(java.lang.Boolean.valueOf(true)) } catch { case err: PFAUserException => }
+    try { engineRB.action(java.lang.Boolean.valueOf(true)) } catch { case err: PFAUserException => }
+    try { engineRB.action(java.lang.Boolean.valueOf(true)) } catch { case err: PFAUserException => }
+    engineRB.action(java.lang.Boolean.valueOf(false)) should be (4)
+    engineRB.action(java.lang.Boolean.valueOf(false)) should be (5)
+  }
+
+  it must "do pool rollback" taggedAs(JVMCompilation) in {
+    val engine = PFAEngine.fromYaml("""
+input: boolean
+output: int
+action:
+  - pool: x
+    path: [[z]]
+    init: 0
+    to:
+      params: [{y: int}]
+      ret: int
+      do: {+: [y, 1]}
+  - if: input
+    then: {error: "crash!"}
+  - pool: x
+    path: [[z]]
+pools:
+  x: {type: int, init: {z: 0}, rollback: false}
+""").head
+
+    engine.action(java.lang.Boolean.valueOf(false)) should be (1)
+    engine.action(java.lang.Boolean.valueOf(false)) should be (2)
+    try { engine.action(java.lang.Boolean.valueOf(true)) } catch { case err: PFAUserException => }
+    engine.action(java.lang.Boolean.valueOf(false)) should be (4)
+    try { engine.action(java.lang.Boolean.valueOf(true)) } catch { case err: PFAUserException => }
+    try { engine.action(java.lang.Boolean.valueOf(true)) } catch { case err: PFAUserException => }
+    try { engine.action(java.lang.Boolean.valueOf(true)) } catch { case err: PFAUserException => }
+    engine.action(java.lang.Boolean.valueOf(false)) should be (8)
+    engine.action(java.lang.Boolean.valueOf(false)) should be (9)
+
+    val engineRB = PFAEngine.fromYaml("""
+input: boolean
+output: int
+action:
+  - pool: x
+    path: [[z]]
+    init: 0
+    to:
+      params: [{y: int}]
+      ret: int
+      do: {+: [y, 1]}
+  - if: input
+    then: {error: "crash!"}
+  - pool: x
+    path: [[z]]
+pools:
+  x: {type: int, init: {z: 0}, rollback: true}
+""").head
+
+    engineRB.action(java.lang.Boolean.valueOf(false)) should be (1)
+    engineRB.action(java.lang.Boolean.valueOf(false)) should be (2)
+    try { engineRB.action(java.lang.Boolean.valueOf(true)) } catch { case err: PFAUserException => }
+    engineRB.action(java.lang.Boolean.valueOf(false)) should be (3)
+    try { engineRB.action(java.lang.Boolean.valueOf(true)) } catch { case err: PFAUserException => }
+    try { engineRB.action(java.lang.Boolean.valueOf(true)) } catch { case err: PFAUserException => }
+    try { engineRB.action(java.lang.Boolean.valueOf(true)) } catch { case err: PFAUserException => }
+    engineRB.action(java.lang.Boolean.valueOf(false)) should be (4)
+    engineRB.action(java.lang.Boolean.valueOf(false)) should be (5)
+  }
+
 }

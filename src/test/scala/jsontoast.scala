@@ -129,8 +129,8 @@ class JsonToAstSuite extends FlatSpec with Matchers {
       List(),
       Map(),
       None,
-      Map("private" -> Cell(AvroInt(), "0", false)),
-      Map("private" -> Pool(AvroInt(), Map[String, String](), false)),
+      Map("private" -> Cell(AvroInt(), "0", false, false)),
+      Map("private" -> Pool(AvroInt(), Map[String, String](), false, false)),
       None,
       None,
       None,
@@ -140,8 +140,8 @@ class JsonToAstSuite extends FlatSpec with Matchers {
   "input": "int",
   "output": "string",
   "action": [{"+": [2, 2]}],
-  "cells":{"private":{"type":"int","init":0,"shared":false}},
-  "pools":{"private":{"type":"int","init":{},"shared":false}}
+  "cells":{"private":{"type":"int","init":0,"shared":false,"rollback":false}},
+  "pools":{"private":{"type":"int","init":{},"shared":false,"rollback":false}}
 }""")
 
     checkJsonToAst(EngineConfig(
@@ -182,8 +182,8 @@ class JsonToAstSuite extends FlatSpec with Matchers {
       List(Call("+", List(LiteralInt(2), LiteralInt(2)))),
       Map("f" -> FcnDef(List("x" -> AvroInt(), "y" -> AvroString()), AvroNull(), List(LiteralNull()))),
       None,
-      Map("private" -> Cell(AvroInt(), "0", false)),
-      Map("private" -> Pool(AvroInt(), Map[String, String](), false)),
+      Map("private" -> Cell(AvroInt(), "0", false, false)),
+      Map("private" -> Pool(AvroInt(), Map[String, String](), false, false)),
       Some(12345),
       Some("hello"),
       Some(convertFromJson("""{"internal": "data"}""")),
@@ -197,8 +197,8 @@ class JsonToAstSuite extends FlatSpec with Matchers {
   "action": [{"+": [2, 2]}],
   "end": [{"+": [2, 2]}],
   "fcns": {"f": {"params":[{"x":"int"},{"y":"string"}],"ret":"null","do":[null]}},
-  "cells":{"private":{"type":"int","init":0,"shared":false}},
-  "pools":{"private":{"type":"int","init":{},"shared":false}},
+  "cells":{"private":{"type":"int","init":0,"shared":false,"rollback":false}},
+  "pools":{"private":{"type":"int","init":{},"shared":false,"rollback":false}},
   "randseed":12345,
   "doc":"hello",
   "metadata":{"internal":"data"},
@@ -217,7 +217,7 @@ class JsonToAstSuite extends FlatSpec with Matchers {
       List(),
       Map(),
       None,
-      Map("private" -> Cell(AvroArray(AvroString()), "[]", false)),
+      Map("private" -> Cell(AvroArray(AvroString()), "[]", false, false)),
       Map(),
       None,
       None,
@@ -228,7 +228,7 @@ class JsonToAstSuite extends FlatSpec with Matchers {
   "input": "int",
   "output": "string",
   "action": [{"+": [2, 2]}],
-  "cells":{"private":{"type":{"type": "array", "items": "string"},"init":[],"shared":false}}
+  "cells":{"private":{"type":{"type": "array", "items": "string"},"init":[],"shared":false,"rollback":false}}
 }""")
   }
 

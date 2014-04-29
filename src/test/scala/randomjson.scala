@@ -248,12 +248,24 @@ class RandomJsonSuite extends FlatSpec with Matchers {
 
   def cells(length: Int): ObjectNode = m(
     (for (i <- 0 until length) yield {
-      name(10) -> m("type" -> avroType(), "init" -> data(), "shared" -> rng.nextBoolean())
+      val shared = rng.nextBoolean()
+      val rollback =
+        if (shared)
+          false
+        else
+          rng.nextBoolean()
+      name(10) -> m("type" -> avroType(), "init" -> data(), "shared" -> shared, "rollback" -> rollback)
     }): _*)
 
   def pools(length: Int): ObjectNode = m(
     (for (i <- 0 until length) yield {
-      name(10) -> m("type" -> avroType(), "init" -> m("some" -> data()), "shared" -> rng.nextBoolean())
+      val shared = rng.nextBoolean()
+      val rollback =
+        if (shared)
+          false
+        else
+          rng.nextBoolean()
+      name(10) -> m("type" -> avroType(), "init" -> m("some" -> data()), "shared" -> shared, "rollback" -> rollback)
     }): _*)
 
   def engineConfig(): ObjectNode = {

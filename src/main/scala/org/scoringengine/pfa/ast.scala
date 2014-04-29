@@ -443,15 +443,18 @@ package ast {
     ) extends AstContext
   }
 
-  case class Cell(avroPlaceholder: AvroPlaceholder, init: String, shared: Boolean, pos: Option[String] = None) extends Ast {
+  case class Cell(avroPlaceholder: AvroPlaceholder, init: String, shared: Boolean, rollback: Boolean, pos: Option[String] = None) extends Ast {
     def avroType: AvroType = avroPlaceholder.avroType
+
+    if (shared && rollback)
+      throw new PFASyntaxException("shared and rollback are mutually incompatible flags for a Cell", pos)
 
     override def equals(other: Any): Boolean = other match {
       case that: Cell =>
-        this.avroPlaceholder.toString == that.avroPlaceholder.toString  &&  convertFromJson(this.init) == convertFromJson(that.init)  &&  this.shared == that.shared  // but not pos
+        this.avroPlaceholder.toString == that.avroPlaceholder.toString  &&  convertFromJson(this.init) == convertFromJson(that.init)  &&  this.shared == that.shared  &&  this.rollback == that.rollback  // but not pos
       case _ => false
     }
-    override def hashCode(): Int = ScalaRunTime._hashCode((avroPlaceholder.toString, convertFromJson(this.init), shared))
+    override def hashCode(): Int = ScalaRunTime._hashCode((avroPlaceholder.toString, convertFromJson(this.init), shared, rollback))
 
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val context = Cell.Context()
@@ -464,6 +467,7 @@ package ast {
       out.put("type", convertFromJson(avroPlaceholder.toString))
       out.put("init", convertFromJson(init))
       out.put("shared", shared)
+      out.put("rollback", rollback)
       out
     }
   }
@@ -471,17 +475,21 @@ package ast {
     case class Context() extends AstContext
   }
 
-  case class Pool(avroPlaceholder: AvroPlaceholder, init: Map[String, String], shared: Boolean, pos: Option[String] = None) extends Ast {
+  case class Pool(avroPlaceholder: AvroPlaceholder, init: Map[String, String], shared: Boolean, rollback: Boolean, pos: Option[String] = None) extends Ast {
     def avroType: AvroType = avroPlaceholder.avroType
+
+    if (shared && rollback)
+      throw new PFASyntaxException("shared and rollback are mutually incompatible flags for a Cell", pos)
 
     override def equals(other: Any): Boolean = other match {
       case that: Pool =>
         this.avroPlaceholder.toString == that.avroPlaceholder.toString  &&
           (this.init map {case (k, v) => (k, convertFromJson(v))}) == (that.init map {case (k, v) => (k, convertFromJson(v))})  &&
-          this.shared == that.shared  // but not pos
+          this.shared == that.shared  &&
+          this.rollback == that.rollback  // but not pos
       case _ => false
     }
-    override def hashCode(): Int = ScalaRunTime._hashCode((avroPlaceholder.toString, this.init map {case (k, v) => (k, convertFromJson(v))}, shared))
+    override def hashCode(): Int = ScalaRunTime._hashCode((avroPlaceholder.toString, this.init map {case (k, v) => (k, convertFromJson(v))}, shared, rollback))
 
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val context = Pool.Context()
@@ -499,6 +507,7 @@ package ast {
       out.put("init", jsonInits)
 
       out.put("shared", shared)
+      out.put("rollback", rollback)
       out
     }
   }

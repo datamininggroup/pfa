@@ -928,6 +928,7 @@ package reader {
         var _avroType: AvroPlaceholder = null
         var _init: String = null
         var _shared: Boolean = false
+        var _rollback: Boolean = false
 
         var subtoken = parser.nextToken()
         while (subtoken != JsonToken.END_OBJECT) {
@@ -940,16 +941,17 @@ package reader {
               case "type" => _avroType = readAvroPlaceholder(parser, parser.nextToken(), dot + "." + key, _at, avroTypeBuilder)
               case "init" => _init = readJsonToString(parser, parser.nextToken(), dot + "." + key, _at)
               case "shared" => _shared = readBoolean(parser, parser.nextToken(), dot + "." + key, _at)
+              case "rollback" => _rollback = readBoolean(parser, parser.nextToken(), dot + "." + key, _at)
               case x => throw new PFASyntaxException("unexpected cell property: %s".format(x), Some(pos(dot, _at)))
             }
           }
           subtoken = parser.nextToken()
         }
         
-        if (keys != Set("type", "init")  &&  keys != Set("type", "init", "shared"))
+        if (!keys.contains("type")  ||  !keys.contains("init")  ||  !keys.subsetOf(Set("type", "init", "shared", "rollback")))
           throw new PFASyntaxException("wrong set of fields for cell: %s".format(keys.mkString(", ")), Some(pos(dot, _at)))
         else
-          Cell(_avroType, _init, _shared, Some(pos(dot, _at)))
+          Cell(_avroType, _init, _shared, _rollback, Some(pos(dot, _at)))
       }
       case x => throw new PFASyntaxException("expected cell, found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }
@@ -983,6 +985,7 @@ package reader {
         var _avroType: AvroPlaceholder = null
         var _init: Map[String, String] = Map[String, String]()
         var _shared: Boolean = false
+        var _rollback: Boolean = false
 
         var subtoken = parser.nextToken()
         while (subtoken != JsonToken.END_OBJECT) {
@@ -995,16 +998,17 @@ package reader {
               case "type" => _avroType = readAvroPlaceholder(parser, parser.nextToken(), dot + "." + key, _at, avroTypeBuilder)
               case "init" => _init = readJsonToStringMap(parser, parser.nextToken(), dot + "." + key, _at)
               case "shared" => _shared = readBoolean(parser, parser.nextToken(), dot + "." + key, _at)
+              case "rollback" => _rollback = readBoolean(parser, parser.nextToken(), dot + "." + key, _at)
               case x => throw new PFASyntaxException("unexpected pool property: %s".format(x), Some(pos(dot, _at)))
             }
           }
           subtoken = parser.nextToken()
         }
         
-        if (keys != Set("type")  &&  keys != Set("type", "init")  &&  keys != Set("type", "init", "shared"))
+        if (!keys.contains("type")  ||  !keys.subsetOf(Set("type", "init", "shared", "rollback")))
           throw new PFASyntaxException("wrong set of fields for pool: %s".format(keys.mkString(", ")), Some(pos(dot, _at)))
         else
-          Pool(_avroType, _init, _shared, Some(pos(dot, _at)))
+          Pool(_avroType, _init, _shared, _rollback, Some(pos(dot, _at)))
       }
       case x => throw new PFASyntaxException("expected pool, found %s".format(tokenMessage.getOrElse(x, x.toString)), Some(pos(dot, at)))
     }
