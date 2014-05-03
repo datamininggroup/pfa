@@ -111,6 +111,7 @@
 2014-04-30:   Prepared website: pfa-docs in GitHub and scoringengine.org on S3.
 2014-05-01:   Front page of website.
 2014-05-02:   Pictures for website.
+2014-05-03:   Wrote the first page.
 
 
 
