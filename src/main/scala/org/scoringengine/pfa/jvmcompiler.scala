@@ -578,10 +578,26 @@ package jvmcompiler {
     def toJson(obj: AnyRef, avroType: AvroType): String         = toJson(obj, avroType.schema)
     def toAvro(obj: AnyRef, avroType: AvroType): Array[Byte]    = toAvro(obj, avroType.schema)
 
-    def avroInputReader[X](inputStream: InputStream): DataFileStream[X] = {
+    def avroInputIterator[X](inputStream: InputStream): DataFileStream[X] = {    // DataFileStream is a java.util.Iterator
       val reader = new PFADatumReader[X](specificData)
       reader.setSchema(inputType.schema)
       new DataFileStream[X](inputStream, reader)
+    }
+
+    def jsonInputIterator[X](inputStream: InputStream): java.util.Iterator[X] = {
+      val reader = new PFADatumReader[X](specificData)
+      reader.setSchema(inputType.schema)
+      val scanner = new java.util.Scanner(inputStream)
+
+      new java.util.Iterator[X] {
+        def hasNext(): Boolean = scanner.hasNextLine
+        def next(): X = {
+          val json = scanner.nextLine()
+          val decoder = DecoderFactory.get.jsonDecoder(inputType.schema, json)
+          reader.read(null.asInstanceOf[X], decoder)
+        }
+        def remove(): Unit = throw new java.lang.UnsupportedOperationException
+      }
     }
   }
 
@@ -608,7 +624,8 @@ package jvmcompiler {
     def fromAvro(avro: Array[Byte], avroType: AvroType): AnyRef
     def toJson(obj: AnyRef, avroType: AvroType): String
     def toAvro(obj: AnyRef, avroType: AvroType): Array[Byte]
-    def avroInputReader[X](inputStream: InputStream): DataFileStream[X]
+    def avroInputIterator[X](inputStream: InputStream): DataFileStream[X]
+    def jsonInputIterator[X](inputStream: InputStream): java.util.Iterator[X]
 
     def randomGenerator: Random
 
