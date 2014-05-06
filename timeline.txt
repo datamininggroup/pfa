@@ -114,6 +114,7 @@
 2014-05-03:   Wrote much of the first page.
 2014-05-04:   Finished the first page with a lot of clean-up.
 2014-05-05:   Added interactive PFA testing box in the tutorials.
+2014-05-06:   Started basic.md.
 
 
 
