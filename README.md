@@ -11,4 +11,4 @@ This repository contains two implementations of PFA hosts (compilers and runtime
 
 Also, the library needs to be filled up with more statistical models and techniques.
 
-See the specification for a verbose introduction.  The [testing code](https://github.com/scoringengine/pfa/tree/master/src/test/scala) includes many working examples.  Gentle-introduction tutorials and online demos are coming soon.
+See [http://scoringengine.org](http://scoringengine.org/) for tutorials, references, and interactive examples.
