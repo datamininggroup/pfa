@@ -1690,7 +1690,7 @@ return null;
           block(loopBody, ReturnMethod.NONE, retType),
           predicate.toString)
 
-      case For.Context(retType, _, symbols, initNameTypeExpr, predicate, loopBody, stepNameExpr) =>
+      case For.Context(retType, _, symbols, initNameTypeExpr, predicate, loopBody, stepNameTypeExpr) =>
         JavaCode("""(new Object() {
 %s
 public Void apply() {
@@ -1703,12 +1703,12 @@ checkClock();
 return null;
 } }).apply()""",
           symbolFields(symbols),
-          (for ((name, _, expr) <- initNameTypeExpr) yield
-            s(name) + " = " + expr.toString + ";").mkString("\n"),
+          (for ((name, t, expr) <- initNameTypeExpr) yield
+            s(name) + " = " + W.wrapExpr(expr.toString, t, false) + ";").mkString("\n"),
           predicate.toString,
           block(loopBody, ReturnMethod.NONE, retType),
-          (for ((name, expr) <- stepNameExpr) yield
-            s(name) + " = " + expr.toString + ";").mkString("\n"))
+          (for ((name, t, expr) <- stepNameTypeExpr) yield
+            s(name) + " = " + W.wrapExpr(expr.toString, t, false) + ";").mkString("\n"))
 
       case Foreach.Context(retType, _, symbols, objType, objExpr, itemType, name, loopBody) =>
         JavaCode("""(new Object() {
@@ -1717,7 +1717,7 @@ public Void apply() {
 Iterator<%s> iter = %s.iterator();
 while (iter.hasNext()) {
 checkClock();
-%s = ((%s)iter.next());
+%s = ((%s)%s);
 %s
 }
 return null;
@@ -1727,9 +1727,10 @@ return null;
           objExpr.toString,
           s(name),
           javaType(itemType, true, true, true),
+          W.wrapExpr("iter.next()", itemType, false),
           block(loopBody, ReturnMethod.NONE, retType))
 
-      case Forkeyval.Context(retType, _, symbols, objType, objExpr, itemType, forkey, forval, loopBody) =>
+      case Forkeyval.Context(retType, _, symbols, objType, objExpr, valueType, forkey, forval, loopBody) =>
         JavaCode("""(new Object() {
 %s
 public Void apply() {
@@ -1738,26 +1739,27 @@ while (iter.hasNext()) {
 checkClock();
 Map.Entry<String, %s> pair = ((Map.Entry<String, %s>)iter.next());
 %s = ((String)pair.getKey());
-%s = ((%s)pair.getValue());
+%s = ((%s)%s);
 %s
 }
 return null;
 } }).apply()""",
           symbolFields(symbols),
-          javaType(itemType, true, true, true),
+          javaType(valueType, true, true, true),
           objExpr.toString,
-          javaType(itemType, true, true, true),
-          javaType(itemType, true, true, true),
+          javaType(valueType, true, true, true),
+          javaType(valueType, true, true, true),
           s(forkey),
           s(forval),
-          javaType(itemType, true, true, true),
+          javaType(valueType, true, true, true),
+          W.wrapExpr("pair.getValue()", valueType, false),
           block(loopBody, ReturnMethod.NONE, retType))
 
       case CastCase.Context(retType, name, toType, _, symbols, clause) => {
         JavaCode("""(new Object() {
 %s
 public %s apply() {
-%s = ((%s)obj);
+%s = ((%s)%s);
 %s
 } }).apply();
 """,
@@ -1765,6 +1767,7 @@ public %s apply() {
           javaType(retType, false, true, true),
           s(name),
           javaType(toType, true, true, true),
+          W.wrapExpr("obj", toType, false),
           block(clause, ReturnMethod.RETURN, retType))
       }
 
@@ -1805,7 +1808,7 @@ obj = %s;
             }).mkString("\n"))
       
       case Upcast.Context(retType, _, expr) =>
-        JavaCode("((%s)(%s))", javaType(retType, false, true, false), expr.toString)
+        JavaCode("((%s)(%s))", javaType(retType, false, true, false), W.wrapExpr(expr.toString, retType, false))
 
       case IfNotNull.Context(retType, calls, symbolTypeResult, thenSymbols, thenClause, elseSymbols, elseClause) => {
         val toCheckSymbols =

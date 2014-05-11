@@ -1921,7 +1921,7 @@ package ast {
         throw new PFASemanticException("\"until\" predicate should be boolean, but is " + untilContext.retType, pos)
       calls ++= untilContext.calls
 
-      val stepNameExpr: Seq[(String, TaskResult)] =
+      val stepNameTypeExpr: Seq[(String, AvroType, TaskResult)] =
         for ((name, expr) <- step.toList) yield {
           if (loopScope.get(name) == None)
             throw new PFASemanticException("unknown symbol \"%s\" cannot be assigned with \"step\"".format(name), pos)
@@ -1935,7 +1935,7 @@ package ast {
           if (!loopScope(name).accepts(exprContext.retType))
             throw new PFASemanticException("symbol \"%s\" was declared as %s; it cannot be re-assigned as %s".format(name, loopScope(name), exprContext.retType), pos)
 
-          (name, exprResult)
+          (name, loopScope(name), exprResult)
         }
 
       val bodyScope = loopScope.newScope(false, false)
@@ -1943,7 +1943,7 @@ package ast {
       for ((exprCtx, _) <- bodyResults)
         calls ++= exprCtx.calls
 
-      val context = For.Context(AvroNull(), calls.toSet + For.desc, bodyScope.inThisScope ++ loopScope.inThisScope, initNameTypeExpr, untilResult, bodyResults map {_._2}, stepNameExpr)
+      val context = For.Context(AvroNull(), calls.toSet + For.desc, bodyScope.inThisScope ++ loopScope.inThisScope, initNameTypeExpr, untilResult, bodyResults map {_._2}, stepNameTypeExpr)
       (context, task(context))
     }
 
@@ -1973,7 +1973,7 @@ package ast {
   }
   object For {
     val desc = "for"
-    case class Context(retType: AvroType, calls: Set[String], symbols: Map[String, AvroType], initNameTypeExpr: Seq[(String, AvroType, TaskResult)], predicate: TaskResult, loopBody: Seq[TaskResult], stepNameExpr: Seq[(String, TaskResult)]) extends ExpressionContext
+    case class Context(retType: AvroType, calls: Set[String], symbols: Map[String, AvroType], initNameTypeExpr: Seq[(String, AvroType, TaskResult)], predicate: TaskResult, loopBody: Seq[TaskResult], stepNameTypeExpr: Seq[(String, AvroType, TaskResult)]) extends ExpressionContext
   }
 
   case class Foreach(name: String, array: Expression, body: Seq[Expression], seq: Boolean, pos: Option[String] = None) extends Expression {
@@ -2109,7 +2109,7 @@ package ast {
   }
   object Forkeyval {
     val desc = "forkey-forval"
-    case class Context(retType: AvroType, calls: Set[String], symbols: Map[String, AvroType], objType: AvroType, objExpr: TaskResult, itemType: AvroType, forkey: String, forval: String, loopBody: Seq[TaskResult]) extends ExpressionContext
+    case class Context(retType: AvroType, calls: Set[String], symbols: Map[String, AvroType], objType: AvroType, objExpr: TaskResult, valueType: AvroType, forkey: String, forval: String, loopBody: Seq[TaskResult]) extends ExpressionContext
   }
 
   case class CastCase(avroPlaceholder: AvroPlaceholder, named: String, body: Seq[Expression], pos: Option[String] = None) extends Ast {

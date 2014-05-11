@@ -1623,7 +1623,7 @@ class For(Expression):
             raise PFASemanticException("\"until\" predicate should be boolean, but is " + repr(untilContext.retType), self.pos)
         calls = calls.union(untilContext.calls)
 
-        stepNameExpr = []
+        stepNameTypeExpr = []
         for name, expr in self.step.items():
             if loopScope.get(name) is None:
                 raise PFASemanticException("unknown symbol \"{}\" cannot be assigned with \"step\"".format(name), self.pos)
@@ -1637,14 +1637,14 @@ class For(Expression):
             if not loopScope(name).accepts(exprContext.retType):
                 raise PFASemanticException("symbol \"{}\" was declared as {}; it cannot be re-assigned as {}".format(name, loopScope(name), exprContext.retType), self.pos)
 
-            stepNameExpr.append((name, exprResult))
+            stepNameTypeExpr.append((name, loopScope(name), exprResult))
 
         bodyScope = loopScope.newScope(False, False)
         bodyResults = [x.walk(task, bodyScope, functionTable) for x in self.body]
         for exprCtx, exprRes in bodyResults:
             calls = calls.union(exprCtx.calls)
 
-        context = self.Context(AvroNull(), calls.union(set([self.desc])), dict(list(bodyScope.inThisScope.items()) + list(loopScope.inThisScope.items())), initNameTypeExpr, untilResult, [x[1] for x in bodyResults], stepNameExpr)
+        context = self.Context(AvroNull(), calls.union(set([self.desc])), dict(list(bodyScope.inThisScope.items()) + list(loopScope.inThisScope.items())), initNameTypeExpr, untilResult, [x[1] for x in bodyResults], stepNameTypeExpr)
         return context, task(context)
 
     @property
@@ -1655,7 +1655,7 @@ class For(Expression):
 
     @pfa.util.case
     class Context(ExpressionContext):
-        def __init__(self, retType, calls, symbols, initNameTypeExpr, predicate, loopBody, stepNameExpr): pass
+        def __init__(self, retType, calls, symbols, initNameTypeExpr, predicate, loopBody, stepNameTypeExpr): pass
 
 @pfa.util.case
 class Foreach(Expression):
@@ -1754,7 +1754,7 @@ class Forkeyval(Expression):
 
     @pfa.util.case
     class Context(ExpressionContext):
-        def __init__(self, retType, calls, symbols, objType, objExpr, itemType, forkey, forval, loopBody): pass
+        def __init__(self, retType, calls, symbols, objType, objExpr, valueType, forkey, forval, loopBody): pass
 
 @pfa.util.case
 class CastCase(Ast):
