@@ -669,7 +669,7 @@ class Call(Expression):
                 if isinstance(a, FcnRef):
                     argTaskResults[i] = task(argContexts[i], paramTypes[i])
 
-            context = self.Context(retType, calls, fcn, argTaskResults, argContexts)
+            context = self.Context(retType, calls, fcn, argTaskResults, argContexts, paramTypes)
 
         else:
             raise PFASemanticException("parameters of function \"{}\" do not accept [{}]".format(self.name, ",".join(map(repr, argTypes))), self.pos)
@@ -682,7 +682,7 @@ class Call(Expression):
 
     @pfa.util.case
     class Context(ExpressionContext):
-        def __init__(self, retType, calls, fcn, args, argContext): pass
+        def __init__(self, retType, calls, fcn, args, argContexts, paramTypes): pass
 
 @pfa.util.case
 class Ref(Expression):
@@ -1103,7 +1103,7 @@ class SetVar(Expression):
     def walk(self, task, symbolTable, functionTable):
         calls = set()
 
-        nameExpr = []
+        nameTypeExpr = []
         for name, expr in self.values.items():
             if symbolTable.get(name) is None:
                 raise PFASemanticException("unknown symbol \"{}\" cannot be assigned with \"set\" (use \"let\" to declare a new symbol)".format(name), self.pos)
@@ -1117,9 +1117,9 @@ class SetVar(Expression):
             if not symbolTable(name).accepts(exprContext.retType):
                 raise PFASemanticException("symbol \"{}\" was declared as {}; it cannot be re-assigned as {}".format(name, symbolTable(name), exprContext.retType), self.pos)
 
-            nameExpr.append((name, exprResult))
+            nameTypeExpr.append((name, symbolTable(name), exprResult))
 
-        context = self.Context(AvroNull(), calls.union(set([self.desc])), nameExpr)
+        context = self.Context(AvroNull(), calls.union(set([self.desc])), nameTypeExpr)
         return context, task(context)
 
     @property
@@ -1130,7 +1130,7 @@ class SetVar(Expression):
 
     @pfa.util.case
     class Context(ExpressionContext):
-        def __init__(self, retType, calls, nameExpr): pass
+        def __init__(self, retType, calls, nameTypeExpr): pass
 
 @pfa.util.case
 class AttrGet(Expression, HasPath):

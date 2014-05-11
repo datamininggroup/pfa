@@ -19,6 +19,7 @@ import org.scoringengine.pfa.errors.PFASemanticException
 import org.scoringengine.pfa.jvmcompiler.JavaCode
 import org.scoringengine.pfa.jvmcompiler.JVMCompiler
 import org.scoringengine.pfa.jvmcompiler.JVMNameMangle
+import org.scoringengine.pfa.jvmcompiler.W
 import org.scoringengine.pfa.util.convertFromJson
 import org.scoringengine.pfa.util.convertToJson
 
@@ -143,22 +144,33 @@ package ast {
   trait Fcn {
     def sig: Signature
     def javaRef(fcnType: FcnType): JavaCode
-    def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode
+    def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode
+
+    def wrapArgs(args: Seq[JavaCode], paramTypes: Seq[Type], boxed: Boolean): String =
+      args zip paramTypes map {
+        case (j, t: AvroType) => W.wrapExpr(j.toString, t, boxed)
+        case (j, t) => j.toString
+      } mkString(", ")
+
+    def wrapArg(i: Int, args: Seq[JavaCode], paramTypes: Seq[Type], boxed: Boolean): String = (args(i), paramTypes(i)) match {
+      case (j, t: AvroType) => W.wrapExpr(j.toString, t, boxed)
+      case (j, t) => j.toString
+    }
   }
 
   trait LibFcn extends Fcn {
     def name: String
     def doc: scala.xml.Elem
     def javaRef(fcnType: FcnType): JavaCode = JavaCode(this.getClass.getName + ".MODULE$")
-    def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
-      JavaCode("%s.apply(%s)", javaRef(FcnType(argContext collect {case x: ExpressionContext => x.retType}, retType)).toString, args.mkString(", "))
+    def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
+      JavaCode("%s.apply(%s)", javaRef(FcnType(argContext collect {case x: ExpressionContext => x.retType}, retType)).toString, wrapArgs(args, paramTypes, true))
   }
 
   case class UserFcn(name: String, sig: Sig) extends Fcn {
     import JVMNameMangle._
     def javaRef(fcnType: FcnType) = JavaCode("(new %s())", f(name))
-    def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
-      JavaCode("""(new %s()).apply(%s)""", f(name), args.mkString(", "))
+    def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
+      JavaCode("""(new %s()).apply(%s)""", f(name), wrapArgs(args, paramTypes, true))
   }
   object UserFcn {
     def fromFcnDef(n: String, fcnDef: FcnDef): UserFcn =
@@ -168,8 +180,8 @@ package ast {
   case class EmitFcn(outputType: AvroType) extends Fcn {
     val sig = Sig(List(("output", P.fromType(outputType))), P.Null)
     def javaRef(fcnType: FcnType): JavaCode = throw new PFASemanticException("cannot reference the emit function", None)
-    def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
-      JavaCode("W.n(f_emit.apply(%s))", args(0).toString)
+    def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
+      JavaCode("W.n(f_emit.apply(%s))", wrapArg(0, args, paramTypes, true).toString)
   }
 
   case class FunctionTable(functions: Map[String, Fcn])
@@ -704,7 +716,7 @@ package ast {
               case _ =>
             }
 
-            Call.Context(retType, calls.toSet, fcn, argTaskResults.toList, argContexts)
+            Call.Context(retType, calls.toSet, fcn, argTaskResults.toList, argContexts, paramTypes)
           }
           case None => throw new PFASemanticException("parameters of function \"%s\" do not accept [%s]".format(name, argTypes.mkString(",")), pos)
         }
@@ -724,7 +736,7 @@ package ast {
     }
   }
   object Call {
-    case class Context(retType: AvroType, calls: Set[String], fcn: Fcn, args: Seq[TaskResult], argContext: Seq[AstContext]) extends ExpressionContext
+    case class Context(retType: AvroType, calls: Set[String], fcn: Fcn, args: Seq[TaskResult], argContext: Seq[AstContext], paramTypes: Seq[Type]) extends ExpressionContext
   }
 
   case class Ref(name: String, pos: Option[String] = None) extends Expression {
@@ -1192,7 +1204,7 @@ package ast {
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
       val calls = mutable.Set[String]()
 
-      val nameExpr: Seq[(String, TaskResult)] =
+      val nameTypeExpr: Seq[(String, AvroType, TaskResult)] =
         for ((name, expr) <- values.toList) yield {
           if (symbolTable.get(name) == None)
             throw new PFASemanticException("unknown symbol \"%s\" cannot be assigned with \"set\" (use \"let\" to declare a new symbol)".format(name), pos)
@@ -1206,10 +1218,10 @@ package ast {
           if (!symbolTable(name).accepts(exprContext.retType))
             throw new PFASemanticException("symbol \"%s\" was declared as %s; it cannot be re-assigned as %s".format(name, symbolTable(name), exprContext.retType), pos)
 
-          (name, exprResult)
+          (name, symbolTable(name), exprResult)
         }
 
-      val context = SetVar.Context(AvroNull(), calls.toSet + SetVar.desc, nameExpr)
+      val context = SetVar.Context(AvroNull(), calls.toSet + SetVar.desc, nameTypeExpr)
       (context, task(context))
     }
 
@@ -1227,7 +1239,7 @@ package ast {
   }
   object SetVar {
     val desc = "set"
-    case class Context(retType: AvroType, calls: Set[String], nameExpr: Seq[(String, TaskResult)]) extends ExpressionContext
+    case class Context(retType: AvroType, calls: Set[String], nameTypeExpr: Seq[(String, AvroType, TaskResult)]) extends ExpressionContext
   }
 
   case class AttrGet(attr: String, path: Seq[Expression], pos: Option[String] = None) extends Expression with HasPath {

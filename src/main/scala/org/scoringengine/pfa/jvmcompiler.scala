@@ -275,24 +275,15 @@ package jvmcompiler {
   //////////////////////////////////////////////////////////// interfaces to be used on the Java side
   object W {
     def s[X](x: X): Unit = {}
+
     def n[X](x: X): java.lang.Void = null
     def nn[X, Y](x: X, y: Y): java.lang.Void = null
-    def i(x: Int): Int = x
-    def i(x: Long): Int =
-      if (x > java.lang.Integer.MAX_VALUE  ||  x < java.lang.Integer.MIN_VALUE)
-        throw new PFARuntimeException("integer out of range: " + x.toString)
-      else
-        x.toInt
-    def i(x: java.lang.Integer): Int = x.intValue
-    def i(x: java.lang.Long): Int =
-      if (x > java.lang.Integer.MAX_VALUE  ||  x < java.lang.Integer.MIN_VALUE)
-        throw new PFARuntimeException("integer out of range: " + x.toString)
-      else
-        x.intValue
+
     def either[X](value: Either[Exception, X]): X = value match {
       case Left(err) => throw new PFARuntimeException(err.getMessage, err)
       case Right(x) => x
     }
+
     def getOrElse(map: java.util.Map[String, AnyRef], get: String, orElse: AnyRef): AnyRef = {
       if (map.containsKey(get))
         map.get(get)
@@ -305,8 +296,134 @@ package jvmcompiler {
       else
         throw new PFARuntimeException("\"%s\" not found in pool \"%s\"".format(get, name))
     }
-    def bool(x: Boolean): Boolean = x
-    def bool(x: AnyRef): Boolean = x.asInstanceOf[java.lang.Boolean].booleanValue
+
+    def asBool(x: Boolean): Boolean = x
+    def asBool(x: java.lang.Boolean): Boolean = x.booleanValue
+    def asBool(x: AnyRef): Boolean = x.asInstanceOf[java.lang.Boolean].booleanValue
+
+    def asJBool(x: Boolean): java.lang.Boolean = java.lang.Boolean.valueOf(x)
+    def asJBool(x: java.lang.Boolean): java.lang.Boolean = x
+    def asJBool(x: AnyRef): java.lang.Boolean = x.asInstanceOf[java.lang.Boolean]
+
+    def asInt(x: Int): Int = x
+    def asInt(x: Long): Int =
+      if (x > java.lang.Integer.MAX_VALUE  ||  x < java.lang.Integer.MIN_VALUE)
+        throw new PFARuntimeException("integer out of range: " + x.toString)
+      else
+        x.toInt
+    def asInt(x: java.lang.Integer): Int = x.intValue
+    def asInt(x: java.lang.Long): Int =
+      if (x > java.lang.Integer.MAX_VALUE  ||  x < java.lang.Integer.MIN_VALUE)
+        throw new PFARuntimeException("integer out of range: " + x.toString)
+      else
+        x.intValue
+    def asInt(x: AnyRef): Int = x match {
+      case x1: java.lang.Integer => x1.intValue
+      case x2: java.lang.Long => asInt(x2)
+    }
+
+    def asJInt(x: Int): java.lang.Integer = java.lang.Integer.valueOf(x)
+    def asJInt(x: Long): java.lang.Integer =
+      if (x > java.lang.Integer.MAX_VALUE  ||  x < java.lang.Integer.MIN_VALUE)
+        throw new PFARuntimeException("integer out of range: " + x.toString)
+      else
+        java.lang.Integer.valueOf(x.toInt)
+    def asJInt(x: java.lang.Integer): java.lang.Integer = x
+    def asJInt(x: java.lang.Long): java.lang.Integer =
+      if (x > java.lang.Integer.MAX_VALUE  ||  x < java.lang.Integer.MIN_VALUE)
+        throw new PFARuntimeException("integer out of range: " + x.toString)
+      else
+        java.lang.Integer.valueOf(x.intValue)
+    def asJInt(x: AnyRef): java.lang.Integer = x match {
+      case x1: java.lang.Integer => x1
+      case x2: java.lang.Long => asJInt(x2)
+    }
+
+    def asLong(x: Int): Long = x.toLong
+    def asLong(x: Long): Long = x
+    def asLong(x: java.lang.Integer): Long = x.longValue
+    def asLong(x: java.lang.Long): Long = x.longValue
+    def asLong(x: AnyRef): Long = x match {
+      case x1: java.lang.Integer => x1.longValue
+      case x2: java.lang.Long => x2.longValue
+    }
+
+    def asJLong(x: Int): java.lang.Long = java.lang.Long.valueOf(x)
+    def asJLong(x: Long): java.lang.Long = java.lang.Long.valueOf(x)
+    def asJLong(x: java.lang.Integer): java.lang.Long = java.lang.Long.valueOf(x.intValue)
+    def asJLong(x: java.lang.Long): java.lang.Long = x
+    def asJLong(x: AnyRef): java.lang.Long = x match {
+      case x1: java.lang.Integer => java.lang.Long.valueOf(x1.longValue)
+      case x2: java.lang.Long => x2
+    }
+
+    def asFloat(x: Int): Float = x.toFloat
+    def asFloat(x: Long): Float = x.toFloat
+    def asFloat(x: Float): Float = x
+    def asFloat(x: java.lang.Integer): Float = x.floatValue
+    def asFloat(x: java.lang.Long): Float = x.floatValue
+    def asFloat(x: java.lang.Float): Float = x.floatValue
+    def asFloat(x: AnyRef): Float = x match {
+      case x1: java.lang.Integer => x1.floatValue
+      case x2: java.lang.Long => x2.floatValue
+      case x3: java.lang.Float => x3.floatValue
+    }
+
+    def asJFloat(x: Int): java.lang.Float = java.lang.Float.valueOf(x)
+    def asJFloat(x: Long): java.lang.Float = java.lang.Float.valueOf(x)
+    def asJFloat(x: Float): java.lang.Float = java.lang.Float.valueOf(x)
+    def asJFloat(x: java.lang.Integer): java.lang.Float = java.lang.Float.valueOf(x.intValue)
+    def asJFloat(x: java.lang.Long): java.lang.Float = java.lang.Float.valueOf(x.longValue)
+    def asJFloat(x: java.lang.Float): java.lang.Float = x
+    def asJFloat(x: AnyRef): java.lang.Float = x match {
+      case x1: java.lang.Integer => java.lang.Float.valueOf(x1.floatValue)
+      case x2: java.lang.Long => java.lang.Float.valueOf(x2.floatValue)
+      case x3: java.lang.Float => x3
+    }
+
+    def asDouble(x: Int): Double = x.toDouble
+    def asDouble(x: Long): Double = x.toDouble
+    def asDouble(x: Float): Double = x.toDouble
+    def asDouble(x: Double): Double = x
+    def asDouble(x: java.lang.Integer): Double = x.doubleValue
+    def asDouble(x: java.lang.Long): Double = x.doubleValue
+    def asDouble(x: java.lang.Float): Double = x.doubleValue
+    def asDouble(x: java.lang.Double): Double = x.doubleValue
+    def asDouble(x: AnyRef): Double = x match {
+      case x1: java.lang.Integer => x1.doubleValue
+      case x2: java.lang.Long => x2.doubleValue
+      case x3: java.lang.Float => x3.doubleValue
+      case x4: java.lang.Double => x4.doubleValue
+    }
+
+    def asJDouble(x: Int): java.lang.Double = java.lang.Double.valueOf(x)
+    def asJDouble(x: Long): java.lang.Double = java.lang.Double.valueOf(x)
+    def asJDouble(x: Float): java.lang.Double = java.lang.Double.valueOf(x)
+    def asJDouble(x: Double): java.lang.Double = java.lang.Double.valueOf(x)
+    def asJDouble(x: java.lang.Integer): java.lang.Double = java.lang.Double.valueOf(x.intValue)
+    def asJDouble(x: java.lang.Long): java.lang.Double = java.lang.Double.valueOf(x.longValue)
+    def asJDouble(x: java.lang.Float): java.lang.Double = java.lang.Double.valueOf(x.floatValue)
+    def asJDouble(x: java.lang.Double): java.lang.Double = x
+    def asJDouble(x: AnyRef): java.lang.Double = x match {
+      case x1: java.lang.Integer => java.lang.Double.valueOf(x1.doubleValue)
+      case x2: java.lang.Long => java.lang.Double.valueOf(x2.doubleValue)
+      case x3: java.lang.Float => java.lang.Double.valueOf(x3.doubleValue)
+      case x4: java.lang.Double => x4
+    }
+
+    def wrapExpr(x: String, avroType: AvroType, boxed: Boolean): String = (avroType, boxed) match {
+      case (_: AvroBoolean, false) => "W.asBool(" + x + ")"
+      case (_: AvroInt, false) => "W.asInt(" + x + ")"
+      case (_: AvroLong, false) => "W.asLong(" + x + ")"
+      case (_: AvroFloat, false) => "W.asFloat(" + x + ")"
+      case (_: AvroDouble, false) => "W.asDouble(" + x + ")"
+      case (_: AvroBoolean, true) => "W.asJBool(" + x + ")"
+      case (_: AvroInt, true) => "W.asJInt(" + x + ")"
+      case (_: AvroLong, true) => "W.asJLong(" + x + ")"
+      case (_: AvroFloat, true) => "W.asJFloat(" + x + ")"
+      case (_: AvroDouble, true) => "W.asJDouble(" + x + ")"
+      case _ => x
+    }
   }
 
   abstract class PFAEngineBase {
@@ -747,22 +864,19 @@ package jvmcompiler {
       case ReturnMethod.NONE =>
         (exprs map {"W.s(" + _.toString + ");"}).mkString("\n")
       case ReturnMethod.RETURN =>
-        ((exprs.init map {"W.s(" + _.toString + ");"}) ++ List("return %s;".format(
-          retType match {
-            case x: AvroInt => "Integer.valueOf(" + exprs.last.toString + ")"
-            case x: AvroLong => "Long.valueOf(" + exprs.last.toString + ")"
-            case x: AvroFloat => "Float.valueOf(" + exprs.last.toString + ")"
-            case x: AvroDouble => "Double.valueOf(" + exprs.last.toString + ")"
-            case x => "(" + javaType(x, true, true, true) + ")" + exprs.last.toString
-          }
-        ))).mkString("\n")
+        ((exprs.init map {"W.s(" + _.toString + ");"}) ++ List("return %s;".format(retType match {
+          case _: AvroBoolean | _: AvroInt | _: AvroLong | _: AvroFloat | _: AvroDouble =>
+            W.wrapExpr(exprs.last.toString, retType, true)
+          case _ =>
+            "(" + javaType(retType, true, true, true) + ")" + exprs.last.toString
+        }))).mkString("\n")
     }
 
     def symbolFields(symbols: Map[String, AvroType]): String =
       symbols.map({case (n, t) => javaType(t, false, true, true) + " " + s(n) + ";"}).mkString("\n")
 
     def makePathIndex(path: Seq[PathIndex]): String = path.map(_ match {
-      case ArrayIndex(expr, t) => """new I(W.i(%s))""".format(expr.toString)
+      case ArrayIndex(expr, t) => """new I(W.asInt(%s))""".format(expr.toString)
       case MapIndex(expr, t) => """new M(%s)""".format(expr.toString)
       case RecordIndex(name, t) => """new R("%s")""".format(StringEscapeUtils.escapeJava(name))
     }).mkString(", ")
@@ -1135,7 +1249,8 @@ checkClock();
             ((fcnContext.params map {case (n, t) => javaType(t, true, true, true)}) :+ javaType(fcnContext.ret, true, true, true)).mkString(", "),
             symbolFields(fcnContext.symbols),
             if (fcnContext.params.size > 0  &&  (fcnContext.params exists {case (_, _: AvroUnion) => false; case _ => true}))
-              "public Object apply(%s) { return (Object)apply(%s); }".format(
+              "public %s apply(%s) { return apply(%s); }".format(
+                javaType(fcnContext.ret, true, true, true),
                 fcnContext.params map {case (n, t) => "Object " + s(n)} mkString(", "),
                 fcnContext.params map {case (n, t) => "(%s)%s".format(javaType(t, true, true, true), s(n))} mkString(", ")
               )
@@ -1209,7 +1324,8 @@ public void checkClock() {
           if (params.isEmpty)
             ""
           else
-            """public Object apply(%s) { return apply(%s); }""".format(
+            """public %s apply(%s) { return apply(%s); }""".format(
+              javaType(ret, true, true, true),
               params map {case (n, t) => "Object " + s(n)} mkString(", "),
               params map {case (n, t) => "((%s)(%s))".format(javaType(t, true, true, true), s(n))} mkString(", "))
 
@@ -1238,7 +1354,7 @@ checkClock();
         case _ => JavaCode("").setAsPlaceholder()
       }
 
-      case Call.Context(retType, _, fcn, args, argContext) => fcn.javaCode(args.collect({case x: JavaCode => x}), argContext, retType)
+      case Call.Context(retType, _, fcn, args, argContext, paramTypes) => fcn.javaCode(args.collect({case x: JavaCode => x}), argContext, paramTypes, retType)
 
       case Ref.Context(retType, _, name) => JavaCode(s(name))
 
@@ -1253,30 +1369,33 @@ checkClock();
       case Literal.Context(retType, _, value) => JavaCode("""((%s)fromJson("%s", %s))""", javaType(retType, true, true, true), StringEscapeUtils.escapeJava(value), javaSchema(retType, false))
 
       case NewObject.Context(retType, _, fields) =>
-        if (retType.isInstanceOf[AvroRecord])
-          JavaCode("""(new Object() {
+        retType match {
+          case avroRecord: AvroRecord =>
+            JavaCode("""(new Object() {
 public %s apply() {
 %s out = new %s();
 %s
 return (%s)out;
 } }).apply()""",
-            javaType(retType, false, true, true),
-            javaType(retType, false, true, false),
-            javaType(retType, false, true, false),
-            fields map {case (name: String, expr: JavaCode) => "out.%s = %s;".format(s(name), expr.toString)} mkString("\n"),
-            javaType(retType, false, true, true))
-        else
-          JavaCode("""(new Object() {
+              javaType(retType, false, true, true),
+              javaType(retType, false, true, false),
+              javaType(retType, false, true, false),
+              fields map {case (name: String, expr: JavaCode) => "out.%s = %s;".format(s(name), W.wrapExpr(expr.toString, avroRecord.field(name).avroType, false))} mkString("\n"),
+              javaType(retType, false, true, true))
+
+          case avroMap: AvroMap =>
+            JavaCode("""(new Object() {
 public %s apply() {
 %s out = PFAMap.empty(%s, %s);
 %s
 return out;
 } }).apply()""",
-            javaType(retType, false, true, false),
-            javaType(retType, false, true, false),
-            fields.size.toString,
-            javaSchema(retType, false),
-            fields map {case (name: String, expr: JavaCode) => "out.put(\"%s\", %s);".format(StringEscapeUtils.escapeJava(name), expr.toString)} mkString("\n"))
+              javaType(retType, false, true, false),
+              javaType(retType, false, true, false),
+              fields.size.toString,
+              javaSchema(retType, false),
+              fields map {case (name: String, expr: JavaCode) => "out.put(\"%s\", %s);".format(StringEscapeUtils.escapeJava(name), W.wrapExpr(expr.toString, avroMap.values, true))} mkString("\n"))
+        }
 
       case NewArray.Context(retType, calls, items) =>
         JavaCode("""(new Object() {
@@ -1289,7 +1408,7 @@ return out;
           javaType(retType, false, true, false),
           items.size.toString,
           javaSchema(retType, false),
-          items map {case expr: JavaCode => "out.add(%s);".format(expr.toString)} mkString("\n"))
+          items map {case expr: JavaCode => "out.add(%s);".format(W.wrapExpr(expr.toString, retType.asInstanceOf[AvroArray].items, false))} mkString("\n"))
 
       case Do.Context(retType, _, symbols, exprs) => {
         JavaCode("""(new Object() {
@@ -1302,24 +1421,24 @@ public %s apply() {
 
       case Let.Context(_, _, nameTypeExpr) => {
         def wrap(nameTypeExpr: List[(String, AvroType, JavaCode)]): JavaCode = nameTypeExpr match {
-          case (name, _, expr) :: Nil => JavaCode("W.n(%s = %s)", s(name), expr.toString)
-          case (name, _, expr) :: rest => JavaCode("W.nn(%s = %s, %s)", s(name), expr.toString, wrap(rest).toString)
+          case (name, t, expr) :: Nil => JavaCode("W.n(%s = %s)", s(name), W.wrapExpr(expr.toString, t, false))
+          case (name, t, expr) :: rest => JavaCode("W.nn(%s = %s, %s)", s(name), W.wrapExpr(expr.toString, t, false), wrap(rest).toString)
         }
         wrap(nameTypeExpr.toList.collect({case (n, t, j: JavaCode) => (n, t, j)}))
       }
 
-      case SetVar.Context(_, _, nameExpr) => {
-        def wrap(nameExpr: List[(String, JavaCode)]): JavaCode = nameExpr match {
-          case (name, expr) :: Nil => JavaCode("W.n(%s = %s)", s(name), expr.toString)
-          case (name, expr) :: rest => JavaCode("W.nn(%s = %s, %s)", s(name), expr.toString, wrap(rest).toString)
+      case SetVar.Context(_, _, nameTypeExpr) => {
+        def wrap(nameTypeExpr: List[(String, AvroType, JavaCode)]): JavaCode = nameTypeExpr match {
+          case (name, t, expr) :: Nil => JavaCode("W.n(%s = %s)", s(name), W.wrapExpr(expr.toString, t, false))
+          case (name, t, expr) :: rest => JavaCode("W.nn(%s = %s, %s)", s(name), W.wrapExpr(expr.toString, t, false), wrap(rest).toString)
         }
-        wrap(nameExpr.toList.collect({case (n, j: JavaCode) => (n, j)}))
+        wrap(nameTypeExpr.toList.collect({case (n, t, j: JavaCode) => (n, t, j)}))
       }
 
       case AttrGet.Context(retType, _, attr, attrType, path) => {
         var out = "((%s)(%s))".format(javaType(attrType, true, true, false), s(attr))
         for (item <- path) item match {
-          case ArrayIndex(expr, t) => out = """((%s)(%s.get(W.i(%s))))""".format(javaType(t, true, true, false), out, expr.toString)
+          case ArrayIndex(expr, t) => out = """((%s)(%s.get(W.asInt(%s))))""".format(javaType(t, true, true, false), out, expr.toString)
           case MapIndex(expr, t) => out = """((%s)(%s.get(%s)))""".format(javaType(t, true, true, false), out, expr.toString)
           case RecordIndex(name, t) => out = """((%s)(%s.%s))""".format(javaType(t, false, true, false), out, s(name))
         }
@@ -1351,7 +1470,7 @@ public %s apply() {
         if (!shared) {
           var out = "((%s)(%s))".format(javaType(cellType, !path.isEmpty, true, false), c(cell))
           for (item <- path) item match {
-            case ArrayIndex(expr, t) => out = """((%s)(%s.get(W.i(%s))))""".format(javaType(t, true, true, false), out, expr.toString)
+            case ArrayIndex(expr, t) => out = """((%s)(%s.get(W.asInt(%s))))""".format(javaType(t, true, true, false), out, expr.toString)
             case MapIndex(expr, t) => out = """((%s)(%s.get(%s)))""".format(javaType(t, true, true, false), out, expr.toString)
             case RecordIndex(name, t) => out = """((%s)(%s.%s))""".format(javaType(t, false, true, false), out, s(name))
           }
@@ -1407,7 +1526,7 @@ public %s apply() {
             path.head.asInstanceOf[MapIndex].k.toString,
             StringEscapeUtils.escapeJava(pool))
           for (item <- path.tail) item match {
-            case ArrayIndex(expr, t) => out = """((%s)(%s.get(W.i(%s))))""".format(javaType(t, true, true, false), out, expr.toString)
+            case ArrayIndex(expr, t) => out = """((%s)(%s.get(W.asInt(%s))))""".format(javaType(t, true, true, false), out, expr.toString)
             case MapIndex(expr, t) => out = """((%s)(%s.get(%s)))""".format(javaType(t, true, true, false), out, expr.toString)
             case RecordIndex(name, t) => out = """((%s)(%s.%s))""".format(javaType(t, false, true, false), out, s(name))
           }
@@ -1469,7 +1588,7 @@ public %s apply() {
         case (Some(symbols), Some(clause)) =>
           JavaCode("""(new Object() {
 public %s apply() {
-if (W.bool(%s)) {
+if (W.asBool(%s)) {
 return (new Object() {
 %s
 public %s apply() {
@@ -1521,8 +1640,8 @@ public %s apply() {
 } }).apply();
 }
 """.format(walkBlock.pred match {
-             case Some(p) if (first) => first = false; "if (W.bool(%s))".format(p)
-             case Some(p) => "else if (W.bool(%s))".format(p)
+             case Some(p) if (first) => first = false; "if (W.asBool(%s))".format(p)
+             case Some(p) => "else if (W.asBool(%s))".format(p)
              case None => "else"
            },
            symbolFields(walkBlock.symbols),

@@ -52,7 +52,7 @@ package object math {
       <doc>
         <desc>The double-precision number that is closer than any other to <m>\pi</m>, the ratio of a circumference of a circle to its diameter.</desc>
       </doc>
-    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
+    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
       JavaCode("Math.PI")
     def apply(): Double = java.lang.Math.PI
   }
@@ -66,7 +66,7 @@ package object math {
       <doc>
         <desc>The double-precision number that is closer than any other to <m>e</m>, the base of natural logarithms.</desc>
       </doc>
-    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
+    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
       JavaCode("Math.E")
     def apply(): Double = java.lang.Math.E
   }
@@ -96,11 +96,11 @@ package object math {
         <error>For exactly one integer value, {java.lang.Integer.MIN_VALUE}, this function produces an "int overflow" runtime error.</error>
         <error>For exactly one long value, {java.lang.Long.MIN_VALUE}, this function produces a "long overflow" runtime error.</error>
       </doc>
-    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
+    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
       if (retType.accepts(AvroFloat()))
-        JavaCode("Math.abs(%s)", args(0).toString)
+        JavaCode("Math.abs(%s)", wrapArg(0, args, paramTypes, false))
       else
-        super.javaCode(args, argContext, retType)
+        super.javaCode(args, argContext, paramTypes, retType)
     def apply(x: Double): Double = java.lang.Math.abs(x)
     def apply(x: Float): Float = java.lang.Math.abs(x)
     def apply(x: Long): Long = {
@@ -124,8 +124,8 @@ package object math {
       <doc>
         <desc>Return the arc-cosine (inverse of the cosine function) of <p>x</p> as an angle in radians between <m>0</m> and <m>\pi</m>.</desc>{domain("-1", "1")}
       </doc>
-    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
-      JavaCode("Math.acos(%s)", args(0).toString)
+    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
+      JavaCode("Math.acos(%s)", wrapArg(0, args, paramTypes, false))
     def apply(x: Double): Double = java.lang.Math.acos(x)
   }
   provide(ACos)
@@ -138,8 +138,8 @@ package object math {
       <doc>
         <desc>Return the arc-sine (inverse of the sine function) of <p>x</p> as an angle in radians between <m>-\pi/2</m> and <m>\pi/2</m>.</desc>{domain("-1", "1")}
       </doc>
-    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
-      JavaCode("Math.asin(%s)", args(0).toString)
+    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
+      JavaCode("Math.asin(%s)", wrapArg(0, args, paramTypes, false))
     def apply(x: Double): Double = java.lang.Math.asin(x)
   }
   provide(ASin)
@@ -152,8 +152,8 @@ package object math {
       <doc>
         <desc>Return the arc-tangent (inverse of the tangent function) of <p>x</p> as an angle in radians between <m>-\pi/2</m> and <m>\pi/2</m>.</desc>{wholeLine()}
       </doc>
-    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
-      JavaCode("Math.atan(%s)", args(0).toString)
+    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
+      JavaCode("Math.atan(%s)", wrapArg(0, args, paramTypes, false))
     def apply(x: Double): Double = java.lang.Math.atan(x)
   }
   provide(ATan)
@@ -167,8 +167,8 @@ package object math {
         <desc>Return the arc-tangent (inverse of the tangent function) of <p>y</p>/<p>x</p> without loss of precision for small <p>x</p>.</desc>{wholePlane()}
         <detail>Note that <p>y</p> is the first parameter and <p>x</p> is the second parameter.</detail>
       </doc>
-    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
-      JavaCode("Math.atan2(%s, %s)", args(0).toString, args(1).toString)
+    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
+      JavaCode("Math.atan2(%s, %s)", wrapArg(0, args, paramTypes, false), wrapArg(1, args, paramTypes, false))
     def apply(x: Double, y: Double): Double = java.lang.Math.atan2(x, y)
   }
   provide(ATan2)
@@ -181,8 +181,8 @@ package object math {
       <doc>
         <desc>Return the smallest (closest to negative infinity, not closest to zero) whole number that is greater than or equal to the input.</desc>{wholeLine()}
       </doc>
-    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
-      JavaCode("Math.ceil(%s)", args(0).toString)
+    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
+      JavaCode("Math.ceil(%s)", wrapArg(0, args, paramTypes, false))
     def apply(x: Double): Double = java.lang.Math.ceil(x)
   }
   provide(Ceil)
@@ -210,8 +210,8 @@ package object math {
       <doc>
         <desc>Return the trigonometric cosine of <p>x</p>, which is assumed to be in radians.</desc>{wholeLine()}
       </doc>
-    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
-      JavaCode("Math.cos(%s)", args(0).toString)
+    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
+      JavaCode("Math.cos(%s)", wrapArg(0, args, paramTypes, false))
     def apply(x: Double): Double = java.lang.Math.cos(x)
   }
   provide(Cos)
@@ -224,8 +224,8 @@ package object math {
       <doc>
         <desc>Return the hyperbolic cosine of <p>x</p>, which is equal to <m>{"""\frac{e^x + e^{-x}}{2}"""}</m></desc>{wholeLine()}
       </doc>
-    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
-      JavaCode("Math.cosh(%s)", args(0).toString)
+    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
+      JavaCode("Math.cosh(%s)", wrapArg(0, args, paramTypes, false))
     def apply(x: Double): Double = java.lang.Math.cosh(x)
   }
   provide(CosH)
@@ -238,8 +238,8 @@ package object math {
       <doc>
         <desc>Return <f>m.e</f> raised to the power of <p>x</p>.</desc>{wholeLine()}
       </doc>
-    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
-      JavaCode("Math.exp(%s)", args(0).toString)
+    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
+      JavaCode("Math.exp(%s)", wrapArg(0, args, paramTypes, false))
     def apply(x: Double): Double = java.lang.Math.exp(x)
   }
   provide(Exp)
@@ -252,8 +252,8 @@ package object math {
       <doc>
         <desc>Return <m>e^x - 1</m>.</desc>{avoidsRoundoff}{wholeLine()}
       </doc>
-    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
-      JavaCode("Math.expm1(%s)", args(0).toString)
+    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
+      JavaCode("Math.expm1(%s)", wrapArg(0, args, paramTypes, false))
     def apply(x: Double): Double = java.lang.Math.expm1(x)
   }
   provide(ExpM1)
@@ -266,8 +266,8 @@ package object math {
       <doc>
         <desc>Return the largest (closest to positive infinity) whole number that is less than or equal to the input.</desc>{wholeLine()}
       </doc>
-    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
-      JavaCode("Math.floor(%s)", args(0).toString)
+    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
+      JavaCode("Math.floor(%s)", wrapArg(0, args, paramTypes, false))
     def apply(x: Double): Double = java.lang.Math.floor(x)
   }
   provide(Floor)
@@ -280,8 +280,8 @@ package object math {
       <doc>
         <desc>Return <m>{"""\sqrt{x^2 + y^2}"""}</m>.</desc>{avoidsRoundoff}{wholeLine()}
       </doc>
-    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
-      JavaCode("Math.hypot(%s, %s)", args(0).toString, args(1).toString)
+    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
+      JavaCode("Math.hypot(%s, %s)", wrapArg(0, args, paramTypes, false), wrapArg(1, args, paramTypes, false))
     def apply(x: Double, y: Double): Double = java.lang.Math.hypot(x, y)
   }
   provide(Hypot)
@@ -295,8 +295,8 @@ package object math {
         <desc>Return the natural logarithm of <p>x</p>.</desc>
         {domain("0", "infinity", "", " (exclusive)", <x>Given zero, the result is negative infinity, and below zero, the result is <c>NaN</c>, not an exception (see IEEE 754).</x>.child.head)}
       </doc>
-    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
-      JavaCode("Math.log(%s)", args(0).toString)
+    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
+      JavaCode("Math.log(%s)", wrapArg(0, args, paramTypes, false))
     def apply(x: Double): Double = java.lang.Math.log(x)
   }
   provide(Ln)
@@ -310,8 +310,8 @@ package object math {
         <desc>Return the logarithm base 10 of <p>x</p>.</desc>
         {domain("0", "infinity", "", " (exclusive)", <x>Given zero, the result is negative infinity, and below zero, the result is <c>NaN</c>, not an exception (see IEEE 754).</x>.child.head)}
       </doc>
-    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
-      JavaCode("Math.log10(%s)", args(0).toString)
+    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
+      JavaCode("Math.log10(%s)", wrapArg(0, args, paramTypes, false))
     def apply(x: Double): Double = java.lang.Math.log10(x)
   }
   provide(Log10)
@@ -343,8 +343,8 @@ package object math {
         <desc>Return <m>ln(x^2 + 1)</m>.</desc>{avoidsRoundoff}
         {domain("-1", "infinity", "", " (exclusive)", <x>Given -1, the result is negative infinity, and below -1, the result is <c>NaN</c>, not an exception (see IEEE 754).</x>.child.head)}
       </doc>
-    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
-      JavaCode("Math.log1p(%s)", args(0).toString)
+    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
+      JavaCode("Math.log1p(%s)", wrapArg(0, args, paramTypes, false))
     def apply(x: Double): Double = java.lang.Math.log1p(x)
   }
   provide(Ln1p)
@@ -382,8 +382,8 @@ package object math {
       <doc>
         <desc>Return the closest whole number to <p>x</p>, rounding toward the nearest even number if the fractional part is exactly one-half.</desc>
       </doc>
-    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
-      JavaCode("Math.rint(%s)", args(0).toString)
+    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
+      JavaCode("Math.rint(%s)", wrapArg(0, args, paramTypes, false))
     def apply(x: Double): Double = java.lang.Math.rint(x)
   }
   provide(RInt)
@@ -396,8 +396,8 @@ package object math {
       <doc>
         <desc>Return 0 if <p>x</p> is zero, 1 if <p>x</p> is positive, and -1 if <p>x</p> is negative.</desc>{wholeLine()}
       </doc>
-    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
-      JavaCode("((int)(Math.signum(%s)))", args(0).toString)
+    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
+      JavaCode("((int)(Math.signum(%s)))", wrapArg(0, args, paramTypes, false))
     def apply(x: Double): Int = java.lang.Math.signum(x).toInt
   }
   provide(Signum)
@@ -410,8 +410,8 @@ package object math {
       <doc>
         <desc>Return the trigonometric sine of <p>x</p>, which is assumed to be in radians.</desc>{wholeLine()}
       </doc>
-    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
-      JavaCode("Math.sin(%s)", args(0).toString)
+    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
+      JavaCode("Math.sin(%s)", wrapArg(0, args, paramTypes, false))
     def apply(x: Double): Double = java.lang.Math.sin(x)
   }
   provide(Sin)
@@ -424,8 +424,8 @@ package object math {
       <doc>
         <desc>Return the hyperbolic sine of <p>x</p>, which is equal to <m>{"""\frac{e^x - e^{-x}}{2}"""}</m>.</desc>{wholeLine()}
       </doc>
-    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
-      JavaCode("Math.sinh(%s)", args(0).toString)
+    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
+      JavaCode("Math.sinh(%s)", wrapArg(0, args, paramTypes, false))
     def apply(x: Double): Double = java.lang.Math.sinh(x)
   }
   provide(SinH)
@@ -438,8 +438,8 @@ package object math {
       <doc>
         <desc>Return the positive square root of <p>x</p>.</desc>{domain("0", "infinity", lowInclusive = " (inclusive)", highInclusive = "")}
       </doc>
-    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
-      JavaCode("Math.sqrt(%s)", args(0).toString)
+    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
+      JavaCode("Math.sqrt(%s)", wrapArg(0, args, paramTypes, false))
     def apply(x: Double): Double = java.lang.Math.sqrt(x)
   }
   provide(Sqrt)
@@ -452,8 +452,8 @@ package object math {
       <doc>
         <desc>Return the trigonometric tangent of <p>x</p>, which is assumed to be in radians.</desc>{wholeLine()}
       </doc>
-    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
-      JavaCode("Math.tan(%s)", args(0).toString)
+    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
+      JavaCode("Math.tan(%s)", wrapArg(0, args, paramTypes, false))
     def apply(x: Double): Double = java.lang.Math.tan(x)
   }
   provide(Tan)
@@ -466,8 +466,8 @@ package object math {
       <doc>
         <desc>Return the hyperbolic tangent of <p>x</p>, which is equal to <m>{"""\frac{e^x - e^{-x}}{e^x + e^{-x}}"""}</m>.</desc>{wholeLine()}
       </doc>
-    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], retType: AvroType): JavaCode =
-      JavaCode("Math.tanh(%s)", args(0).toString)
+    override def javaCode(args: Seq[JavaCode], argContext: Seq[AstContext], paramTypes: Seq[Type], retType: AvroType): JavaCode =
+      JavaCode("Math.tanh(%s)", wrapArg(0, args, paramTypes, false))
     def apply(x: Double): Double = java.lang.Math.tanh(x)
   }
   provide(TanH)

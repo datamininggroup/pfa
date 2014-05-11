@@ -367,7 +367,7 @@ package object array {
       <doc>
         <desc>Return an array with the same elements as <p>a</p> but in ascending order as defined by the <p>lessThan</p> function.</desc>{sideEffectFree()}
       </doc>
-    def apply[X](a: PFAArray[X], lt: (X, X) => Boolean): PFAArray[X] = PFAArray.fromVector(a.toVector.sortWith(lt))
+    def apply[X](a: PFAArray[X], lt: (X, X) => java.lang.Boolean): PFAArray[X] = PFAArray.fromVector(a.toVector.sortWith((x: X, y: X) => lt(x, y).booleanValue))
   }
   provide(SortLT)
 
