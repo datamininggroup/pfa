@@ -196,20 +196,50 @@ package data {
 
     def multiUpdate(fields: Array[String], values: Array[Any]): PFARecord
 
-    def apply(i: String): AnyRef = get(i)
-    def updated[X](i: Int, elem: X): PFARecord = internalUpdate(i, elem)
-    def updated[X](i: String, elem: X): PFARecord = internalUpdate(i, elem)
+    def converted[X](elem: X, schema: Schema): Any =
+      if (schema == null)
+        elem
+      else
+        schema.getType match {
+          case Schema.Type.INT => elem match {
+            case x: Int => x
+            case x: Long => x.toInt
+            case x: Float => x.toInt
+            case x: Double => x.toInt
+            case x: AnyRef => x.asInstanceOf[java.lang.Number].intValue
+          }
+          case Schema.Type.LONG => elem match {
+            case x: Long => x
+            case x: Float => x.toLong
+            case x: Double => x.toLong
+            case x: AnyRef => x.asInstanceOf[java.lang.Number].longValue
+          }
+          case Schema.Type.FLOAT => elem match {
+            case x: Float => x
+            case x: Double => x.toFloat
+            case x: AnyRef => x.asInstanceOf[java.lang.Number].floatValue
+          }
+          case Schema.Type.DOUBLE => elem match {
+            case x: Double => x
+            case x: AnyRef => x.asInstanceOf[java.lang.Number].doubleValue
+          }
+          case _ => elem
+        }
 
-    def updated(path: Array[PathIndex], elem: AnyRef): PFARecord = updated(path.toList, (dummy: AnyRef) => elem)
-    def updated(path: List[PathIndex], elem: AnyRef): PFARecord = updated(path, (dummy: AnyRef) => elem)
-    def updated[Y](path: Array[PathIndex], updator: Y => Y): PFARecord = updated(path.toList, updator)
-    def updated[Y](path: List[PathIndex], updator: Y => Y): PFARecord = path match {
-      case R(f) :: Nil => updated(f, updator(apply(f).asInstanceOf[Y]))
+    def apply(i: String): AnyRef = get(i)
+    def updated[X](i: Int, elem: X, schema: Schema): PFARecord = internalUpdate(i, converted(elem, schema))
+    def updated[X](i: String, elem: X, schema: Schema): PFARecord = internalUpdate(i, converted(elem, schema))
+
+    def updated(path: Array[PathIndex], elem: AnyRef, schema: Schema): PFARecord = updated(path.toList, (dummy: AnyRef) => elem, schema)
+    def updated(path: List[PathIndex], elem: AnyRef, schema: Schema): PFARecord = updated(path, (dummy: AnyRef) => elem, schema)
+    def updated[Y](path: Array[PathIndex], updator: Y => Y, schema: Schema): PFARecord = updated(path.toList, updator, schema)
+    def updated[Y](path: List[PathIndex], updator: Y => Y, schema: Schema): PFARecord = path match {
+      case R(f) :: Nil => updated(f, updator(apply(f).asInstanceOf[Y]), schema)
       case R(f) :: rest => {
         apply(f) match {
-          case x: PFAArray[_] => updated(f, x.updated(rest, updator))
-          case x: PFAMap[_] => updated(f, x.updated(rest, updator))
-          case x: PFARecord => updated(f, x.updated(rest, updator))
+          case x: PFAArray[_] => updated(f, x.updated(rest, updator, schema), null)
+          case x: PFAMap[_] => updated(f, x.updated(rest, updator, schema), null)
+          case x: PFARecord => updated(f, x.updated(rest, updator, schema), null)
           case _ => throw new IllegalArgumentException("path used on a non-container")
         }
       }
@@ -308,6 +338,36 @@ package data {
     override def toArray(): Array[AnyRef] = throw new NotImplementedError
     override def toArray[Y](y: Array[Y with AnyRef]): Array[Y with AnyRef] = throw new NotImplementedError
 
+    def converted[X](elem: X, schema: Schema): X =
+      if (schema == null)
+        elem
+      else
+        schema.getType match {
+          case Schema.Type.INT => elem match {
+            case x: Int => x.asInstanceOf[X]
+            case x: Long => x.toInt.asInstanceOf[X]
+            case x: Float => x.toInt.asInstanceOf[X]
+            case x: Double => x.toInt.asInstanceOf[X]
+            case x: AnyRef => x.asInstanceOf[java.lang.Number].intValue.asInstanceOf[X]
+          }
+          case Schema.Type.LONG => elem match {
+            case x: Long => x.asInstanceOf[X]
+            case x: Float => x.toLong.asInstanceOf[X]
+            case x: Double => x.toLong.asInstanceOf[X]
+            case x: AnyRef => x.asInstanceOf[java.lang.Number].longValue.asInstanceOf[X]
+          }
+          case Schema.Type.FLOAT => elem match {
+            case x: Float => x.asInstanceOf[X]
+            case x: Double => x.toFloat.asInstanceOf[X]
+            case x: AnyRef => x.asInstanceOf[java.lang.Number].floatValue.asInstanceOf[X]
+          }
+          case Schema.Type.DOUBLE => elem match {
+            case x: Double => x.asInstanceOf[X]
+            case x: AnyRef => x.asInstanceOf[java.lang.Number].doubleValue.asInstanceOf[X]
+          }
+          case _ => elem
+        }
+
     def apply(i: Int): X = {
       val vec = toVector
       try {
@@ -317,25 +377,25 @@ package data {
         case err: java.lang.IndexOutOfBoundsException => throw new PFARuntimeException("index %d out of bounds for array with size %d".format(i, vec.size))
       }
     }
-    def updated(i: Int, elem: X): PFAArray[X] = {
+    def updated(i: Int, elem: X, schema: Schema): PFAArray[X] = {
       val vec = toVector
       try {
-        PFAArray.fromVector(vec.updated(i, elem))
+        PFAArray.fromVector(vec.updated(i, converted(elem, schema)))
       }
       catch {
         case err: java.lang.IndexOutOfBoundsException => throw new PFARuntimeException("index %d out of bounds for array with size %d".format(i, vec.size))
       }
     }
-    def updated(path: Array[PathIndex], elem: X): PFAArray[X] = updated(path.toList, (dummy: X) => elem)
-    def updated(path: List[PathIndex], elem: X): PFAArray[X] = updated(path, (dummy: X) => elem)
-    def updated[Y](path: Array[PathIndex], updator: Y => Y): PFAArray[X] = updated(path.toList, updator)
-    def updated[Y](path: List[PathIndex], updator: Y => Y): PFAArray[X] = path match {
-      case I(i) :: Nil => updated(i, updator(apply(i).asInstanceOf[Y]).asInstanceOf[X])
+    def updated(path: Array[PathIndex], elem: X, schema: Schema): PFAArray[X] = updated(path.toList, (dummy: X) => elem, schema)
+    def updated(path: List[PathIndex], elem: X, schema: Schema): PFAArray[X] = updated(path, (dummy: X) => elem, schema)
+    def updated[Y](path: Array[PathIndex], updator: Y => Y, schema: Schema): PFAArray[X] = updated(path.toList, updator, schema)
+    def updated[Y](path: List[PathIndex], updator: Y => Y, schema: Schema): PFAArray[X] = path match {
+      case I(i) :: Nil => updated(i, updator(apply(i).asInstanceOf[Y]).asInstanceOf[X], schema)
       case I(i) :: rest => {
         apply(i) match {
-          case x: PFAArray[_] => updated(i, x.updated(rest, updator).asInstanceOf[X])
-          case x: PFAMap[_] => updated(i, x.updated(rest, updator).asInstanceOf[X])
-          case x: PFARecord => updated(i, x.updated(rest, updator).asInstanceOf[X])
+          case x: PFAArray[_] => updated(i, x.updated(rest, updator, schema).asInstanceOf[X], null)
+          case x: PFAMap[_] => updated(i, x.updated(rest, updator, schema).asInstanceOf[X], null)
+          case x: PFARecord => updated(i, x.updated(rest, updator, schema).asInstanceOf[X], null)
           case _ => throw new IllegalArgumentException("path used on a non-container")
         }
       }
@@ -419,6 +479,18 @@ package data {
     override def size(): Int = toMap.size
     override def values(): java.util.Collection[X] = throw new NotImplementedError
 
+    def converted[X](elem: X, schema: Schema): X =
+      if (schema == null)
+        elem
+      else
+        schema.getType match {
+          case Schema.Type.INT => java.lang.Integer.valueOf(elem.asInstanceOf[java.lang.Number].intValue).asInstanceOf[X]
+          case Schema.Type.LONG => java.lang.Long.valueOf(elem.asInstanceOf[java.lang.Number].longValue).asInstanceOf[X]
+          case Schema.Type.FLOAT => java.lang.Float.valueOf(elem.asInstanceOf[java.lang.Number].floatValue).asInstanceOf[X]
+          case Schema.Type.DOUBLE => java.lang.Double.valueOf(elem.asInstanceOf[java.lang.Number].doubleValue).asInstanceOf[X]
+          case _ => elem
+        }
+
     def apply(i: String): X = {
       val map = toMap
       try {
@@ -428,17 +500,17 @@ package data {
         case err: java.util.NoSuchElementException => throw new PFARuntimeException("key \"%s\" not found in map with size %d".format(i, map.size))
       }
     }
-    def updated(i: String, elem: X): PFAMap[X] = PFAMap.fromMap(toMap.updated(i, elem))
-    def updated(path: Array[PathIndex], elem: X): PFAMap[X] = updated(path.toList, (dummy: X) => elem)
-    def updated(path: List[PathIndex], elem: X): PFAMap[X] = updated(path, (dummy: X) => elem)
-    def updated[Y](path: Array[PathIndex], updator: Y => Y): PFAMap[X] = updated(path.toList, updator)
-    def updated[Y](path: List[PathIndex], updator: Y => Y): PFAMap[X] = path match {
-      case M(k) :: Nil => updated(k, updator(apply(k).asInstanceOf[Y]).asInstanceOf[X])
+    def updated(i: String, elem: X, schema: Schema): PFAMap[X] = PFAMap.fromMap(toMap.updated(i, converted(elem, schema)))
+    def updated(path: Array[PathIndex], elem: X, schema: Schema): PFAMap[X] = updated(path.toList, (dummy: X) => elem, schema)
+    def updated(path: List[PathIndex], elem: X, schema: Schema): PFAMap[X] = updated(path, (dummy: X) => elem, schema)
+    def updated[Y](path: Array[PathIndex], updator: Y => Y, schema: Schema): PFAMap[X] = updated(path.toList, updator, schema)
+    def updated[Y](path: List[PathIndex], updator: Y => Y, schema: Schema): PFAMap[X] = path match {
+      case M(k) :: Nil => updated(k, updator(apply(k).asInstanceOf[Y]).asInstanceOf[X], schema)
       case M(k) :: rest => {
         apply(k) match {
-          case x: PFAArray[_] => updated(k, x.updated(rest, updator).asInstanceOf[X])
-          case x: PFAMap[_] => updated(k, x.updated(rest, updator).asInstanceOf[X])
-          case x: PFARecord => updated(k, x.updated(rest, updator).asInstanceOf[X])
+          case x: PFAArray[_] => updated(k, x.updated(rest, updator, schema).asInstanceOf[X], null)
+          case x: PFAMap[_] => updated(k, x.updated(rest, updator, schema).asInstanceOf[X], null)
+          case x: PFARecord => updated(k, x.updated(rest, updator, schema).asInstanceOf[X], null)
           case _ => throw new IllegalArgumentException("path used on a non-container")
         }
       }

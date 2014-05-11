@@ -6,6 +6,8 @@ import org.scalatest.FlatSpec
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.Matchers
 
+import org.apache.avro.Schema
+
 import org.scoringengine.pfa.shared._
 import org.scoringengine.pfa.types._
 import test.scala._
@@ -20,12 +22,12 @@ class SharedSuite extends FlatSpec with Matchers {
     state.put("two", Array[PathIndex](), 2.2)
     state.put("three", Array[PathIndex](), "THREE")
     state.put("three", Array[PathIndex](), "Three")
-    state.update("four", Array[PathIndex](), 0, (x: Int) => x + 1)
-    state.update("four", Array[PathIndex](), 0, (x: Int) => x + 1)
-    state.update("four", Array[PathIndex](), 0, (x: Int) => x + 1)
-    state.update("five", Array[PathIndex](), List[Int](), (x: List[Int]) => 5 :: x)
-    state.update("five", Array[PathIndex](), List[Int](), (x: List[Int]) => 5 :: x)
-    state.update("five", Array[PathIndex](), List[Int](), (x: List[Int]) => 5 :: x)
+    state.update("four", Array[PathIndex](), 0, (x: Int) => x + 1, Schema.create(Schema.Type.INT))
+    state.update("four", Array[PathIndex](), 0, (x: Int) => x + 1, Schema.create(Schema.Type.INT))
+    state.update("four", Array[PathIndex](), 0, (x: Int) => x + 1, Schema.create(Schema.Type.INT))
+    state.update("five", Array[PathIndex](), List[Int](), (x: List[Int]) => 5 :: x, Schema.create(Schema.Type.INT))
+    state.update("five", Array[PathIndex](), List[Int](), (x: List[Int]) => 5 :: x, Schema.create(Schema.Type.INT))
+    state.update("five", Array[PathIndex](), List[Int](), (x: List[Int]) => 5 :: x, Schema.create(Schema.Type.INT))
 
     state.get("one", Array[PathIndex]()) should be (Right(1))
     state.get("two", Array[PathIndex]()) should be (Right(2.2))
@@ -71,7 +73,7 @@ class SharedSuite extends FlatSpec with Matchers {
     })
     reader.start
 
-    state.update("x", Array[PathIndex](), 5, {(x: Int) => Thread.sleep(150); 99})
+    state.update("x", Array[PathIndex](), 5, {(x: Int) => Thread.sleep(150); 99}, Schema.create(Schema.Type.INT))
     Thread.sleep(200)
     state.remove("x", Array[PathIndex]())
     Thread.sleep(150)
@@ -83,7 +85,7 @@ class SharedSuite extends FlatSpec with Matchers {
 
     class Increment extends Runnable {
       def run(): Unit =
-        state.update("x", Array[PathIndex](), 0, {(x: Int) => Thread.sleep(100); x + 1})
+        state.update("x", Array[PathIndex](), 0, {(x: Int) => Thread.sleep(100); x + 1}, Schema.create(Schema.Type.INT))
     }
 
     val thread1 = new Thread(new Increment)

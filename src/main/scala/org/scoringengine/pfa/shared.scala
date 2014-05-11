@@ -4,6 +4,8 @@ import java.util.concurrent.ConcurrentHashMap
 
 import scala.collection.JavaConversions._
 
+import org.apache.avro.Schema
+
 import org.scoringengine.pfa.data.PFAArray
 import org.scoringengine.pfa.data.PFAMap
 import org.scoringengine.pfa.data.PFARecord
@@ -61,7 +63,7 @@ package shared {
     def put[X](name: String, path: Array[PathIndex], value: X, initializing: Boolean = false): Either[Exception, Unit]
 
     // update() is exclusive and atomic: only one put or update can happen at a time.
-    def update[X](name: String, path: Array[PathIndex], initialValue: X, updator: (X) => X): Either[Exception, Unit]
+    def update[X](name: String, path: Array[PathIndex], initialValue: X, updator: (X) => X, schema: Schema): Either[Exception, Unit]
 
     // remove() is atomic and more than one remove has the same effect as one remove.
     def remove(name: String, path: Array[PathIndex]): Either[Exception, Unit]
@@ -108,7 +110,7 @@ package shared {
       case err: Exception => Left(err)
     }
 
-    override def update[X](name: String, path: Array[PathIndex], initialValue: X, updator: (X) => X): Either[Exception, Unit] = try {
+    override def update[X](name: String, path: Array[PathIndex], initialValue: X, updator: (X) => X, schema: Schema): Either[Exception, Unit] = try {
       blockUntilInitialized()
       val newRef = Ref(initialValue, LastUpdate(System.currentTimeMillis))
       newRef.lastUpdate.synchronized {
@@ -116,9 +118,9 @@ package shared {
         if (oldRef != null) {
           oldRef.lastUpdate.synchronized {
             oldRef.to = oldRef.to match {
-              case x: PFAArray[_] => x.updated(path, updator)
-              case x: PFAMap[_] => x.updated(path, updator)
-              case x: PFARecord => x.updated(path, updator)
+              case x: PFAArray[_] => x.updated(path, updator, schema)
+              case x: PFAMap[_] => x.updated(path, updator, schema)
+              case x: PFARecord => x.updated(path, updator, schema)
               case x => updator(x.asInstanceOf[X])
             }
             oldRef.lastUpdate.at = System.currentTimeMillis

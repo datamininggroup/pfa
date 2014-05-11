@@ -1459,11 +1459,12 @@ public %s apply() {
           else
             to.toString
 
-        JavaCode("(%s)%s.updated(new PathIndex[]{%s}, %s)",
+        JavaCode("(%s)%s.updated(new PathIndex[]{%s}, %s, %s)",
           javaType(attrType, false, true, false),
           s(attr),
           makePathIndex(path),
-          toFcn)
+          toFcn,
+          javaSchema(setType, false))
       }
 
       case CellGet.Context(retType, _, cell, cellType, path, shared) => {
@@ -1502,18 +1503,20 @@ public %s apply() {
           if (path.isEmpty)
             JavaCode("W.n(%s = (%s)%s.apply(%s))".format(c(cell), javaType(cellType, false, true, false), toFcn, c(cell)))
           else
-            JavaCode("W.n(%s = (%s)%s.updated(new PathIndex[]{%s}, %s))",
+            JavaCode("W.n(%s = (%s)%s.updated(new PathIndex[]{%s}, %s, %s))",
               c(cell),
               javaType(cellType, false, true, false),
               c(cell),
               makePathIndex(path),
-              toFcn)
+              toFcn,
+              javaSchema(setType, false))
         }
         else {
-          JavaCode("""W.n(sharedCells.update("%s", new PathIndex[]{%s}, null, %s))""",
+          JavaCode("""W.n(sharedCells.update("%s", new PathIndex[]{%s}, null, %s, %s))""",
             cell,
             makePathIndex(path),
-            toFcn
+            toFcn,
+            javaSchema(setType, false)
           )
         }
       }
@@ -1565,7 +1568,7 @@ public %s apply() {
               path.head.asInstanceOf[MapIndex].k.toString,
               init.toString)
           else
-            JavaCode("""W.n(%s.put(%s, ((%s)(W.getOrElse(%s, %s, %s))).updated(new PathIndex[]{%s}, %s)))""",
+            JavaCode("""W.n(%s.put(%s, ((%s)(W.getOrElse(%s, %s, %s))).updated(new PathIndex[]{%s}, %s, %s)))""",
               p(pool),
               path.head.asInstanceOf[MapIndex].k.toString,
               javaType(path.head.asInstanceOf[MapIndex].t, true, true, false),
@@ -1573,15 +1576,17 @@ public %s apply() {
               path.head.asInstanceOf[MapIndex].k.toString,
               init.toString,
               makePathIndex(path.tail),
-              toFcn)
+              toFcn,
+              javaSchema(setType, false))
         }
         else
-          JavaCode("""W.n(%s.update(%s, new PathIndex[]{%s}, %s, %s))""",
+          JavaCode("""W.n(%s.update(%s, new PathIndex[]{%s}, %s, %s, %s))""",
             p(pool),
             path.head.asInstanceOf[MapIndex].k.toString,
             makePathIndex(path.tail),
             init.toString,
-            toFcn)
+            toFcn,
+            javaSchema(setType, false))
       }
 
       case If.Context(retType, _, thenSymbols, predicate, thenClause, elseSymbols, elseClause) => (elseSymbols, elseClause) match {
