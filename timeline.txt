@@ -118,6 +118,8 @@
 2014-05-07:   rewrote beginning of basic.md; will finish tomorrow
 2014-05-08:
 2014-05-09:   integrated exoplanets into pfa-docs
+2014-05-10:
+2014-05-11:   found and fixed a bug in which promoted numbers fail with an (uncaught) exception
 
 
 
