@@ -1145,13 +1145,13 @@ The ``attr'' special form extracts a value from an array, a map, a record, or an
 
 The form of ``attr'' is
 \begin{json}
-{"attr": SYMBOL, "path": INDEXES}
+{"attr": EXPRESSION, "path": INDEXES}
 \end{json}
-where {\PFAc SYMBOL} is a JSON string (not an expression) that specifies a pre-existing symbol and {\PFAc INDEXES} is a JSON array of expressions with {\bf int} type or {\bf string} type and string literals.  These {\PFAc INDEXES} specify a path through the nested objects.  If nesting is only one level deep, {\PFAc INDEXES} must have exactly one element.  It is a syntax error for {\PFAc INDEXES} to have zero elements.
+where {\PFAc EXPRESSION} is the array, map, or record to extract from and {\PFAc INDEXES} is a JSON array of expressions with {\bf int} type or {\bf string} type and string literals.  These {\PFAc INDEXES} specify a path through the nested objects.  If nesting is only one level deep, {\PFAc INDEXES} must have exactly one element.  It is a syntax error for {\PFAc INDEXES} to have zero elements.
 
 If the type at a particular nesting level is an {\bf array}, the path index must resolve to an {\bf int}, though it can perform arbitrary calculations to produce the {\bf int}.  If the type at a particular nesting level is a {\bf map}, the path index must resolve to a {\bf string}.  If the type at a particular nesting level is a {\bf record}, the path index must be a literal {\bf string} (not just an expression that resolves to a {\bf string}), and that string must be a field name of the record.  Since it is a literal string, static analysis can verify that the field name exists and a PFA system should raise a type error if no such field exists.  The nesting level is increased for each array element of the path, and the return type of ``attr'' is the type of the deepest object referenced by the path.
 
-As a convenience, ``attr'' forms may also be expressed as a dot-delimited string resembling a symbol reference.  The first substring is taken to be {\PFAc SYMBOL} and the rest are taken to be elements of the {\PFAc INDEXES} array (literal expressions only).  PFA systems should implement this short-cut.
+As a convenience, ``attr'' forms may also be expressed as a dot-delimited string resembling a symbol reference.  The first substring is taken to be a symbol reference {\PFAc EXPRESSION} and the rest are taken to be elements of the {\PFAc INDEXES} array (literal expressions only).  PFA systems should implement this short-cut.
 
 \begin{example}
 The following are equivalent:
@@ -1180,11 +1180,11 @@ then the example is valid and the return type is {\PFAtp X}.
 
 The form of ``attr-to'' is:
 \begin{json}
-{"attr": SYMBOL, "path": INDEXES, "to": VALUE-OR-FUNCTION}
+{"attr": EXPRESSION, "path": INDEXES, "to": VALUE-OR-FUNCTION}
 \end{json}
-with the same meaning for {\PFAc SYMBOL} and {\PFAc INDEXES} as in ``attr''.  If the attribute evaluates to {\PFAtp X} at the end of its path, the {\PFAc VALUE-OR-FUNCTION} argument must either be an expression of type {\PFAtp X} or a function that maps {\PFAtp X} to {\PFAtp X}.  If is an expression, then the form will return a structure like the original, but with the specified subelement changed to the new value.  If {\PFAc VALUE-OR-FUNCTION} is a function, then the function is evaluated, passing in the old value of the subelement and updating the structure with the function's return value.
+with the same meaning for {\PFAc EXPRESSION} and {\PFAc INDEXES} as in ``attr''.  If the attribute evaluates to {\PFAtp X} at the end of its path, the {\PFAc VALUE-OR-FUNCTION} argument must either be an expression of type {\PFAtp X} or a function that maps {\PFAtp X} to {\PFAtp X}.  If is an expression, then the form will return a structure like the original, but with the specified subelement changed to the new value.  If {\PFAc VALUE-OR-FUNCTION} is a function, then the function is evaluated, passing in the old value of the subelement and updating the structure with the function's return value.
 
-The {\PFAc INDEXES} must contain at least item.  There is no equivalent of using the dot-delimited string as a short-cut.  The ``attr-to'' form returns a whole new structure with one subelement changed; it has the same type as {\PFAc SYMBOL}.  It must be emphasized that ``attr-to'' does not change the object referred to by {\PFAc SYMBOL}, nor does it reassign {\PFAc SYMBOL}; it returns a new value.
+The {\PFAc INDEXES} must contain at least item.  There is no equivalent of using the dot-delimited string as a short-cut.  The ``attr-to'' form returns a whole new structure with one subelement changed; it has the same type as {\PFAc EXPRESSION}.  It must be emphasized that ``attr-to'' does not change the {\PFAc EXPRESSION} or the object it refers to, nor does it reassign any symbols; it returns a new value.
 
 \begin{example}
 If {\PFAc x} is an array, we can effectively change one element of {\PFAc x} to {\PFAc xn} by
