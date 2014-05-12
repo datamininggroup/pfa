@@ -1134,7 +1134,7 @@ class SetVar(Expression):
 
 @pfa.util.case
 class AttrGet(Expression, HasPath):
-    def __init__(self, attr, path, pos=None):
+    def __init__(self, expr, path, pos=None):
         if len(self.path) < 1:
             raise PFASyntaxException("attr path must have at least one key", self.pos)
 
@@ -1142,31 +1142,29 @@ class AttrGet(Expression, HasPath):
         raise NotImplementedError
 
     def walk(self, task, symbolTable, functionTable):
-        a = symbolTable.get(self.attr)
-        if a is None:
-            raise PFASemanticException("unknown symbol \"{}\"".format(self.attr), self.pos)
-        attrType = a.avroType
+        exprScope = symbolTable.newScope(True, True)
+        exprContext, exprResult = self.expr.walk(task, symbolTable, functionTable)
 
-        if not isinstance(attrType, (AvroArray, AvroMap, AvroRecord)):
-            raise PFASemanticException("symbol \"{}\" is not an array, map, or record".format(self.attr), self.pos)
+        if not isinstance(exprContext.retType, (AvroArray, AvroMap, AvroRecord)):
+            raise PFASemanticException("expression is not an array, map, or record", self.pos)
 
-        retType, calls, pathResult = self.walkPath(attrType, task, symbolTable, functionTable)
-        context = self.Context(retType, calls.union(set([self.desc])), self.attr, attrType, pathResult)
+        retType, calls, pathResult = self.walkPath(exprContext.retType, task, symbolTable, functionTable)
+        context = self.Context(retType, calls.union(set([self.desc])), exprResult, exprContext.retType, pathResult)
         return context, task(context)
 
     @property
     def jsonNode(self):
-        return {"attr": self.attr, "path": [x.jsonNode for x in self.path]}
+        return {"attr": self.expr.jsonNode, "path": [x.jsonNode for x in self.path]}
 
     desc = "attr"
 
     @pfa.util.case
     class Context(ExpressionContext):
-        def __init__(self, retType, calls, attr, attrType, path): pass
+        def __init__(self, retType, calls, expr, exprType, path): pass
 
 @pfa.util.case
 class AttrTo(Expression, HasPath):
-    def __init__(self, attr, path, to, pos=None):
+    def __init__(self, expr, path, to, pos=None):
         if len(self.path) < 1:
             raise PFASyntaxException("attr path must have at least one key", self.pos)
 
@@ -1174,44 +1172,42 @@ class AttrTo(Expression, HasPath):
         raise NotImplementedError
 
     def walk(self, task, symbolTable, functionTable):
-        a = symbolTable.get(self.attr)
-        if a is None:
-            raise PFASemanticException("unknown symbol \"{}\"".format(self.attr), self.pos)
-        attrType = a.avroType
+        exprScope = symbolTable.newScope(True, True)
+        exprContext, exprResult = self.expr.walk(task, symbolTable, functionTable)
 
-        if not isinstance(attrType, (AvroArray, AvroMap, AvroRecord)):
-            raise PFASemanticException("symbol \"{}\" is not an array, map, or record".format(self.attr), self.pos)
+        if not isinstance(exprContext.retType, (AvroArray, AvroMap, AvroRecord)):
+            raise PFASemanticException("expression is not an array, map, or record", self.pos)
 
-        setType, calls, pathResult = self.walkPath(attrType, task, symbolTable, functionTable)
+        setType, calls, pathResult = self.walkPath(exprContext.retType, task, symbolTable, functionTable)
 
         toContext, toResult = self.to.walk(task, symbolTable, functionTable)
 
         if isinstance(toContext, ExpressionContext):
             if not setType.accepts(toContext.retType):
                 raise PFASemanticException("attr-and-path has type {} but attempting to assign with type {}".format(repr(setType), repr(toContext.retType)), self.pos)
-            context = self.Context(attrType, calls.union(toContext.calls).union(set([self.desc])), self.attr, attrType, setType, pathResult, toResult, toContext.retType)
+            context = self.Context(exprContext.retType, calls.union(toContext.calls).union(set([self.desc])), exprResult, exprContext.retType, setType, pathResult, toResult, toContext.retType)
 
         elif isinstance(toContext, FcnDef.Context):
             if not FcnType([setType], setType).accepts(toContext.fcnType):
                 raise PFASemanticException("attr-and-path has type {} but attempting to assign with a function of type {}".format(repr(setType), repr(toContext.fcnType)), self.pos)
-            context = self.Context(attrType, calls.union(toContext.calls).union(set([self.desc])), self.attr, attrType, setType, pathResult, toResult, toContext.fcnType)
+            context = self.Context(exprContext.retType, calls.union(toContext.calls).union(set([self.desc])), exprResult, exprContext.retType, setType, pathResult, toResult, toContext.fcnType)
 
         elif isinstance(toContext, FcnRef.Context):
             if not FcnType([setType], setType).accepts(toContext.fcnType):
                 raise PFASemanticException("attr-and-path has type {} but attempting to assign with a function of type {}".format(repr(setType), repr(toContext.fcnType)), self.pos)
-            context = self.Context(attrType, calls.union(toContext.calls).union(set([self.desc])), self.attr, attrType, setType, pathResult, task(toContext, toContext.fcnType), toContext.fcnType)
+            context = self.Context(exprContext.retType, calls.union(toContext.calls).union(set([self.desc])), exprResult, exprContext.retType, setType, pathResult, task(toContext, toContext.fcnType), toContext.fcnType)
 
         return context, task(context)
         
     @property
     def jsonNode(self):
-        return {"attr": self.attr, "path": [x.jsonNode for x in self.path], "to": self.to.jsonNode}
+        return {"attr": self.expr.jsonNode, "path": [x.jsonNode for x in self.path], "to": self.to.jsonNode}
 
     desc = "attr-to"
 
     @pfa.util.case
     class Context(ExpressionContext):
-        def __init__(self, retType, calls, attr, attrType, setType, path, to, toType): pass
+        def __init__(self, retType, calls, expr, exprType, setType, path, to, toType): pass
 
 @pfa.util.case
 class CellGet(Expression, HasPath):

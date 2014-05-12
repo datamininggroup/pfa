@@ -425,6 +425,7 @@ def _readArgument(data, dot, avroTypeBuilder):
             elif key == "path":
                 _path = _readExpressionArray(data[key], dot + "." + key, avroTypeBuilder)
 
+            elif key == "attr": _attr = _readExpression(data[key], dot + "." + key, avroTypeBuilder)
             elif key == "if": _ifPredicate = _readExpression(data[key], dot + "." + key, avroTypeBuilder)
             elif key == "while": _whilePredicate = _readExpression(data[key], dot + "." + key, avroTypeBuilder)
             elif key == "until": _until = _readExpression(data[key], dot + "." + key, avroTypeBuilder)
@@ -440,7 +441,6 @@ def _readArgument(data, dot, avroTypeBuilder):
             elif key == "forkey": _forkey = _readString(data[key], dot + "." + key)
             elif key == "forval": _forval = _readString(data[key], dot + "." + key)
             elif key == "fcnref": _fcnref = _readString(data[key], dot + "." + key)
-            elif key == "attr": _attr = _readString(data[key], dot + "." + key)
             elif key == "cell": _cell = _readString(data[key], dot + "." + key)
             elif key == "pool": _pool = _readString(data[key], dot + "." + key)
 

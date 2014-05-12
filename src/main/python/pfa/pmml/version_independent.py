@@ -21,7 +21,7 @@ class Context(object):
         if name in self.scope:
             return ast.Ref(name)
         elif name in self.dataDictionary:
-            return ast.AttrGet("input", [ast.LiteralString(name)])
+            return ast.AttrGet(ast.Ref("input"), [ast.LiteralString(name)])
         else:
             raise NameError("unknown field \"{}\"".format(name))
 

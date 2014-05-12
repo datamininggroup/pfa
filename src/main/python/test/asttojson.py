@@ -350,10 +350,10 @@ class TestAstToJson(unittest.TestCase):
         self.assertEqual(SetVar({"x": LiteralInt(3), "y": LiteralInt(4)}).jsonNode, json.loads('''{"set":{"x":3,"y":4}}'''))
 
     def testAttrGet(self):
-        self.assertEqual(AttrGet("a", [Ref("a"), LiteralInt(1), LiteralString("b")]).jsonNode, json.loads('''{"attr":"a","path":["a",1,{"string":"b"}]}'''))
+        self.assertEqual(AttrGet(Ref("a"), [Ref("a"), LiteralInt(1), LiteralString("b")]).jsonNode, json.loads('''{"attr":"a","path":["a",1,{"string":"b"}]}'''))
 
     def testAttrSet(self):
-        self.assertEqual(AttrTo("a", [Ref("a"), LiteralInt(1), LiteralString("b")], LiteralDouble(2.2)).jsonNode, json.loads('''{"attr":"a","path":["a",1,{"string":"b"}],"to":2.2}'''))
+        self.assertEqual(AttrTo(Ref("a"), [Ref("a"), LiteralInt(1), LiteralString("b")], LiteralDouble(2.2)).jsonNode, json.loads('''{"attr":"a","path":["a",1,{"string":"b"}],"to":2.2}'''))
 
     def testCellGet(self):
         self.assertEqual(CellGet("c", []).jsonNode, json.loads('''{"cell":"c"}'''))
