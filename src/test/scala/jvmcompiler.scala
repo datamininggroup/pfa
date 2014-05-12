@@ -1406,6 +1406,20 @@ action:
     engine.action(engine.fromJson("""{"one": [{"zero": 0}, {"one": 1}, {"two": 2}]}""", engine.inputType)) should be (2)
   }
 
+  it must "extract from an on-the-fly generated object" taggedAs(JVMCompilation) in {
+    val engine = PFAEngine.fromYaml("""
+input: "null"
+output: int
+action:
+  - {let: {x: [two]}}
+  - attr:
+      value: {"one": [{"zero": 0}, {"one": 1}, {"two": 2}]}
+      type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}
+    path: [[one], 2, x]
+""").head
+    engine.action(null) should be (2)
+  }
+
   it must "not accept bad indexes" taggedAs(JVMCompilation) in {
     evaluating {
       val engine = PFAEngine.fromYaml("""
@@ -1474,6 +1488,24 @@ action:
   - {attr: something, path: [[one], 2, x]}
 """).head
     engine.action(engine.fromJson("""{"one": [{"zero": 0}, {"one": 1}, {"two": 2}]}""", engine.inputType)) should be (999)
+  }
+
+  it must "change an on-the-fly generated object" taggedAs(JVMCompilation) in {
+    val engine = PFAEngine.fromYaml("""
+input: "null"
+output: int
+action:
+  - {let: {x: [two]}}
+  - let:
+      something:
+        attr:
+          value: {"one": [{"zero": 0}, {"one": 1}, {"two": 2}]}
+          type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}
+        path: [[one], 2, x]
+        to: 999
+  - {attr: something, path: [[one], 2, x]}
+""").head
+    engine.action(null) should be (999)
   }
 
   it must "change a deep object with fcndef" taggedAs(JVMCompilation) in {

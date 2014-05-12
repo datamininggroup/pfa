@@ -1435,8 +1435,8 @@ public %s apply() {
         wrap(nameTypeExpr.toList.collect({case (n, t, j: JavaCode) => (n, t, j)}))
       }
 
-      case AttrGet.Context(retType, _, attr, attrType, path) => {
-        var out = "((%s)(%s))".format(javaType(attrType, true, true, false), s(attr))
+      case AttrGet.Context(retType, _, expr, exprType, path) => {
+        var out = "((%s)(%s))".format(javaType(exprType, false, true, false), W.wrapExpr(expr.toString, exprType, false))
         for (item <- path) item match {
           case ArrayIndex(expr, t) => out = """((%s)(%s.get(W.asInt(%s))))""".format(javaType(t, true, true, false), out, expr.toString)
           case MapIndex(expr, t) => out = """((%s)(%s.get(%s)))""".format(javaType(t, true, true, false), out, expr.toString)
@@ -1445,7 +1445,7 @@ public %s apply() {
         JavaCode(out)
       }
 
-      case AttrTo.Context(retType, _, attr, attrType, setType, path, to, toType) => {
+      case AttrTo.Context(retType, _, expr, exprType, setType, path, to, toType) => {
         val toFcn =
           if (toType.isInstanceOf[AvroType])
             """(new AbstractFunction1<%s, %s>() { public %s apply(%s dummy) { return %s; } public Object apply(Object dummy) { return apply((%s)(%s)); } })""".format(
@@ -1460,8 +1460,8 @@ public %s apply() {
             to.toString
 
         JavaCode("(%s)%s.updated(new PathIndex[]{%s}, %s, %s)",
-          javaType(attrType, false, true, false),
-          s(attr),
+          javaType(exprType, false, true, false),
+          W.wrapExpr(expr.toString, exprType, false),
           makePathIndex(path),
           toFcn,
           javaSchema(setType, false))

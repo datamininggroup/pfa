@@ -1242,61 +1242,62 @@ package ast {
     case class Context(retType: AvroType, calls: Set[String], nameTypeExpr: Seq[(String, AvroType, TaskResult)]) extends ExpressionContext
   }
 
-  case class AttrGet(attr: String, path: Seq[Expression], pos: Option[String] = None) extends Expression with HasPath {
+  case class AttrGet(expr: Expression, path: Seq[Expression], pos: Option[String] = None) extends Expression with HasPath {
     override def equals(other: Any): Boolean = other match {
-      case that: AttrGet => this.attr == that.attr  &&  this.path == that.path  // but not pos
+      case that: AttrGet => this.expr == that.expr  &&  this.path == that.path  // but not pos
       case _ => false
     }
-    override def hashCode(): Int = ScalaRunTime._hashCode((attr, path))
+    override def hashCode(): Int = ScalaRunTime._hashCode((expr, path))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
+        expr.collect(pf) ++
         path.flatMap(_.collect(pf))
 
     if (path.size < 1)
       throw new PFASyntaxException("attr path must have at least one key", pos)
 
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
-      val attrType = symbolTable.get(attr) match {
-        case Some(x) => x.avroType
-        case None => throw new PFASemanticException("unknown symbol \"%s\"".format(attr), pos)
-      }
+      val exprScope = symbolTable.newScope(true, true)
 
-      attrType match {
+      val (exprContext: ExpressionContext, exprResult) = expr.walk(task, exprScope, functionTable)
+
+      exprContext.retType match {
         case _: AvroArray | _: AvroMap | _: AvroRecord =>
-        case _ => throw new PFASemanticException("symbol \"%s\" is not an array, map, or record".format(attr), pos)
+        case _ => throw new PFASemanticException("expression is not an array, map, or record", pos)
       }
 
-      val (retType, calls, pathResult) = walkPath(attrType, task, symbolTable, functionTable)
-      val context = AttrGet.Context(retType, calls + AttrGet.desc, attr, attrType, pathResult)
+      val (retType, calls, pathResult) = walkPath(exprContext.retType, task, symbolTable, functionTable)
+      val context = AttrGet.Context(retType, calls + AttrGet.desc, exprResult, exprContext.retType, pathResult)
       (context, task(context))
     }
 
     override def jsonNode: JsonNode = {
       val factory = JsonNodeFactory.instance
       val out = factory.objectNode
-      out.put("attr", attr)
+      out.put("attr", expr.jsonNode)
       val jsonPath = factory.arrayNode
-      for (expr <- path)
-        jsonPath.add(expr.jsonNode)
+      for (p <- path)
+        jsonPath.add(p.jsonNode)
       out.put("path", jsonPath)
       out
     }
   }
   object AttrGet {
     val desc = "attr"
-    case class Context(retType: AvroType, calls: Set[String], attr: String, attrType: AvroType, path: Seq[PathIndex]) extends ExpressionContext
+    case class Context(retType: AvroType, calls: Set[String], expr: TaskResult, exprType: AvroType, path: Seq[PathIndex]) extends ExpressionContext
   }
 
-  case class AttrTo(attr: String, path: Seq[Expression], to: Argument, pos: Option[String] = None) extends Expression with HasPath {
+  case class AttrTo(expr: Expression, path: Seq[Expression], to: Argument, pos: Option[String] = None) extends Expression with HasPath {
     override def equals(other: Any): Boolean = other match {
-      case that: AttrTo => this.attr == that.attr  &&  this.path == that.path  &&  this.to == that.to  // but not pos
+      case that: AttrTo => this.expr == that.expr  &&  this.path == that.path  &&  this.to == that.to  // but not pos
       case _ => false
     }
-    override def hashCode(): Int = ScalaRunTime._hashCode((attr, path, to))
+    override def hashCode(): Int = ScalaRunTime._hashCode((expr, path, to))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
+        expr.collect(pf) ++
         path.flatMap(_.collect(pf)) ++
         to.collect(pf)
 
@@ -1304,17 +1305,16 @@ package ast {
       throw new PFASyntaxException("attr path must have at least one key", pos)
 
     override def walk(task: Task, symbolTable: SymbolTable, functionTable: FunctionTable): (AstContext, TaskResult) = {
-      val attrType = symbolTable.get(attr) match {
-        case Some(x) => x.avroType
-        case None => throw new PFASemanticException("unknown symbol \"%s\"".format(attr), pos)
-      }
+      val exprScope = symbolTable.newScope(true, true)
 
-      attrType match {
+      val (exprContext: ExpressionContext, exprResult) = expr.walk(task, exprScope, functionTable)
+
+      exprContext.retType match {
         case _: AvroArray | _: AvroMap | _: AvroRecord =>
-        case _ => throw new PFASemanticException("symbol \"%s\" is not an array, map, or record".format(attr), pos)
+        case _ => throw new PFASemanticException("expression is not an array, map, or record", pos)
       }
 
-      val (setType, calls, pathResult) = walkPath(attrType, task, symbolTable, functionTable)
+      val (setType, calls, pathResult) = walkPath(exprContext.retType, task, symbolTable, functionTable)
 
       val (toContext, toResult) = to.walk(task, symbolTable, functionTable)
 
@@ -1323,19 +1323,19 @@ package ast {
           case toCtx: ExpressionContext => {
             if (!setType.accepts(toCtx.retType))
               throw new PFASemanticException("attr-and-path has type %s but attempting to assign with type %s".format(setType.toString, toCtx.retType.toString), pos)
-            AttrTo.Context(attrType, calls ++ toCtx.calls + AttrTo.desc, attr, attrType, setType, pathResult, toResult, toCtx.retType)
+            AttrTo.Context(exprContext.retType, calls ++ toCtx.calls + AttrTo.desc, exprResult, exprContext.retType, setType, pathResult, toResult, toCtx.retType)
           }
 
           case FcnDef.Context(fcnType, fcnCalls, _, _, _, _) => {
             if (!FcnType(List(setType), setType).accepts(fcnType))
               throw new PFASemanticException("attr-and-path has type %s but attempting to assign with a function of type %s".format(setType.toString, fcnType.toString), pos)
-            AttrTo.Context(attrType, calls ++ fcnCalls + AttrTo.desc, attr, attrType, setType, pathResult, toResult, fcnType)
+            AttrTo.Context(exprContext.retType, calls ++ fcnCalls + AttrTo.desc, exprResult, exprContext.retType, setType, pathResult, toResult, fcnType)
           }
 
           case FcnRef.Context(fcnType, fcnCalls, _) => {
             if (!FcnType(List(setType), setType).accepts(fcnType))
               throw new PFASemanticException("attr-and-path has type %s but attempting to assign with a function of type %s".format(setType.toString, fcnType.toString), pos)
-            AttrTo.Context(attrType, calls ++ fcnCalls + AttrTo.desc, attr, attrType, setType, pathResult, task(toContext, Some(fcnType)), fcnType)
+            AttrTo.Context(exprContext.retType, calls ++ fcnCalls + AttrTo.desc, exprResult, exprContext.retType, setType, pathResult, task(toContext, Some(fcnType)), fcnType)
           }
         }
       (context, task(context))
@@ -1344,7 +1344,7 @@ package ast {
     override def jsonNode: JsonNode = {
       val factory = JsonNodeFactory.instance
       val out = factory.objectNode
-      out.put("attr", attr)
+      out.put("attr", expr.jsonNode)
       val jsonPath = factory.arrayNode
       for (expr <- path)
         jsonPath.add(expr.jsonNode)
@@ -1355,7 +1355,7 @@ package ast {
   }
   object AttrTo {
     val desc = "attr-to"
-    case class Context(retType: AvroType, calls: Set[String], attr: String, attrType: AvroType, setType: AvroType, path: Seq[PathIndex], to: TaskResult, toType: Type) extends ExpressionContext
+    case class Context(retType: AvroType, calls: Set[String], expr: TaskResult, exprType: AvroType, setType: AvroType, path: Seq[PathIndex], to: TaskResult, toType: Type) extends ExpressionContext
   }
 
   case class CellGet(cell: String, path: Seq[Expression], pos: Option[String] = None) extends Expression with HasPath {

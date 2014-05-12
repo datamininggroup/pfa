@@ -381,11 +381,11 @@ class AstToJsonSuite extends FlatSpec with Matchers {
   }
 
   it must "attr-get" taggedAs(AstToJson) in {
-    checkAstToJson(AttrGet("a", List(Ref("a"), LiteralInt(1), LiteralString("b"))), """{"attr":"a","path":["a",1,{"string":"b"}]}""")
+    checkAstToJson(AttrGet(Ref("a"), List(Ref("a"), LiteralInt(1), LiteralString("b"))), """{"attr":"a","path":["a",1,{"string":"b"}]}""")
   }
 
   it must "attr-set" taggedAs(AstToJson) in {
-    checkAstToJson(AttrTo("a", List(Ref("a"), LiteralInt(1), LiteralString("b")), LiteralDouble(2.2)), """{"attr":"a","path":["a",1,{"string":"b"}],"to":2.2}""")
+    checkAstToJson(AttrTo(Ref("a"), List(Ref("a"), LiteralInt(1), LiteralString("b")), LiteralDouble(2.2)), """{"attr":"a","path":["a",1,{"string":"b"}],"to":2.2}""")
   }
 
   it must "cell-get" taggedAs(AstToJson) in {

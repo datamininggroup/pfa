@@ -538,7 +538,7 @@ package reader {
 
         case base :: path =>
           if (validSymbolName(base))
-            AttrGet(base, path.map(x => x match {
+            AttrGet(Ref(base), path.map(x => x match {
               case NumberPattern() => LiteralInt(x.toInt, Some(pos(dot, at)))
               case _ => LiteralString(x, Some(pos(dot, at)))
             }), Some(pos(dot, at)))
@@ -588,6 +588,7 @@ package reader {
         var _log: Seq[Expression] = null
         var _path: Seq[Expression] = Nil
 
+        var _attr: Expression = null
         var _ifPredicate: Expression = null
         var _whilePredicate: Expression = null
         var _until: Expression = null
@@ -599,7 +600,6 @@ package reader {
         var _forkey: String = null
         var _forval: String = null
         var _fcnref: String = null
-        var _attr: String = null
         var _cell: String = null
         var _pool: String = null
 
@@ -668,6 +668,7 @@ package reader {
               }
               case "path" =>      _path = readExpressionArray(parser, parser.nextToken(), dot + "." + key, _at, avroTypeBuilder)
 
+              case "attr" =>      _attr = readExpression(parser, parser.nextToken(), dot + "." + key, _at, avroTypeBuilder)
               case "if" =>        _ifPredicate = readExpression(parser, parser.nextToken(), dot + "." + key, _at, avroTypeBuilder)
               case "while" =>     _whilePredicate = readExpression(parser, parser.nextToken(), dot + "." + key, _at, avroTypeBuilder)
               case "until" =>     _until = readExpression(parser, parser.nextToken(), dot + "." + key, _at, avroTypeBuilder)
@@ -684,7 +685,6 @@ package reader {
               case "forkey" =>    _forkey = readString(parser, parser.nextToken(), dot + "." + key, _at)
               case "forval" =>    _forval = readString(parser, parser.nextToken(), dot + "." + key, _at)
               case "fcnref" =>    _fcnref = readString(parser, parser.nextToken(), dot + "." + key, _at)
-              case "attr" =>      _attr = readString(parser, parser.nextToken(), dot + "." + key, _at)
               case "cell" =>      _cell = readString(parser, parser.nextToken(), dot + "." + key, _at)
               case "pool" =>      _pool = readString(parser, parser.nextToken(), dot + "." + key, _at)
 
