@@ -120,6 +120,9 @@
 2014-05-09:   integrated exoplanets into pfa-docs
 2014-05-10:
 2014-05-11:   found and fixed a bug in which promoted numbers fail with an (uncaught) exception
+2014-05-12:   started Javascript-to-PFA converter
+2014-05-13:
+2014-05-14:   finished more of the Javascript-to-PFA converter, leaving only cells, pools, conditionals, loops, casting, doc, error, and log.
 
 
 
