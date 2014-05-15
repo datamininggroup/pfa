@@ -1049,7 +1049,7 @@ class JsonToAstSuite extends FlatSpec with Matchers {
   "name": "test",
   "input": "int",
   "output": "string",
-  "action": [{"for":{"i":0},"until":{"<":["i",10]},"step":{"i":{"+":["i",1]}},"do":["i"]}]
+  "action": [{"for":{"i":0},"while":{"<":["i",10]},"step":{"i":{"+":["i",1]}},"do":["i"]}]
 }""")
   }
 

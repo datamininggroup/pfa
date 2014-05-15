@@ -1871,18 +1871,18 @@ package ast {
     case class Context(retType: AvroType, calls: Set[String], symbols: Map[String, AvroType], loopBody: Seq[TaskResult], predicate: TaskResult) extends ExpressionContext
   }
 
-  case class For(init: Map[String, Expression], until: Expression, step: Map[String, Expression], body: Seq[Expression], pos: Option[String] = None) extends Expression {
+  case class For(init: Map[String, Expression], predicate: Expression, step: Map[String, Expression], body: Seq[Expression], pos: Option[String] = None) extends Expression {
     override def equals(other: Any): Boolean = other match {
       case that: For =>
-        this.init == that.init  &&  this.until == that.until  &&  this.step == that.step  &&  this.body == that.body  // but not pos
+        this.init == that.init  &&  this.predicate == that.predicate  &&  this.step == that.step  &&  this.body == that.body  // but not pos
       case _ => false
     }
-    override def hashCode(): Int = ScalaRunTime._hashCode((init, until, step, body))
+    override def hashCode(): Int = ScalaRunTime._hashCode((init, predicate, step, body))
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
         init.values.flatMap(_.collect(pf)) ++
-        until.collect(pf) ++
+        predicate.collect(pf) ++
         step.values.flatMap(_.collect(pf)) ++
         body.flatMap(_.collect(pf))
 
@@ -1915,11 +1915,11 @@ package ast {
           (name, exprContext.retType, exprResult)
         }
 
-      val untilScope = loopScope.newScope(true, true)
-      val (untilContext: ExpressionContext, untilResult) = until.walk(task, untilScope, functionTable)
-      if (!AvroBoolean().accepts(untilContext.retType))
-        throw new PFASemanticException("\"until\" predicate should be boolean, but is " + untilContext.retType, pos)
-      calls ++= untilContext.calls
+      val predicateScope = loopScope.newScope(true, true)
+      val (predicateContext: ExpressionContext, predicateResult) = predicate.walk(task, predicateScope, functionTable)
+      if (!AvroBoolean().accepts(predicateContext.retType))
+        throw new PFASemanticException("predicate should be boolean, but is " + predicateContext.retType, pos)
+      calls ++= predicateContext.calls
 
       val stepNameTypeExpr: Seq[(String, AvroType, TaskResult)] =
         for ((name, expr) <- step.toList) yield {
@@ -1943,7 +1943,7 @@ package ast {
       for ((exprCtx, _) <- bodyResults)
         calls ++= exprCtx.calls
 
-      val context = For.Context(AvroNull(), calls.toSet + For.desc, bodyScope.inThisScope ++ loopScope.inThisScope, initNameTypeExpr, untilResult, bodyResults map {_._2}, stepNameTypeExpr)
+      val context = For.Context(AvroNull(), calls.toSet + For.desc, bodyScope.inThisScope ++ loopScope.inThisScope, initNameTypeExpr, predicateResult, bodyResults map {_._2}, stepNameTypeExpr)
       (context, task(context))
     }
 
@@ -1956,7 +1956,7 @@ package ast {
         jsonValues.put(name, expr.jsonNode)
       out.put("for", jsonValues)
 
-      out.put("until", until.jsonNode)
+      out.put("while", predicate.jsonNode)
 
       val jsonStep = factory.objectNode
       for ((name, expr) <- step)

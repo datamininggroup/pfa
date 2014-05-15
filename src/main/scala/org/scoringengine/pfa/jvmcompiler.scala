@@ -1695,7 +1695,7 @@ return null;
 %s
 public Void apply() {
 %s
-while (!%s) {
+while (%s) {
 checkClock();
 %s
 %s

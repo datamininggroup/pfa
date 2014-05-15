@@ -1406,23 +1406,23 @@ For loops are specialized loops that declare new symbols for use in the loop bod
 
 The ``for'' special form has the following syntax.
 \begin{json}
-{"for": NAME-TO-EXPRESSION, "until": CONDITION, "step": NAME-TO-EXPRESSION,
+{"for": NAME-TO-EXPRESSION, "while": CONDITION, "step": NAME-TO-EXPRESSION,
  "do": EXPRESSION-OR-EXPRESSIONS}
 \end{json}
-The {\PFAc for} clause's {\PFAc NAME-TO-EXPRESSION} is a JSON object whose members are new symbols to declare, the {\PFAc step} clause's {\PFAc NAME-TO-EXPRESSION} is a JSON object whose members are symbols to modify, and {\PFAc until} is a {\bf boolean}-valued single expression that stops the iteration when {\PFAc true}.  The {\PFAc do} expression or expressions is the body of the loop, and the return value of the ``for'' form is {\PFAc null}.
+The {\PFAc for} clause's {\PFAc NAME-TO-EXPRESSION} is a JSON object whose members are new symbols to declare, the {\PFAc step} clause's {\PFAc NAME-TO-EXPRESSION} is a JSON object whose members are symbols to modify, and {\PFAc while} is a {\bf boolean}-valued single expression that stops the iteration when it becomes {\PFAc false}.  The {\PFAc do} expression or expressions is the body of the loop, and the return value of the ``for'' form is {\PFAc null}.
 
-The {\PFAc for} clause's {\PFAc NAME-TO-EXPRESSION} is similar to a \hyperlink{hsec:let-set}{let expression} in that it declares and initializes new symbols.  The names of the symbols are the member names of the {\PFAc NAME-TO-EXPRESSION} and the initial values are the evaluated results of the member values.  The scope of the initialization expressions are sealed-from-above and sealed-within (\hyperlink{hsec:symbol-scope}{see Sec.~\ref{sec:symbol-scope}}), and they are evaluated before anything else in the ``if'' form but the order of initialization expressions is not guaranteed.  The symbols declared by the {\PFAc for} clause can only be referenced in the {\PFAc until}, {\PFAc step}, and {\PFAc do} clauses.
+The {\PFAc for} clause's {\PFAc NAME-TO-EXPRESSION} is similar to a \hyperlink{hsec:let-set}{let expression} in that it declares and initializes new symbols.  The names of the symbols are the member names of the {\PFAc NAME-TO-EXPRESSION} and the initial values are the evaluated results of the member values.  The scope of the initialization expressions are sealed-from-above and sealed-within (\hyperlink{hsec:symbol-scope}{see Sec.~\ref{sec:symbol-scope}}), and they are evaluated before anything else in the ``if'' form but the order of initialization expressions is not guaranteed.  The symbols declared by the {\PFAc for} clause can only be referenced in the {\PFAc while}, {\PFAc step}, and {\PFAc do} clauses.
 
 The {\PFAc step} clause's {\PFAc NAME-TO-EXPRESSION} is similar to a \hyperlink{hsec:let-set}{set expression} in that it changes symbols, usually by incrementing them.  The names of the symbols to modify are the member names of the {\PFAc NAME-TO-EXPRESSION} and their new values are the evaluated results of the member values.  The scope of the updator expressions are sealed-from-above and sealed-within, and if any updator expressions depend on a symbol that is also being updated, they will see the old value of the symbol.  That way, they can be evaluated in any order without conflict, which is important because their order is not guaranteed.
 
-The {\PFAc until} expression is sealed-from-above and sealed-within.  It is evaluated before the loop body ({\PFAc do}), so it is possible for the loop body to never be evaluated.
+The {\PFAc while} expression is sealed-from-above and sealed-within.  It is evaluated before the loop body ({\PFAc do}), so it is possible for the loop body to never be evaluated.
 
-The {\PFAc do} expression or expressions is evaluated until the {\PFAc CONDITION} is {\PFAc true}.  The symbols declared by the {\PFAc for} clause may be referenced and even modified, though it is good practice to modify these loop variables only in the {\PFAc step} clause.  The body of the loop is unsealed, meaning that it can modify symbols defined outside of its scope.
+The {\PFAc do} expression or expressions is evaluated while the {\PFAc CONDITION} is {\PFAc true}.  The symbols declared by the {\PFAc for} clause may be referenced and even modified, though it is good practice to modify these loop variables only in the {\PFAc step} clause.  The body of the loop is unsealed, meaning that it can modify symbols defined outside of its scope.
 
 \begin{example}
 This is a basic for loop that indexes the loop iteration with an integer {\PFAc i}.
 \begin{json}
-{"for": {"i": 0}, "until": {"==": ["i", 10]}, "step": {"i": {"+": ["i", 1]}},
+{"for": {"i": 0}, "while": {"<": ["i", 10]}, "step": {"i": {"+": ["i", 1]}},
  "do": [
      {"something": i}
      {"somethingElse": i}
@@ -1591,7 +1591,7 @@ or
 \begin{json}
 {"log": EXPRESSION-OR-EXPRESSIONS, "namespace": NAME}
 \end{json}
-The {\PFAc EXPRESSION-OR-EXPRESSIONS} are the expressions to dump to the log (remember to wrap plain strings in {\PFAc \{"string": "} \ldots {\PFAc "\}} or {\PFAc ["} \ldots {\PFAc "]}); the optional {\PFAc NAMESPACE} is a token that may be used for filtering or collating.  The ``log'' form returns {\PFAc null}.
+The {\PFAc EXPRESSION-OR-EXPRESSIONS} are the expressions to dump to the log (remember to wrap plain strings in {\PFAc \{"string":$\!$ "} \ldots {\PFAc "\}} or {\PFAc ["} \ldots {\PFAc "]}); the optional {\PFAc NAMESPACE} is a token that may be used for filtering or collating.  The ``log'' form returns {\PFAc null}.
 
 \pagebreak
 

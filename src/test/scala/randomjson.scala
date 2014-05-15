@@ -228,7 +228,7 @@ class RandomJsonSuite extends FlatSpec with Matchers {
     case 23 => m("cond" -> a((for (i <- 0 until (1 + rng.nextInt(2))) yield m("if" -> expression(), "then" -> expressions(1 + rng.nextInt(2)))): _*), "else" -> expressions(1 + rng.nextInt(2)))
     case 24 => m("while" -> expression(), "do" -> expressions(1 + rng.nextInt(2)))
     case 25 => m("do" -> expressions(1 + rng.nextInt(2)), "until" -> expression())
-    case 26 => m("for" -> nameExprPairs(1 + rng.nextInt(2)), "until" -> expression(), "step" -> nameExprPairs(1 + rng.nextInt(2)), "do" -> expressions(1 + rng.nextInt(2)))
+    case 26 => m("for" -> nameExprPairs(1 + rng.nextInt(2)), "while" -> expression(), "step" -> nameExprPairs(1 + rng.nextInt(2)), "do" -> expressions(1 + rng.nextInt(2)))
     case 27 => m("foreach" -> name(10), "in" -> expression(), "do" -> expressions(1 + rng.nextInt(2)), "seq" -> rng.nextBoolean())
     case 28 => m("forkey" -> name(10), "forval" -> name(10), "in" -> expression(), "do" -> expressions(1 + rng.nextInt(2)))
     case 29 => m("cast" -> expression(), "cases" -> a((for (i <- 0 until 2) yield m("as" -> avroType(), "named" -> name(10), "do" -> expressions(1 + rng.nextInt(2)))): _*))

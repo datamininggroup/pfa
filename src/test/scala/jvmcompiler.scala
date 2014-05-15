@@ -727,7 +727,7 @@ do:
   it must "do for loops" taggedAs(JVMCompilation) in {
     collectLogs(compileExpressionEngine("""
 for: {x: 0}
-until: {==: [x, 5]}
+while: {"!=": [x, 5]}
 step: {x: {+: [x, 1]}}
 do:
   - {log: [x]}
@@ -736,7 +736,7 @@ do:
     compileExpression("""
 do:
   - for: {x: 0}
-    until: {==: [x, 5]}
+    while: {"!=": [x, 5]}
     step: {x: {+: [x, 1]}}
     do:
       - x
@@ -745,7 +745,7 @@ do:
     evaluating { compileExpression("""
 do:
   - for: {x: 0}
-    until: {==: [x, 5]}
+    while: {"!=": [x, 5]}
     step: {x: {+: [x, 1]}}
     do:
       - x
@@ -756,7 +756,7 @@ do:
 do:
   - {let: {x: 0}}
   - for: {dummy: null}
-    until: {==: [x, 5]}
+    while: {"!=": [x, 5]}
     step: {x: {+: [x, 1]}}
     do:
       - x
@@ -765,7 +765,7 @@ do:
 
     compileExpression("""
 for: {x: {+: [99, -99]}}
-until: {==: [x, {+: [2, 3]}]}
+while: {"!=": [x, {+: [2, 3]}]}
 step: {x: {+: [x, {-: [3, 2]}]}}
 do:
   - x
@@ -773,7 +773,7 @@ do:
 
     evaluating { compileExpression("""
 for: {x: {let: {y: 0}}}
-until: {==: [x, {+: [2, 3]}]}
+while: {"!=": [x, {+: [2, 3]}]}
 step: {x: {+: [x, {-: [3, 2]}]}}
 do:
   - x
@@ -781,7 +781,7 @@ do:
 
     compileExpression("""
 for: {x: {do: [{let: {y: 0}}, y]}}
-until: {==: [x, {+: [2, 3]}]}
+while: {"!=": [x, {+: [2, 3]}]}
 step: {x: {+: [x, {-: [3, 2]}]}}
 do:
   - x
@@ -789,7 +789,7 @@ do:
 
     compileExpression("""
 for: {x: 0}
-until: {==: [x, 5]}
+while: {"!=": [x, 5]}
 step: {x: {+: [x, 1]}}
 do:
   - {let: {y: x}}
@@ -798,7 +798,7 @@ do:
 
     evaluating { compileExpression("""
 for: {x: 0}
-until: {==: [x, 5]}
+while: {"!=": [x, 5]}
 step: {x: {+: [y, 1]}}
 do:
   - {let: {y: x}}
@@ -807,7 +807,7 @@ do:
 
     evaluating { compileExpression("""
 for: {x: 0}
-until: {==: [y, 5]}
+while: {"!=": [y, 5]}
 step: {x: {+: [x, 1]}}
 do:
   - {let: {y: x}}
@@ -816,7 +816,7 @@ do:
 
     compileExpression("""
 for: {x: 0}
-until: {==: [x, 0]}
+while: {"!=": [x, 0]}
 step: {x: {+: [x, 1]}}
 do:
   - x
@@ -826,7 +826,7 @@ do:
 do:
   - {let: {y: [before]}}
   - for: {x: 0}
-    until: {==: [x, 0]}
+    while: {"!=": [x, 0]}
     step: {x: {+: [x, 1]}}
     do:
       - {set: {y: [after]}}
@@ -2372,7 +2372,7 @@ input: string
 output: "null"
 action:
   - for: {x: 0}
-    until: {==: [x, -5]}
+    while: {"!=": [x, -5]}
     step: {x: {+: [x, 1]}}
     do: [x]
 options:

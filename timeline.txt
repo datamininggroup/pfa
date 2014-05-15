@@ -123,7 +123,7 @@
 2014-05-12:   started Javascript-to-PFA converter
 2014-05-13:
 2014-05-14:   finished more of the Javascript-to-PFA converter, leaving only cells, pools, conditionals, loops, casting, doc, error, and log.
-2014-05-15:   finished the Javascript-to-PFA converter and fixed an error in the specification
+2014-05-15:   finished the Javascript-to-PFA converter, fixed an error in the specification, for-while instead of for-until
 
 
 Tomorrow:     An AppEngine example.
@@ -138,7 +138,6 @@ And then:     Regression
 Wish list:
     There needs to be a {"pool": NAME, "del": ITEM-NAME} to delete one item and {"pool": NAME, "del": null} to clear all items atomically.
     For-comprehensions to make new data structures functionally.
-    Perhaps instead of {for, until, step, do}, it should be {for, while, step, do} for consistency with most other languages?
 
 Embedding:
     (big projects)

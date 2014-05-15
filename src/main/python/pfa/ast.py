@@ -1581,7 +1581,7 @@ class DoUntil(Expression):
 
 @pfa.util.case
 class For(Expression):
-    def __init__(self, init, until, step, body, pos=None):
+    def __init__(self, init, predicate, step, body, pos=None):
         if len(self.init) < 1:
             raise PFASyntaxException("\"for\" must contain at least one declaration", self.pos)
 
@@ -1613,11 +1613,11 @@ class For(Expression):
             loopScope.put(name, exprContext.retType)
             initNameTypeExpr.append((name, exprContext.retType, exprResult))
 
-        untilScope = loopScope.newScope(True, True)
-        untilContext, untilResult = self.until.walk(task, untilScope, functionTable)
-        if not AvroBoolean().accepts(untilContext.retType):
-            raise PFASemanticException("\"until\" predicate should be boolean, but is " + repr(untilContext.retType), self.pos)
-        calls = calls.union(untilContext.calls)
+        predicateScope = loopScope.newScope(True, True)
+        predicateContext, predicateResult = self.predicate.walk(task, predicateScope, functionTable)
+        if not AvroBoolean().accepts(predicateContext.retType):
+            raise PFASemanticException("predicate should be boolean, but is " + repr(predicateContext.retType), self.pos)
+        calls = calls.union(predicateContext.calls)
 
         stepNameTypeExpr = []
         for name, expr in self.step.items():
@@ -1640,12 +1640,12 @@ class For(Expression):
         for exprCtx, exprRes in bodyResults:
             calls = calls.union(exprCtx.calls)
 
-        context = self.Context(AvroNull(), calls.union(set([self.desc])), dict(list(bodyScope.inThisScope.items()) + list(loopScope.inThisScope.items())), initNameTypeExpr, untilResult, [x[1] for x in bodyResults], stepNameTypeExpr)
+        context = self.Context(AvroNull(), calls.union(set([self.desc])), dict(list(bodyScope.inThisScope.items()) + list(loopScope.inThisScope.items())), initNameTypeExpr, predicateResult, [x[1] for x in bodyResults], stepNameTypeExpr)
         return context, task(context)
 
     @property
     def jsonNode(self):
-        return {"for": dict((k, v.jsonNode) for k, v in self.init.items()), "until": self.until.jsonNode, "step": dict((k, v.jsonNode) for k, v in self.step.items()), "do": [x.jsonNode for x in self.body]}
+        return {"for": dict((k, v.jsonNode) for k, v in self.init.items()), "while": self.predicate.jsonNode, "step": dict((k, v.jsonNode) for k, v in self.step.items()), "do": [x.jsonNode for x in self.body]}
 
     desc = "for"
 

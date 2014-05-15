@@ -312,25 +312,25 @@ class TestTypeCheck(unittest.TestCase):
             inferType(jsonToAst.expr('''{"do": 12, "until": null}'''))
 
     def testFor(self):
-        self.assertTrue(self.typeEquality(inferType(jsonToAst.expr('''{"for": {"x": 0}, "until": true, "step": {"x": 1}, "do": 12}''')), AvroNull()))
-        self.assertTrue(self.typeEquality(inferType(jsonToAst.expr('''{"for": {"x": 0}, "until": true, "step": {"x": 1}, "do": "x"}''')), AvroNull()))
+        self.assertTrue(self.typeEquality(inferType(jsonToAst.expr('''{"for": {"x": 0}, "while": true, "step": {"x": 1}, "do": 12}''')), AvroNull()))
+        self.assertTrue(self.typeEquality(inferType(jsonToAst.expr('''{"for": {"x": 0}, "while": true, "step": {"x": 1}, "do": "x"}''')), AvroNull()))
         with self.assertRaises(PFASemanticException):
-            inferType(jsonToAst.expr('''{"for": {"x": 0}, "until": true, "step": {"x": 1}, "do": "y"}'''))
+            inferType(jsonToAst.expr('''{"for": {"x": 0}, "while": true, "step": {"x": 1}, "do": "y"}'''))
         with self.assertRaises(PFASyntaxException):
-            inferType(jsonToAst.expr('''{"for": {}, "until": true, "step": {"x": 1}, "do": 12}'''))
+            inferType(jsonToAst.expr('''{"for": {}, "while": true, "step": {"x": 1}, "do": 12}'''))
         with self.assertRaises(PFASemanticException):
-            inferType(jsonToAst.expr('''{"for": {"x": 0}, "until": null, "step": {"x": 1}, "do": 12}'''))
+            inferType(jsonToAst.expr('''{"for": {"x": 0}, "while": null, "step": {"x": 1}, "do": 12}'''))
         with self.assertRaises(PFASyntaxException):
-            inferType(jsonToAst.expr('''{"for": {"x": 0}, "until": true, "step": {}, "do": 12}'''))
+            inferType(jsonToAst.expr('''{"for": {"x": 0}, "while": true, "step": {}, "do": 12}'''))
         with self.assertRaises(PFASemanticException):
-            inferType(jsonToAst.expr('''{"for": {"x": 0}, "until": true, "step": {"y": 1}, "do": 12}'''))
+            inferType(jsonToAst.expr('''{"for": {"x": 0}, "while": true, "step": {"y": 1}, "do": 12}'''))
         with self.assertRaises(PFASemanticException):
-            inferType(jsonToAst.expr('''{"for": {"x": 0}, "until": true, "step": {"x": 2.2}, "do": 12}'''))
+            inferType(jsonToAst.expr('''{"for": {"x": 0}, "while": true, "step": {"x": 2.2}, "do": 12}'''))
         with self.assertRaises(PFASemanticException):
-            inferType(jsonToAst.expr('''{"for": {"x": 0}, "until": true, "step": {"x": 1}, "do": 12}'''), {"x": AvroInt()})
-        self.assertTrue(self.typeEquality(inferType(jsonToAst.expr('''{"for": {"x": 0}, "until": true, "step": {"x": 1}, "do": {"set": {"x": 12}}}''')), AvroNull()))
+            inferType(jsonToAst.expr('''{"for": {"x": 0}, "while": true, "step": {"x": 1}, "do": 12}'''), {"x": AvroInt()})
+        self.assertTrue(self.typeEquality(inferType(jsonToAst.expr('''{"for": {"x": 0}, "while": true, "step": {"x": 1}, "do": {"set": {"x": 12}}}''')), AvroNull()))
         with self.assertRaises(PFASemanticException):
-            inferType(jsonToAst.expr('''{"for": {"x": 0}, "until": true, "step": {"x": 1}, "do": {"set": {"x": 12.4}}}'''))
+            inferType(jsonToAst.expr('''{"for": {"x": 0}, "while": true, "step": {"x": 1}, "do": {"set": {"x": 12.4}}}'''))
 
     def testForeach(self):
         self.assertTrue(self.typeEquality(inferType(jsonToAst.expr('''{"foreach": "x", "in": {"type": {"type": "array", "items": "int"}, "value": [1, 2, 3]}, "do": 12}''')), AvroNull()))
