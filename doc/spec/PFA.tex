@@ -1581,17 +1581,17 @@ The {\PFAc STRING} is the error message, and if a {\PFAc code} is provided, it p
 \subsubsection{Log messages: the ``log'' special form}
 \label{sec:logs}
 
-The only three outputs that a PFA scoring engine can emit are (1) normal output, the result of a calculation, (2) an exception, and (3) log messages.  Log messages should not be used for normal output, as they are restricted to strings and may or may not be handled by the host PFA system.  The PFA system has full discretion to ignore, filter, collate, forward, or merge log messages.
+The only three outputs that a PFA scoring engine can emit are (1) normal output, the result of a calculation, (2) an exception, and (3) log messages.  Log messages should not be used for normal output, as they may or may not be handled by the host PFA system.  The PFA system has full discretion to ignore, filter, collate, forward, or merge log messages.
 
 The ``log'' special form emits a log message.  It has the following syntax.
 \begin{json}
-{"log": STRING}
+{"log": EXPRESSION-OR-EXPRESSIONS}
 \end{json}
 or
 \begin{json}
-{"log": STRING, "namespace": NAME}
+{"log": EXPRESSION-OR-EXPRESSIONS, "namespace": NAME}
 \end{json}
-The {\PFAc STRING} is the text of the log message; the optional {\PFAc NAMESPACE} is a token that may be used for filtering or collating.  The ``log'' form returns {\PFAc null}.
+The {\PFAc EXPRESSION-OR-EXPRESSIONS} are the expressions to dump to the log (remember to wrap plain strings in {\PFAc \{"string": "} \ldots {\PFAc "\}} or {\PFAc ["} \ldots {\PFAc "]}); the optional {\PFAc NAMESPACE} is a token that may be used for filtering or collating.  The ``log'' form returns {\PFAc null}.
 
 \pagebreak
 
