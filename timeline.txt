@@ -124,6 +124,7 @@
 2014-05-13:
 2014-05-14:   finished more of the Javascript-to-PFA converter, leaving only cells, pools, conditionals, loops, casting, doc, error, and log.
 2014-05-15:   finished the Javascript-to-PFA converter, fixed an error in the specification, for-while instead of for-until
+2014-05-16:   js-to-ast is done and in place
 
 
 Tomorrow:     An AppEngine example.
