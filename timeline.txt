@@ -125,13 +125,13 @@
 2014-05-14:   finished more of the Javascript-to-PFA converter, leaving only cells, pools, conditionals, loops, casting, doc, error, and log.
 2014-05-15:   finished the Javascript-to-PFA converter, fixed an error in the specification, for-while instead of for-until
 2014-05-16:   js-to-ast is done and in place
+2014-05-17:   tutorial is done and now split into three parts
 
 
-Tomorrow:     An AppEngine example.
+Tomorrow:     Clustering (with metrics under m.metric.*)
 And then:     Map, bytes, enums, fixed, record (conversions, mostly)
 And then:     Linear algebra: find a good library, matricies with named rows and columns
 And then:     Regular expressions: find a good library for PCRE
-And then:     Clustering
 And then:     Regression
 
 
@@ -139,6 +139,7 @@ And then:     Regression
 Wish list:
     There needs to be a {"pool": NAME, "del": ITEM-NAME} to delete one item and {"pool": NAME, "del": null} to clear all items atomically.
     For-comprehensions to make new data structures functionally.
+    Consider having begin and end return output.  (It doesn't have to be type-checked: just return AnyRef.)
 
 Embedding:
     (big projects)
