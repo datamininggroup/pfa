@@ -126,6 +126,10 @@
 2014-05-15:   finished the Javascript-to-PFA converter, fixed an error in the specification, for-while instead of for-until
 2014-05-16:   js-to-ast is done and in place
 2014-05-17:   tutorial is done and now split into three parts
+2014-05-18:
+2014-05-19:
+2014-05-20:
+2014-05-21:   propagated "@"-signs through Python implementation; renamed files
 
 
 Tomorrow:     Clustering (with metrics under m.metric.*)
