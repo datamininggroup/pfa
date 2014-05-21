@@ -219,10 +219,10 @@ def _stripAtSigns(data):
         return data
 
 def _readEngineConfig(data, avroTypeBuilder):
-    at = getattr(data, "@", None)
+    at = data.get("@")
 
     if not isinstance(data, dict):
-        raise PFASyntaxException("PFA engine must be a JSON object, not " + _trunc(repr(data)), "")
+        raise PFASyntaxException("PFA engine must be a JSON object, not " + _trunc(repr(data)), at)
 
     keys = set(x for x in data.keys() if x != "@")
 
@@ -249,7 +249,7 @@ def _readEngineConfig(data, avroTypeBuilder):
             elif x == "fold":
                 _method = Method.FOLD
             else:
-                raise PFASyntaxException("expected one of \"map\", \"emit\", \"fold\", not \"{}\"".format(x), "")
+                raise PFASyntaxException("expected one of \"map\", \"emit\", \"fold\", not \"{}\"".format(x), at)
         elif key == "input": _input = _readAvroPlaceholder(data[key], key, avroTypeBuilder)
         elif key == "output": _output = _readAvroPlaceholder(data[key], key, avroTypeBuilder)
         elif key == "begin":
@@ -276,19 +276,19 @@ def _readEngineConfig(data, avroTypeBuilder):
         elif key == "metadata": _metadata = _readJsonNode(data[key], key)
         elif key == "options": _options = _readJsonNodeMap(data[key], key)
         else:
-            raise PFASyntaxException("unexpected top-level field: {}".format(key), "")
+            raise PFASyntaxException("unexpected top-level field: {}".format(key), at)
 
     if "name" not in keys:
         _name = pfa.util.uniqueEngineName()
 
     if _method == Method.FOLD and "zero" not in keys:
-        raise PFASyntaxException("folding engines must include a \"zero\" to begin the calculation", "")
+        raise PFASyntaxException("folding engines must include a \"zero\" to begin the calculation", at)
 
     required = set(["action", "input", "output"])
     if keys.intersection(required) != required:
-        raise PFASyntaxException("missing top-level fields: {}".format(", ".join(required.diff(fields))), "")
+        raise PFASyntaxException("missing top-level fields: {}".format(", ".join(required.diff(fields))), at)
     else:
-        return EngineConfig(_name, _method, _input, _output, _begin, _action, _end, _fcns, _zero, _cells, _pools, _randseed, _doc, _metadata, _options, "")
+        return EngineConfig(_name, _method, _input, _output, _begin, _action, _end, _fcns, _zero, _cells, _pools, _randseed, _doc, _metadata, _options, at)
 
 def _readJsonToString(data, dot):
     return json.dumps(_stripAtSigns(data))
@@ -307,7 +307,7 @@ def _readJsonNodeMap(data, dot):
 
 def _readJsonToStringMap(data, dot):
     if isinstance(data, dict):
-        at = getattr(data, "@", None)
+        at = data.get("@")
         return dict((k, _readJsonToString(v, dot + "." + k)) for k, v in data.items() if k != "@")
     else:
         raise PFASyntaxException("expected map of JSON objects, not " + _trunc(repr(data)), pos(dot, at))
@@ -316,37 +316,37 @@ def _readBoolean(data, dot):
     if isinstance(data, bool):
         return data
     else:
-        raise PFASyntaxException("expected boolean, not " + _trunc(repr(data)), pos(dot, at))
+        raise PFASyntaxException("expected boolean, not " + _trunc(repr(data)), dot)
 
 def _readInt(data, dot):
     if isinstance(data, int):
         if -2147483648 <= data <= 2147483647:
             return data
         else:
-            raise PFASyntaxException("int out of range: {}".format(data), pos(dot, at))
+            raise PFASyntaxException("int out of range: {}".format(data), dot)
     else:
-        raise PFASyntaxException("expected int, not " + _trunc(repr(data)), pos(dot, at))
+        raise PFASyntaxException("expected int, not " + _trunc(repr(data)), dot)
 
 def _readLong(data, dot):
     if isinstance(data, (int, long)):
         if -9223372036854775808 <= data <= 9223372036854775807:
             return data
         else:
-            raise PFASyntaxException("long out of range: {}".format(data), pos(dot, at))
+            raise PFASyntaxException("long out of range: {}".format(data), dot)
     else:
-        raise PFASyntaxException("expected long, not " + _trunc(repr(data)), pos(dot, at))
+        raise PFASyntaxException("expected long, not " + _trunc(repr(data)), dot)
 
 def _readFloat(data, dot):
     if isinstance(data, (int, long, float)):
         return float(data)
     else:
-        raise PFASyntaxException("expected float, not " + _trunc(repr(data)), pos(dot, at))
+        raise PFASyntaxException("expected float, not " + _trunc(repr(data)), dot)
 
 def _readDouble(data, dot):
     if isinstance(data, (int, long, float)):
         return float(data)
     else:
-        raise PFASyntaxException("expected double, not " + _trunc(repr(data)), pos(dot, at))
+        raise PFASyntaxException("expected double, not " + _trunc(repr(data)), dot)
 
 def _readStringArray(data, dot):
     if isinstance(data, (list, tuple)):
@@ -374,7 +374,7 @@ def _readExpressionArray(data, dot, avroTypeBuilder):
 
 def _readExpressionMap(data, dot, avroTypeBuilder):
     if isinstance(data, dict):
-        at = getattr(data, "@", None)
+        at = data.get("@")
         return dict((k, _readExpression(v, dot + "." + k, avroTypeBuilder)) for k, v in data.items() if k != "@")
     else:
         raise PFASyntaxException("expected map of expressions, not " + _trunc(repr(data)), pos(dot, at))
@@ -387,7 +387,7 @@ def _readCastCaseArray(data, dot, avroTypeBuilder):
 
 def _readCastCase(data, dot, avroTypeBuilder):
     if isinstance(data, dict):
-        at = getattr(data, "@", None)
+        at = data.get("@")
         keys = set(x for x in data.keys() if x != "@")
 
         for key in keys:
@@ -450,7 +450,7 @@ def _readArgument(data, dot, avroTypeBuilder):
             raise PFASyntaxException("expecting expression, which may be [\"string\"], but no other array can be used as an expression", dot)
 
     elif isinstance(data, dict):
-        at = getattr(data, "@", None)
+        at = data.get("@")
         keys = set(x for x in data.keys() if x != "@")
 
         _path = []
@@ -562,69 +562,69 @@ def _readArgument(data, dot, avroTypeBuilder):
         if "fcnref" in keys and not validFunctionName(_fcnref):
             raise PFASyntaxException("\"{}\" is not a valid function name".format(data[keys]), pos(dot, at))
 
-        if keys == set(["int"]):                             return LiteralInt(_int, dot)
-        elif keys == set(["long"]):                          return LiteralLong(_long, dot)
-        elif keys == set(["float"]):                         return LiteralFloat(_float, dot)
-        elif keys == set(["double"]):                        return LiteralDouble(_double, dot)
-        elif keys == set(["string"]):                        return LiteralString(_string, dot)
-        elif keys == set(["base64"]):                        return LiteralBase64(_bytes, dot)
-        elif keys == set(["type", "value"]):                 return Literal(_avroType, _value, dot)
+        if keys == set(["int"]):                             return LiteralInt(_int, pos(dot, at))
+        elif keys == set(["long"]):                          return LiteralLong(_long, pos(dot, at))
+        elif keys == set(["float"]):                         return LiteralFloat(_float, pos(dot, at))
+        elif keys == set(["double"]):                        return LiteralDouble(_double, pos(dot, at))
+        elif keys == set(["string"]):                        return LiteralString(_string, pos(dot, at))
+        elif keys == set(["base64"]):                        return LiteralBase64(_bytes, pos(dot, at))
+        elif keys == set(["type", "value"]):                 return Literal(_avroType, _value, pos(dot, at))
 
         elif keys == set(["new", "type"]) and _newObject is not None:
-                                                             return NewObject(_newObject, _avroType, avroTypeBuilder, dot)
+                                                             return NewObject(_newObject, _avroType, avroTypeBuilder, pos(dot, at))
         elif keys == set(["new", "type"]) and _newArray is not None:
-                                                             return NewArray(_newArray, _avroType, avroTypeBuilder, dot)
+                                                             return NewArray(_newArray, _avroType, avroTypeBuilder, pos(dot, at))
 
-        elif keys == set(["do"]):                            return Do(_body, dot)
-        elif keys == set(["let"]):                           return Let(_let, dot)
-        elif keys == set(["set"]):                           return SetVar(_set, dot)
+        elif keys == set(["do"]):                            return Do(_body, pos(dot, at))
+        elif keys == set(["let"]):                           return Let(_let, pos(dot, at))
+        elif keys == set(["set"]):                           return SetVar(_set, pos(dot, at))
 
-        elif keys == set(["attr", "path"]):                  return AttrGet(_attr, _path, dot)
-        elif keys == set(["attr", "path", "to"]):            return AttrTo(_attr, _path, _to, dot)
+        elif keys == set(["attr", "path"]):                  return AttrGet(_attr, _path, pos(dot, at))
+        elif keys == set(["attr", "path", "to"]):            return AttrTo(_attr, _path, _to, pos(dot, at))
         elif keys == set(["cell"]) or \
-             keys == set(["cell", "path"]):                  return CellGet(_cell, _path, dot)
+             keys == set(["cell", "path"]):                  return CellGet(_cell, _path, pos(dot, at))
         elif keys == set(["cell", "to"]) or \
-             keys == set(["cell", "path", "to"]):            return CellTo(_cell, _path, _to, dot)
-        elif keys == set(["pool", "path"]):                  return PoolGet(_pool, _path, dot)
+             keys == set(["cell", "path", "to"]):            return CellTo(_cell, _path, _to, pos(dot, at))
+        elif keys == set(["pool", "path"]):                  return PoolGet(_pool, _path, pos(dot, at))
         elif keys == set(["pool", "path", "to"]) or \
-             keys == set(["pool", "path", "to", "init"]):    return PoolTo(_pool, _path, _to, _init, dot)
+             keys == set(["pool", "path", "to", "init"]):    return PoolTo(_pool, _path, _to, _init, pos(dot, at))
 
-        elif keys == set(["if", "then"]):                    return If(_ifPredicate, _thenClause, None, dot)
-        elif keys == set(["if", "then", "else"]):            return If(_ifPredicate, _thenClause, _elseClause, dot)
-        elif keys == set(["cond"]):                          return Cond(_cond, None, dot)
-        elif keys == set(["cond", "else"]):                  return Cond(_cond, _elseClause, dot)
+        elif keys == set(["if", "then"]):                    return If(_ifPredicate, _thenClause, None, pos(dot, at))
+        elif keys == set(["if", "then", "else"]):            return If(_ifPredicate, _thenClause, _elseClause, pos(dot, at))
+        elif keys == set(["cond"]):                          return Cond(_cond, None, pos(dot, at))
+        elif keys == set(["cond", "else"]):                  return Cond(_cond, _elseClause, pos(dot, at))
 
-        elif keys == set(["while", "do"]):                   return While(_whilePredicate, _body, dot)
-        elif keys == set(["do", "until"]):                   return DoUntil(_body, _until, dot)
-        elif keys == set(["for", "while", "step", "do"]):    return For(_forlet, _whilePredicate, _forstep, _body, dot)
+        elif keys == set(["while", "do"]):                   return While(_whilePredicate, _body, pos(dot, at))
+        elif keys == set(["do", "until"]):                   return DoUntil(_body, _until, pos(dot, at))
+        elif keys == set(["for", "while", "step", "do"]):    return For(_forlet, _whilePredicate, _forstep, _body, pos(dot, at))
 
         elif keys == set(["foreach", "in", "do"]) or \
-             keys == set(["foreach", "in", "do", "seq"]):    return Foreach(_foreach, _in, _body, _seq, dot)
-        elif keys == set(["forkey", "forval", "in", "do"]):  return Forkeyval(_forkey, _forval, _in, _body, dot)
+             keys == set(["foreach", "in", "do", "seq"]):    return Foreach(_foreach, _in, _body, _seq, pos(dot, at))
+        elif keys == set(["forkey", "forval", "in", "do"]):  return Forkeyval(_forkey, _forval, _in, _body, pos(dot, at))
 
         elif keys == set(["cast", "cases"]) or \
-             keys == set(["cast", "cases", "partial"]):      return CastBlock(_cast, _cases, _partial, dot)
-        elif keys == set(["upcast", "as"]):                  return Upcast(_upcast, _as, dot)
+             keys == set(["cast", "cases", "partial"]):      return CastBlock(_cast, _cases, _partial, pos(dot, at))
+        elif keys == set(["upcast", "as"]):                  return Upcast(_upcast, _as, pos(dot, at))
 
-        elif keys == set(["ifnotnull", "then"]):             return IfNotNull(_ifnotnull, _thenClause, None, dot)
-        elif keys == set(["ifnotnull", "then", "else"]):     return IfNotNull(_ifnotnull, _thenClause, _elseClause, dot)
+        elif keys == set(["ifnotnull", "then"]):             return IfNotNull(_ifnotnull, _thenClause, None, pos(dot, at))
+        elif keys == set(["ifnotnull", "then", "else"]):     return IfNotNull(_ifnotnull, _thenClause, _elseClause, pos(dot, at))
 
-        elif keys == set(["doc"]):                           return Doc(_doc, dot)
+        elif keys == set(["doc"]):                           return Doc(_doc, pos(dot, at))
 
-        elif keys == set(["error"]):                         return Error(_error, None, dot)
-        elif keys == set(["error", "code"]):                 return Error(_error, _code, dot)
-        elif keys == set(["log"]):                           return Log(_log, None, dot)
-        elif keys == set(["log", "namespace"]):              return Log(_log, _namespace, dot)
+        elif keys == set(["error"]):                         return Error(_error, None, pos(dot, at))
+        elif keys == set(["error", "code"]):                 return Error(_error, _code, pos(dot, at))
+        elif keys == set(["log"]):                           return Log(_log, None, pos(dot, at))
+        elif keys == set(["log", "namespace"]):              return Log(_log, _namespace, pos(dot, at))
 
-        elif keys == set(["params", "ret", "do"]):           return FcnDef(_params, _ret, _body, dot)
-        elif keys == set(["fcnref"]):                        return FcnRef(_fcnref, dot)
+        elif keys == set(["params", "ret", "do"]):           return FcnDef(_params, _ret, _body, pos(dot, at))
+        elif keys == set(["fcnref"]):                        return FcnRef(_fcnref, pos(dot, at))
 
         elif len(keys) == 1 and list(keys)[0] not in \
              set(["as", "base64", "cases", "cast", "cell", "code", "cond", "do", "doc", "double", "else", "error", "fcnref",
                   "float", "for", "foreach", "forkey", "forval", "if", "ifnotnull", "in", "init", "int", "let", "log", "long",
                   "namespace", "new", "params", "partial", "path", "pool", "ret", "seq", "set", "step", "string", "then",
                   "to", "type", "upcast", "until", "value", "while"]):
-                                                             return Call(_callName, _callArgs, dot)
+                                                             return Call(_callName, _callArgs, pos(dot, at))
 
         else: raise PFASyntaxException("unrecognized special form: {} (not enough arguments? too many?)".format(", ".join(keys)), pos(dot, at))
 
@@ -633,7 +633,7 @@ def _readArgument(data, dot, avroTypeBuilder):
 
 def _readFcnDefMap(data, dot, avroTypeBuilder):
     if isinstance(data, dict):
-        at = getattr(data, "@", None)
+        at = data.get("@")
         for k in data.keys():
             if k != "@" and not validFunctionName(k):
                 raise PFASyntaxException("\"{}\" is not a valid function name".format(k), pos(dot, at))
@@ -643,7 +643,7 @@ def _readFcnDefMap(data, dot, avroTypeBuilder):
 
 def _readFcnDef(data, dot, avroTypeBuilder):
     if isinstance(data, dict):
-        at = getattr(data, "@", None)
+        at = data.get("@")
         keys = set(x for x in data.keys() if x != "@")
 
         for key in keys:
@@ -661,7 +661,7 @@ def _readFcnDef(data, dot, avroTypeBuilder):
         if (keys != required):
             raise PFASyntaxException("wrong set of fields for a function definition: " + ", ".join(keys), pos(dot, at))
         else:
-            return FcnDef(_params, _ret, _body, dot)
+            return FcnDef(_params, _ret, _body, pos(dot, at))
     else:
         raise PFASyntaxException("expected function definition, not " + _trunc(repr(data)), pos(dot, at))
 
@@ -673,7 +673,7 @@ def _readParams(data, dot, avroTypeBuilder):
 
 def _readParam(data, dot, avroTypeBuilder):
     if isinstance(data, dict):
-        at = getattr(data, "@", None)
+        at = data.get("@")
         keys = set(x for x in data.keys() if x != "@")
         if len(keys) != 1:
             raise PFASyntaxException("function parameter name-type map should have only one pair", pos(dot, at))
@@ -688,7 +688,7 @@ def _readParam(data, dot, avroTypeBuilder):
 
 def _readCells(data, dot, avroTypeBuilder):
     if isinstance(data, dict):
-        at = getattr(data, "@", None)
+        at = data.get("@")
         for k in data.keys():
             if k != "@" and not validSymbolName(k):
                 raise PFASyntaxException("\"{}\" is not a valid symbol name".format(k), pos(dot, at))
@@ -698,7 +698,7 @@ def _readCells(data, dot, avroTypeBuilder):
 
 def _readCell(data, dot, avroTypeBuilder):
     if isinstance(data, dict):
-        at = getattr(data, "@", None)
+        at = data.get("@")
         _shared = False
         _rollback = False
         keys = set(x for x in data.keys() if x != "@")
@@ -713,13 +713,13 @@ def _readCell(data, dot, avroTypeBuilder):
         if ("type" not in keys) or ("init" not in keys) or (not keys.issubset(set(["type", "init", "shared", "rollback"]))):
             raise PFASyntaxException("wrong set of fields for a cell: " + ", ".join(keys), pos(dot, at))
         else:
-            return Cell(_avroType, _init, _shared, _rollback, dot)
+            return Cell(_avroType, _init, _shared, _rollback, pos(dot, at))
     else:
         raise PFASyntaxException("expected cell, not " + _trunc(repr(data)), pos(dot, at))
 
 def _readPools(data, dot, avroTypeBuilder):
     if isinstance(data, dict):
-        at = getattr(data, "@", None)
+        at = data.get("@")
         for k in data.keys():
             if k != "@" and not validSymbolName(k):
                 raise PFASyntaxException("\"{}\" is not a valid symbol name".format(k), pos(dot, at))
@@ -729,7 +729,7 @@ def _readPools(data, dot, avroTypeBuilder):
 
 def _readPool(data, dot, avroTypeBuilder):
     if isinstance(data, dict):
-        at = getattr(data, "@", None)
+        at = data.get("@")
         _shared = False
         _rollback = False
         keys = set(x for x in data.keys() if x != "@")
@@ -742,6 +742,9 @@ def _readPool(data, dot, avroTypeBuilder):
         if ("type" not in keys) or (not keys.issubset(set(["type", "init", "shared", "rollback"]))):
             raise PFASyntaxException("wrong set of fields for a pool: " + ", ".join(keys), pos(dot, at))
         else:
-            return Pool(_avroType, _init, _shared, _rollback, dot)
+            return Pool(_avroType, _init, _shared, _rollback, pos(dot, at))
     else:
         raise PFASyntaxException("expected pool, not " + _trunc(repr(data)), pos(dot, at))
+
+
+
