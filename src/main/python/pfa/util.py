@@ -23,6 +23,9 @@ def uniqueFixedName():
     sys.modules["pfa.util"].uniqueFixedNameCounter += 1
     return "Fixed_{}".format(sys.modules["pfa.util"].uniqueFixedNameCounter)
 
+def pos(dot, at):
+    return "in{} object from {}".format("" if (dot == "") else " field " + dot + " of", at)
+
 def flatten(x):
     return [item for sublist in x for item in sublist]
 
