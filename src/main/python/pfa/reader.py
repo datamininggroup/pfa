@@ -59,7 +59,7 @@ from pfa.ast import Doc
 from pfa.ast import Error
 from pfa.ast import Log
 from pfa.errors import PFASyntaxException
-from pfa.types import AvroTypeBuilder
+from pfa.datatype import AvroTypeBuilder
 
 def jsonToAst(jsonInput):
     if isinstance(jsonInput, file):

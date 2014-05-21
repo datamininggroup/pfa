@@ -3,7 +3,7 @@
 import json
 import unittest
 
-from pfa.types import *
+from pfa.datatype import *
 from pfa.signature import *
 import pfa.P as P
 

@@ -34,12 +34,16 @@ class PythonTestSuite extends FlatSpec with Matchers {
     run("test.asttojson", "TestAstToJson", 2) should be (true)
   }
 
+  it must "TestDataType" taggedAs(PythonTest) in {
+    run("test.datatype", "TestDataType", 2) should be (true)
+  }
+
   it must "TestJsonToAst" taggedAs(PythonTest) in {
     run("test.jsontoast", "TestJsonToAst", 2) should be (true)
   }
 
-  it must "TestTypes" taggedAs(PythonTest) in {
-    run("test.types", "TestTypes", 2) should be (true)
+  it must "TestPMML" taggedAs(PythonTest) in {
+    run("test.pmml", "TestPMML", 2) should be (true)
   }
 
   it must "TestSignature" taggedAs(PythonTest) in {
@@ -48,10 +52,6 @@ class PythonTestSuite extends FlatSpec with Matchers {
 
   it must "TestTypeCheck" taggedAs(PythonTest) in {
     run("test.typecheck", "TestTypeCheck", 2) should be (true)
-  }
-
-  it must "TestPMML" taggedAs(PythonTest) in {
-    run("test.pmml", "TestPMML", 2) should be (true)
   }
 
 }

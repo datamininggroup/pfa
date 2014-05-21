@@ -5,7 +5,7 @@ import unittest
 
 from pfa.ast import *
 from pfa.reader import jsonToAst
-from pfa.types import *
+from pfa.datatype import *
 
 class TestJsonToAst(unittest.TestCase):
     def testEngineConfig(self):

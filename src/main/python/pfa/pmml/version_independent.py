@@ -3,10 +3,10 @@
 import json
 
 import pfa.ast as ast
-from pfa.types import AvroArray
-from pfa.types import AvroDouble
-from pfa.types import AvroString
-from pfa.types import AvroTypeBuilder
+from pfa.datatype import AvroArray
+from pfa.datatype import AvroDouble
+from pfa.datatype import AvroString
+from pfa.datatype import AvroTypeBuilder
 from pfa.signature import LabelData
 from pfa.util import uniqueEngineName, uniqueRecordName, uniqueEnumName
 

@@ -5,7 +5,7 @@ import unittest
 
 from pfa.ast import *
 from pfa.reader import *
-from pfa.types import *
+from pfa.datatype import *
 
 class TestTypeCheck(unittest.TestCase):
     def typeEquality(self, x, y):

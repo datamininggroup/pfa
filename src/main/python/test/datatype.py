@@ -3,9 +3,9 @@
 import json
 import unittest
 
-from pfa.types import *
+from pfa.datatype import *
 
-class TestTypes(unittest.TestCase):
+class TestDataType(unittest.TestCase):
     def testPromoteNumbers(self):
         self.assertTrue(AvroInt().accepts(AvroInt()))
 

@@ -5,7 +5,7 @@ import io
 import xml.sax
 import xml.sax.handler
 
-from pfa.types import AvroTypeBuilder
+from pfa.datatype import AvroTypeBuilder
 import pfa.pmml.version_independent
 import pfa.pmml.version_3_2
 import pfa.pmml.version_4_0

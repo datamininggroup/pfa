@@ -110,7 +110,7 @@ if __name__ == "__main__":
 import json
 
 import pfa.ast as ast
-from pfa.types import AvroTypeBuilder
+from pfa.datatype import AvroTypeBuilder
 from pfa.util import uniqueEngineName, uniqueRecordName, uniqueEnumName
 
 class Context(object): pass

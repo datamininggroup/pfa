@@ -1,24 +1,24 @@
 #!/usr/bin/env python
 
-from pfa.types import Type
-from pfa.types import FcnType
-from pfa.types import AvroType
-from pfa.types import AvroCompiled
-from pfa.types import AvroNull
-from pfa.types import AvroBoolean
-from pfa.types import AvroInt
-from pfa.types import AvroLong
-from pfa.types import AvroFloat
-from pfa.types import AvroDouble
-from pfa.types import AvroBytes
-from pfa.types import AvroFixed
-from pfa.types import AvroString
-from pfa.types import AvroEnum
-from pfa.types import AvroArray
-from pfa.types import AvroMap
-from pfa.types import AvroRecord
-from pfa.types import AvroField
-from pfa.types import AvroUnion
+from pfa.datatype import Type
+from pfa.datatype import FcnType
+from pfa.datatype import AvroType
+from pfa.datatype import AvroCompiled
+from pfa.datatype import AvroNull
+from pfa.datatype import AvroBoolean
+from pfa.datatype import AvroInt
+from pfa.datatype import AvroLong
+from pfa.datatype import AvroFloat
+from pfa.datatype import AvroDouble
+from pfa.datatype import AvroBytes
+from pfa.datatype import AvroFixed
+from pfa.datatype import AvroString
+from pfa.datatype import AvroEnum
+from pfa.datatype import AvroArray
+from pfa.datatype import AvroMap
+from pfa.datatype import AvroRecord
+from pfa.datatype import AvroField
+from pfa.datatype import AvroUnion
 
 class Pattern(object): pass
 

@@ -4,7 +4,7 @@ from pfa.fcn import Fcn
 from pfa.fcn import LibFcn
 from pfa.signature import Sig
 from pfa.signature import Sigs
-from pfa.types import *
+from pfa.datatype import *
 import pfa.P as P
 
 provides = {}

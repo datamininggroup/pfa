@@ -25,7 +25,7 @@ from pfa.fcn import Fcn
 from pfa.signature import IncompatibleTypes
 from pfa.signature import LabelData
 from pfa.signature import Sig
-from pfa.types import *
+from pfa.datatype import *
 
 def inferType(expr, symbols=None, cells=None, pools=None, fcns=None):
     if symbols is None:
