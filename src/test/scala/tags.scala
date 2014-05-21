@@ -8,7 +8,7 @@ package test.scala {
   object RandomJson extends Tag("RandomJson")
   object Shared extends Tag("Shared")
   object SignatureMatch extends Tag("SignatureMatch")
-  object Types extends Tag("Types")
+  object DataType extends Tag("DataType")
   object TypeCheck extends Tag("TypeCheck")
   object Yaml extends Tag("Yaml")
 

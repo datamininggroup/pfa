@@ -1,4 +1,4 @@
-package test.scala.types
+package test.scala.datatype
 
 import scala.collection.JavaConversions._
 import scala.collection.immutable.ListMap
@@ -19,15 +19,15 @@ import org.apache.avro.SchemaCompatibility.checkReaderWriterCompatibility
 import org.apache.avro.SchemaCompatibility.SchemaCompatibilityType
 
 import org.scoringengine.pfa.jvmcompiler._
-import org.scoringengine.pfa.types._
-import org.scoringengine.pfa.types.AvroConversions._
+import org.scoringengine.pfa.datatype._
+import org.scoringengine.pfa.datatype.AvroConversions._
 import test.scala._
 
 @RunWith(classOf[JUnitRunner])
-class TypesSuite extends FlatSpec with Matchers {
+class DataTypeSuite extends FlatSpec with Matchers {
   val objectMapper = new ObjectMapper
 
-  "Avro type comparison" must "promote numbers int -> long -> float -> double" taggedAs(Types) in {
+  "Avro type comparison" must "promote numbers int -> long -> float -> double" taggedAs(DataType) in {
     AvroInt().accepts(AvroInt()) should be (true)
     AvroLong().accepts(AvroInt()) should be (true)
     AvroFloat().accepts(AvroInt()) should be (true)
@@ -52,7 +52,7 @@ class TypesSuite extends FlatSpec with Matchers {
     AvroFloat().accepts(AvroDouble()) should be (false)
   }
 
-  it must "promote numbers in type-variant array" taggedAs(Types) in {
+  it must "promote numbers in type-variant array" taggedAs(DataType) in {
     AvroArray(AvroInt()).accepts(AvroArray(AvroInt())) should be (true)
     AvroArray(AvroLong()).accepts(AvroArray(AvroInt())) should be (true)
     AvroArray(AvroFloat()).accepts(AvroArray(AvroInt())) should be (true)
@@ -77,7 +77,7 @@ class TypesSuite extends FlatSpec with Matchers {
     AvroArray(AvroFloat()).accepts(AvroArray(AvroDouble())) should be (false)
   }
 
-  it must "promote numbers in type-variant map" taggedAs(Types) in {
+  it must "promote numbers in type-variant map" taggedAs(DataType) in {
     AvroMap(AvroInt()).accepts(AvroMap(AvroInt())) should be (true)
     AvroMap(AvroLong()).accepts(AvroMap(AvroInt())) should be (true)
     AvroMap(AvroFloat()).accepts(AvroMap(AvroInt())) should be (true)
@@ -102,7 +102,7 @@ class TypesSuite extends FlatSpec with Matchers {
     AvroMap(AvroFloat()).accepts(AvroMap(AvroDouble())) should be (false)
   }
 
-  it must "promote numbers in record" taggedAs(Types) in {
+  it must "promote numbers in record" taggedAs(DataType) in {
     AvroRecord(List(AvroField("one", AvroInt())), name = "One").accepts(AvroRecord(List(AvroField("one", AvroInt())), name = "One")) should be (true)
     AvroRecord(List(AvroField("one", AvroLong())), name = "One").accepts(AvroRecord(List(AvroField("one", AvroInt())), name = "One")) should be (true)
     AvroRecord(List(AvroField("one", AvroFloat())), name = "One").accepts(AvroRecord(List(AvroField("one", AvroInt())), name = "One")) should be (true)
@@ -127,12 +127,12 @@ class TypesSuite extends FlatSpec with Matchers {
     AvroRecord(List(AvroField("one", AvroFloat())), name = "One").accepts(AvroRecord(List(AvroField("one", AvroDouble())), name = "One")) should be (false)
   }
 
-  it must "have a type-safe null" taggedAs(Types) in {
+  it must "have a type-safe null" taggedAs(DataType) in {
     AvroNull().accepts(AvroString()) should be (false)
     AvroString().accepts(AvroNull()) should be (false)
   }
 
-  it must "distinguish boolean from numbers" taggedAs(Types) in {
+  it must "distinguish boolean from numbers" taggedAs(DataType) in {
     AvroBoolean().accepts(AvroInt()) should be (false)
     AvroBoolean().accepts(AvroLong()) should be (false)
     AvroBoolean().accepts(AvroFloat()) should be (false)
@@ -144,7 +144,7 @@ class TypesSuite extends FlatSpec with Matchers {
     AvroDouble().accepts(AvroBoolean()) should be (false)
   }
 
-  it must "distinguish bytes, string, enum, fixed" taggedAs(Types) in {
+  it must "distinguish bytes, string, enum, fixed" taggedAs(DataType) in {
     AvroBytes().accepts(AvroBytes()) should be (true)
     AvroBytes().accepts(AvroString()) should be (false)
     AvroBytes().accepts(AvroEnum(List("one", "two", "three"), name = "One")) should be (false)
@@ -166,7 +166,7 @@ class TypesSuite extends FlatSpec with Matchers {
     AvroFixed(5, name = "One").accepts(AvroFixed(5, name = "One")) should be (true)
   }
 
-  it must "resolve unions" taggedAs(Types) in {
+  it must "resolve unions" taggedAs(DataType) in {
     AvroUnion(List(AvroInt(), AvroString())).accepts(AvroInt()) should be (true)
     AvroUnion(List(AvroInt(), AvroString())).accepts(AvroString()) should be (true)
     AvroUnion(List(AvroInt(), AvroString())).accepts(AvroDouble()) should be (false)
@@ -178,7 +178,7 @@ class TypesSuite extends FlatSpec with Matchers {
   def testParser(input: String, expected: AvroType): Unit =
     (new ForwardDeclarationParser).parse(List(input)) should be (Map(input -> expected))
 
-  "Avro JSON schema" must "read simple types" taggedAs(Types) in {
+  "Avro JSON schema" must "read simple types" taggedAs(DataType) in {
     testParser(""""null"""", AvroNull())
     testParser(""""boolean"""", AvroBoolean())
     testParser(""""int"""", AvroInt())
@@ -195,13 +195,13 @@ class TypesSuite extends FlatSpec with Matchers {
     testParser("""["string", "null"]""", AvroUnion(List(AvroString(), AvroNull())))
   }
 
-  it must "identify nested record definitions" taggedAs(Types) in {
+  it must "identify nested record definitions" taggedAs(DataType) in {
     testParser(
       """{"type": "record", "name": "Outer", "fields": [{"name": "child", "type": {"type": "record", "name": "Inner", "fields": [{"name": "child", "type": "int"}]}}]}""",
       AvroRecord(List(AvroField("child", AvroRecord(List(AvroField("child", AvroInt())), name = "Inner"))), name = "Outer"))
   }
 
-  it must "resolve dependent records in any order" taggedAs(Types) in {
+  it must "resolve dependent records in any order" taggedAs(DataType) in {
     val record1 = """{"type": "record", "name": "Outer", "fields": [{"name": "child", "type": "Inner"}]}"""
     val record2 = """{"type": "record", "name": "Inner", "fields": [{"name": "child", "type": "int"}]}"""
 
@@ -216,7 +216,7 @@ class TypesSuite extends FlatSpec with Matchers {
     ))
   }
 
-  it must "resolve dependent records with namespaces" taggedAs(Types) in {
+  it must "resolve dependent records with namespaces" taggedAs(DataType) in {
     val record1 = """{"type": "record", "name": "Outer", "namespace": "com.wowie", "fields": [{"name": "child", "type": "Inner"}]}"""
     val record2 = """{"type": "record", "name": "Inner", "namespace": "com.wowie", "fields": [{"name": "child", "type": "int"}]}"""
 
@@ -231,7 +231,7 @@ class TypesSuite extends FlatSpec with Matchers {
     ))
   }
 
-  it must "resolve recursively defined records" taggedAs(Types) in {
+  it must "resolve recursively defined records" taggedAs(DataType) in {
     val input = """{"type": "record", "name": "Recursive", "fields": [{"name": "child", "type": ["null", "Recursive"]}]}"""
     (new ForwardDeclarationParser).parse(List(input))(input) match {
       case x: AvroRecord => x.field("child").avroType should be (AvroUnion(List(AvroNull(), x)))
@@ -239,7 +239,7 @@ class TypesSuite extends FlatSpec with Matchers {
     }
   }
 
-  it must "be re-callable and accumulate types" taggedAs(Types) in {
+  it must "be re-callable and accumulate types" taggedAs(DataType) in {
     val forwardDeclarationParser = new ForwardDeclarationParser
 
     val record1 = """{"type": "record", "name": "Outer", "fields": [{"name": "child", "type": "Inner"}]}"""
@@ -262,7 +262,7 @@ class TypesSuite extends FlatSpec with Matchers {
     forwardDeclarationParser.getAvroType("""{"type": "array", "items": "int"}""") should be (Some(AvroArray(AvroInt())))
   }
 
-  "Avro type matching" must "work in pattern matching" taggedAs(Types) in {
+  "Avro type matching" must "work in pattern matching" taggedAs(DataType) in {
     val avroNull = AvroNull()
     val avroBoolean = AvroBoolean()
     val avroInt = AvroInt()

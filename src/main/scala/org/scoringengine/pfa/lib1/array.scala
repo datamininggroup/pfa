@@ -25,14 +25,14 @@ import org.scoringengine.pfa.signature.Sig
 import org.scoringengine.pfa.signature.Signature
 import org.scoringengine.pfa.signature.Sigs
 
-import org.scoringengine.pfa.types.Type
-import org.scoringengine.pfa.types.FcnType
-import org.scoringengine.pfa.types.AvroType
-import org.scoringengine.pfa.types.AvroInt
-import org.scoringengine.pfa.types.AvroLong
-import org.scoringengine.pfa.types.AvroFloat
-import org.scoringengine.pfa.types.AvroDouble
-import org.scoringengine.pfa.types.AvroArray
+import org.scoringengine.pfa.datatype.Type
+import org.scoringengine.pfa.datatype.FcnType
+import org.scoringengine.pfa.datatype.AvroType
+import org.scoringengine.pfa.datatype.AvroInt
+import org.scoringengine.pfa.datatype.AvroLong
+import org.scoringengine.pfa.datatype.AvroFloat
+import org.scoringengine.pfa.datatype.AvroDouble
+import org.scoringengine.pfa.datatype.AvroArray
 
 package object array {
   private var fcns = Map[String, LibFcn]()

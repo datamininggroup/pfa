@@ -17,7 +17,7 @@ import org.scoringengine.pfa.util.uniqueEnumName
 import org.scoringengine.pfa.util.uniqueFixedName
 import org.scoringengine.pfa.util.uniqueRecordName
 
-package types {
+package datatype {
   ///////////////////////////////////////////////////////// the most general types
 
   trait Type {

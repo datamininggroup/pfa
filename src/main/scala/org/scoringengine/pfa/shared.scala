@@ -10,7 +10,7 @@ import org.scoringengine.pfa.data.PFAArray
 import org.scoringengine.pfa.data.PFAMap
 import org.scoringengine.pfa.data.PFARecord
 import org.scoringengine.pfa.errors.PFAInitializationException
-import org.scoringengine.pfa.types.AvroType
+import org.scoringengine.pfa.datatype.AvroType
 
 package shared {
   trait PathIndex

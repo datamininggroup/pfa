@@ -23,9 +23,9 @@ import org.scoringengine.pfa.shared.PathIndex
 import org.scoringengine.pfa.shared.I
 import org.scoringengine.pfa.shared.M
 import org.scoringengine.pfa.shared.R
-import org.scoringengine.pfa.types.AvroCompiled
-import org.scoringengine.pfa.types.AvroConversions
-import org.scoringengine.pfa.types.AvroType
+import org.scoringengine.pfa.datatype.AvroCompiled
+import org.scoringengine.pfa.datatype.AvroConversions
+import org.scoringengine.pfa.datatype.AvroType
 
 package data {
   /////////////////////////// defer to official library for general ordering, but implement numeric types with simple operators

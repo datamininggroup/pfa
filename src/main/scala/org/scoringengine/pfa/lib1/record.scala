@@ -10,24 +10,24 @@ import org.scoringengine.pfa.ast.ExpressionContext
 import org.scoringengine.pfa.ast.FcnDef
 import org.scoringengine.pfa.ast.FcnRef
 
-import org.scoringengine.pfa.types.Type
-import org.scoringengine.pfa.types.FcnType
-import org.scoringengine.pfa.types.AvroType
-import org.scoringengine.pfa.types.AvroNull
-import org.scoringengine.pfa.types.AvroBoolean
-import org.scoringengine.pfa.types.AvroInt
-import org.scoringengine.pfa.types.AvroLong
-import org.scoringengine.pfa.types.AvroFloat
-import org.scoringengine.pfa.types.AvroDouble
-import org.scoringengine.pfa.types.AvroBytes
-import org.scoringengine.pfa.types.AvroFixed
-import org.scoringengine.pfa.types.AvroString
-import org.scoringengine.pfa.types.AvroEnum
-import org.scoringengine.pfa.types.AvroArray
-import org.scoringengine.pfa.types.AvroMap
-import org.scoringengine.pfa.types.AvroRecord
-import org.scoringengine.pfa.types.AvroField
-import org.scoringengine.pfa.types.AvroUnion
+import org.scoringengine.pfa.datatype.Type
+import org.scoringengine.pfa.datatype.FcnType
+import org.scoringengine.pfa.datatype.AvroType
+import org.scoringengine.pfa.datatype.AvroNull
+import org.scoringengine.pfa.datatype.AvroBoolean
+import org.scoringengine.pfa.datatype.AvroInt
+import org.scoringengine.pfa.datatype.AvroLong
+import org.scoringengine.pfa.datatype.AvroFloat
+import org.scoringengine.pfa.datatype.AvroDouble
+import org.scoringengine.pfa.datatype.AvroBytes
+import org.scoringengine.pfa.datatype.AvroFixed
+import org.scoringengine.pfa.datatype.AvroString
+import org.scoringengine.pfa.datatype.AvroEnum
+import org.scoringengine.pfa.datatype.AvroArray
+import org.scoringengine.pfa.datatype.AvroMap
+import org.scoringengine.pfa.datatype.AvroRecord
+import org.scoringengine.pfa.datatype.AvroField
+import org.scoringengine.pfa.datatype.AvroUnion
 
 package object record {
   private var fcns = Map[String, LibFcn]()

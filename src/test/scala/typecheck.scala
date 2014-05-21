@@ -16,8 +16,8 @@ import org.apache.avro.io.JsonEncoder
 import org.scoringengine.pfa.ast._
 import org.scoringengine.pfa.errors._
 import org.scoringengine.pfa.reader._
-import org.scoringengine.pfa.types._
-import org.scoringengine.pfa.types.AvroConversions._
+import org.scoringengine.pfa.datatype._
+import org.scoringengine.pfa.datatype.AvroConversions._
 import test.scala._
 
 @RunWith(classOf[JUnitRunner])

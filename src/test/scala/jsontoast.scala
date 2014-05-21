@@ -12,8 +12,8 @@ import org.codehaus.jackson.JsonFactory
 import org.scoringengine.pfa.ast._
 import org.scoringengine.pfa.data._
 import org.scoringengine.pfa.reader._
-import org.scoringengine.pfa.types._
-import org.scoringengine.pfa.types.AvroConversions._
+import org.scoringengine.pfa.datatype._
+import org.scoringengine.pfa.datatype.AvroConversions._
 import org.scoringengine.pfa.util._
 import org.scoringengine.pfa.yaml._
 import test.scala._

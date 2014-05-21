@@ -20,8 +20,8 @@ import org.apache.avro.SchemaCompatibility.SchemaCompatibilityType
 
 import org.scoringengine.pfa.data._
 import org.scoringengine.pfa.jvmcompiler._
-import org.scoringengine.pfa.types._
-import org.scoringengine.pfa.types.AvroConversions._
+import org.scoringengine.pfa.datatype._
+import org.scoringengine.pfa.datatype.AvroConversions._
 import test.scala._
 
 @RunWith(classOf[JUnitRunner])

@@ -9,7 +9,7 @@ import org.scalatest.Matchers
 import org.apache.avro.Schema
 
 import org.scoringengine.pfa.shared._
-import org.scoringengine.pfa.types._
+import org.scoringengine.pfa.datatype._
 import test.scala._
 
 @RunWith(classOf[JUnitRunner])
