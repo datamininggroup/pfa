@@ -75,9 +75,77 @@ def jsonToAst(jsonInput):
 
 def yamlToAst(yamlInput):
     import yaml
-    if isinstance(yamlInput, file):
-        yamlInput = yamlInput.read()
-    return jsonToAst(yaml.load(yamlInput))
+
+    def read(parser):
+        try:
+            while True:
+                event = parser.next()
+        
+                if isinstance(event, yaml.ScalarEvent):
+                    if not event.implicit[0]:
+                        return event.value
+                    elif event.value in ("yes", "Yes", "YES", "true", "True", "TRUE", "on", "On", "ON"):
+                        return True
+                    elif event.value in ("no", "No", "NO", "false", "False", "FALSE", "off", "Off", "OFF"):
+                        return False
+                    elif event.value in ("null", "Null", "NULL"):
+                        return None
+                    else:
+                        try:
+                            return int(event.value)
+                        except ValueError:
+                            try:
+                                return float(event.value)
+                            except ValueError:
+                                return event.value
+
+                elif isinstance(event, yaml.SequenceStartEvent):
+                    out = []
+                    while True:
+                        item = read(parser)
+                        if isinstance(item, yaml.SequenceEndEvent):
+                            return out
+                        elif isinstance(item, yaml.events.Event):
+                            raise PFASyntaxException("malformed YAML", "line {}".format(event.end_mark.line))
+                        else:
+                            out.append(item)
+
+                elif isinstance(event, yaml.MappingStartEvent):
+                    out = {}
+                    while True:
+                        startLine = event.start_mark.line
+                        key = read(parser)
+                        if isinstance(key, yaml.MappingEndEvent):
+                            endLine = key.end_mark.line
+                            if startLine == endLine:
+                                out["@"] = "YAML line {}".format(startLine)
+                            else:
+                                out["@"] = "YAML lines {}-{}".format(startLine, endLine)
+
+                            return out
+
+                        elif isinstance(key, yaml.events.Event):
+                            raise PFASyntaxException("malformed YAML", "line {}".format(event.end_mark.line))
+                        elif not isinstance(key, basestring):
+                            raise PFASyntaxException("YAML keys must be strings, not {}".format(key), "line {}".format(event.end_mark.line))
+
+                        value = read(parser)
+                        if isinstance(value, yaml.events.Event):
+                            raise PFASyntaxException("malformed YAML", "line {}".format(event.end_mark.line))
+                        
+                        out[key] = value
+
+                elif isinstance(event, (yaml.SequenceEndEvent, yaml.MappingEndEvent, yaml.DocumentEndEvent, yaml.StreamEndEvent)):
+                    return event
+
+        except StopIteration:
+            return event
+
+    obj = read(yaml.parse(yamlInput, Loader=yaml.SafeLoader))
+    if isinstance(obj, yaml.events.Event):
+        raise PFASyntaxException("YAML document does not contain any elements that map to JSON", None)
+
+    return jsonToAst(obj)
 
 def jsonToExpressionAst(jsonInput):
     if isinstance(jsonInput, file):
