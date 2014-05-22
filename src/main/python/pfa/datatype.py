@@ -321,7 +321,7 @@ class AvroPlaceholder(object):
     def __init__(self, original, forwardDeclarationParser):
         self.original = original
         self.forwardDeclarationParser = forwardDeclarationParser
-
+        
     @property
     def avroType(self):
         return self.forwardDeclarationParser.lookup(self.original)
@@ -342,6 +342,10 @@ class AvroPlaceholder(object):
             return repr(self.forwardDeclarationParser.lookup(self.original))
         else:
             return '{"type": "unknown"}'
+
+    @property
+    def parser(self):
+        return self.forwardDeclarationParser
 
 class AvroFilledPlaceholder(AvroPlaceholder):
     def __init__(self, avroType):
@@ -365,6 +369,10 @@ class ForwardDeclarationParser(object):
 
     def lookup(self, original):
         return self.lookupTable[original]
+
+    @property
+    def compiledTypes(self):
+        return [x for x in self.lookupTable if isinstance(x, (AvroFixed, AvroRecord, AvroEnum))]
 
     def parse(self, jsonStrings):
         schemae = {}

@@ -334,7 +334,7 @@ class EngineConfig(Ast):
         actionContextResults = [x.walk(task, actionScope, withUserFunctions) for x in self.action]
         actionCalls = set(pfa.util.flatten([x[0].calls for x in actionContextResults]))
 
-        if method == Method.MAP or method == Method.FOLD:
+        if self.method == Method.MAP or method == Method.FOLD:
             if not self.output.accepts(actionContextResults[-1][0].retType):
                 raise PFASemanticException("action's inferred output type is %s but the declared output type is %s".format(actionContextResults[-1][0].retType, self.output), self.pos)
 
