@@ -194,6 +194,7 @@ package object math {
     val doc =
       <doc>
         <desc>Return a number with the magnitude of <p>mag</p> and the sign of <p>sign</p>.</desc>{wholePlane(" real or integer")}
+        <details>The return value is positive if <p>mag</p> is not zero and <p>sign</p> is zero.</details>
       </doc>
     def apply(mag: Double, sign: Double): Double = Math.copySign(mag, sign)
     def apply(mag: Float, sign: Float): Float = Math.copySign(mag, sign).toFloat

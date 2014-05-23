@@ -13,4 +13,8 @@ class PFASyntaxException(PFAException):
 
 class PFASemanticException(PFAException):
     def __init__(self, message, pos):
-        super(PFASemanticException, self).__init__(message)
+        super(PFASemanticException, self).__init__(message + " at " + pos)
+
+class PFARuntimeException(PFAException):
+    def __init__(self, message):
+        super(PFARuntimeException, self).__init__(message)

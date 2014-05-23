@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import math
 import base64
 
 import pfa.ast
@@ -141,7 +142,7 @@ class GeneratePython(pfa.ast.Task):
         elif isinstance(context, Log.Context):
             return self.doLog(context)
         else:
-            raise PFASemanticException("unrecognized context class: " + str(type(context)))
+            raise PFASemanticException("unrecognized context class: " + str(type(context)), "")
 
     def returnLast(self, codes, indent):
         return "".join(indent + x + "\n" for x in codes[:-1]) + indent + "return " + codes[-1] + "\n"
@@ -156,38 +157,16 @@ class GeneratePython(pfa.ast.Task):
             name = context.name
         
         return """
-class {name}(PFAEngine):
-    class DynamicScope(object):
-        def __init__(self, parent):
-            self.parent = parent
-            self.symbols = dict()
-
-        def get(self, symbol):
-            if symbol in self.symbols:
-                return self.symbols[symbol]
-            elif self.parent is not None:
-                return self.parent.get(symbol)
-            else:
-                raise RuntimeError()
-
-        def let(self, symbol, init):
-            self.symbols[symbol] = init
-
-        def set(self, symbol, value):
-            if symbol in self.symbols:
-                self.symbols[symbol] = value
-            elif self.parent is not None:
-                self.parent.set(symbol, value)
-            else:
-                raise RuntimeError()
-                
+class PFA_{name}(PFAEngine):
     def __init__(self):
         pass
 
     def action(self, input):
-        scope = self.DynamicScope(None)
-        scope.symbols["input"] = input
+        scope = DynamicScope(None)
+        scope.let("input", input)
 {action}
+
+PFA_{name}.functionTable = functionTable
 """.format(name=name, action=self.returnLast(context.action, "        "))
    
     def doCell(self, context):
@@ -203,10 +182,10 @@ class {name}(PFAEngine):
         raise NotImplementedError("doFcnRef")
     
     def doCall(self, context):
-        raise NotImplementedError("doCall")
+        return context.fcn.genpy(context.paramTypes, context.args)
     
     def doRef(self, context):
-        raise NotImplementedError("doRef")
+        return "scope.get({})".format(repr(context.name))
     
     def doLiteralNull(self, context):
         return "None"
@@ -320,14 +299,40 @@ class GeneratePythonPure(GeneratePython):
 
 ###########################################################################
 
+class DynamicScope(object):
+    def __init__(self, parent):
+        self.parent = parent
+        self.symbols = dict()
+
+    def get(self, symbol):
+        if symbol in self.symbols:
+            return self.symbols[symbol]
+        elif self.parent is not None:
+            return self.parent.get(symbol)
+        else:
+            raise RuntimeError()
+
+    def let(self, symbol, init):
+        self.symbols[symbol] = init
+
+    def set(self, symbol, value):
+        if symbol in self.symbols:
+            self.symbols[symbol] = value
+        elif self.parent is not None:
+            self.parent.set(symbol, value)
+        else:
+            raise RuntimeError()
+
 class PFAEngine(object):
     @staticmethod
     def fromAst(engineConfig, options=None, sharedState=None, multiplicity=1, style="pure", debug=False):
-        context, code = engineConfig.walk(GeneratePython.makeTask(style), pfa.ast.SymbolTable.blank(), pfa.ast.FunctionTable.blank())
+        functionTable = pfa.ast.FunctionTable.blank()
+        context, code = engineConfig.walk(GeneratePython.makeTask(style), pfa.ast.SymbolTable.blank(), functionTable)
         if debug:
             print code
 
-        local = {"PFAEngine": PFAEngine}
+        local = {"PFAEngine": PFAEngine, "DynamicScope": DynamicScope, "functionTable": functionTable, "math": math}
+
         exec(code, globals(), local)
         cls = [x for x in local.values() if getattr(x, "__bases__", None) == (PFAEngine,)][0]
 
