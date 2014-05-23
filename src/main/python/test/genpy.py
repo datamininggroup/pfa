@@ -10,11 +10,17 @@ class TestGeneratePython(unittest.TestCase):
     def testSimple(self):
         engine, = PFAEngine.fromYaml('''
 name: test
-input: int
+input: double
 output: double
 action:
-  - {u-: [input]}
-''')
+  - let: {x: 10}
+  - let:
+      y:
+        if: false
+        then: 100
+        else: 1000000
+  - {+: [input, y]}
+''', debug=True)
         print engine.action(12)
 
 if __name__ == "__main__":

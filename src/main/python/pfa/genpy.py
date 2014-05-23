@@ -58,241 +58,161 @@ class GeneratePython(pfa.ast.Task):
         else:
             raise NotImplementedException("unrecognized style " + style)
 
-    def __call__(self, context):
-        if isinstance(context, EngineConfig.Context):
-            return self.doEngineConfig(context)
-        elif isinstance(context, Cell.Context):
-            return self.doCell(context)
-        elif isinstance(context, Pool.Context):
-            return self.doPool(context)
-        elif isinstance(context, FcnDef.Context):
-            return self.doFcnDef(context)
-        elif isinstance(context, FcnRef.Context):
-            return self.doFcnRef(context)
-        elif isinstance(context, Call.Context):
-            return self.doCall(context)
-        elif isinstance(context, Ref.Context):
-            return self.doRef(context)
-        elif isinstance(context, LiteralNull.Context):
-            return self.doLiteralNull(context)
-        elif isinstance(context, LiteralBoolean.Context):
-            return self.doLiteralBoolean(context)
-        elif isinstance(context, LiteralInt.Context):
-            return self.doLiteralInt(context)
-        elif isinstance(context, LiteralLong.Context):
-            return self.doLiteralLong(context)
-        elif isinstance(context, LiteralFloat.Context):
-            return self.doLiteralFloat(context)
-        elif isinstance(context, LiteralDouble.Context):
-            return self.doLiteralDouble(context)
-        elif isinstance(context, LiteralString.Context):
-            return self.doLiteralString(context)
-        elif isinstance(context, LiteralBase64.Context):
-            return self.doLiteralBase64(context)
-        elif isinstance(context, Literal.Context):
-            return self.doLiteral(context)
-        elif isinstance(context, NewObject.Context):
-            return self.doNewObject(context)
-        elif isinstance(context, NewArray.Context):
-            return self.doNewArray(context)
-        elif isinstance(context, Do.Context):
-            return self.doDo(context)
-        elif isinstance(context, Let.Context):
-            return self.doLet(context)
-        elif isinstance(context, SetVar.Context):
-            return self.doSetVar(context)
-        elif isinstance(context, AttrGet.Context):
-            return self.doAttrGet(context)
-        elif isinstance(context, AttrTo.Context):
-            return self.doAttrTo(context)
-        elif isinstance(context, CellGet.Context):
-            return self.doCellGet(context)
-        elif isinstance(context, CellTo.Context):
-            return self.doCellTo(context)
-        elif isinstance(context, PoolGet.Context):
-            return self.doPoolGet(context)
-        elif isinstance(context, PoolTo.Context):
-            return self.doPoolTo(context)
-        elif isinstance(context, If.Context):
-            return self.doIf(context)
-        elif isinstance(context, Cond.Context):
-            return self.doCond(context)
-        elif isinstance(context, While.Context):
-            return self.doWhile(context)
-        elif isinstance(context, DoUntil.Context):
-            return self.doDoUntil(context)
-        elif isinstance(context, For.Context):
-            return self.doFor(context)
-        elif isinstance(context, Foreach.Context):
-            return self.doForeach(context)
-        elif isinstance(context, Forkeyval.Context):
-            return self.doForkeyval(context)
-        elif isinstance(context, CastCase.Context):
-            return self.doCastCase(context)
-        elif isinstance(context, CastBlock.Context):
-            return self.doCastBlock(context)
-        elif isinstance(context, Upcast.Context):
-            return self.doUpcast(context)
-        elif isinstance(context, IfNotNull.Context):
-            return self.doIfNotNull(context)
-        elif isinstance(context, Doc.Context):
-            return self.doDoc(context)
-        elif isinstance(context, Error.Context):
-            return self.doError(context)
-        elif isinstance(context, Log.Context):
-            return self.doLog(context)
-        else:
-            raise PFASemanticException("unrecognized context class: " + str(type(context)), "")
-
     def returnLast(self, codes, indent):
         return "".join(indent + x + "\n" for x in codes[:-1]) + indent + "return " + codes[-1] + "\n"
 
     def returnNone(self, codes, indent):
         return "".join(indent + x + "\n" for x in codes)
 
-    def doEngineConfig(self, context):
-        if context.name is None:
-            name = pfa.util.uniqueEngineName()
-        else:
-            name = context.name
-        
-        return """
-class PFA_{name}(PFAEngine):
+    def __call__(self, context):
+        if isinstance(context, EngineConfig.Context):
+            if context.name is None:
+                name = pfa.util.uniqueEngineName()
+            else:
+                name = context.name
+
+            return """class PFA_{name}(PFAEngine):
     def __init__(self):
         pass
 
     def action(self, input):
         scope = DynamicScope(None)
-        scope.let("input", input)
+        scope.let({{'input': input}})
 {action}
 
 PFA_{name}.functionTable = functionTable
 """.format(name=name, action=self.returnLast(context.action, "        "))
-   
-    def doCell(self, context):
-        raise NotImplementedError("doCell")
-    
-    def doPool(self, context):
-        raise NotImplementedError("doPool")
-    
-    def doFcnDef(self, context):
-        raise NotImplementedError("doFcnDef")
-    
-    def doFcnRef(self, context):
-        raise NotImplementedError("doFcnRef")
-    
-    def doCall(self, context):
-        return context.fcn.genpy(context.paramTypes, context.args)
-    
-    def doRef(self, context):
-        return "scope.get({})".format(repr(context.name))
-    
-    def doLiteralNull(self, context):
-        return "None"
-    
-    def doLiteralBoolean(self, context):
-        return str(context.value)
-    
-    def doLiteralInt(self, context):
-        return str(context.value)
-    
-    def doLiteralLong(self, context):
-        return str(context.value)
-    
-    def doLiteralFloat(self, context):
-        return str(float(context.value))
-    
-    def doLiteralDouble(self, context):
-        return str(float(context.value))
-    
-    def doLiteralString(self, context):
-        return repr(context.value)
-    
-    def doLiteralBase64(self, context):
-        try:
-            data = base64.decode(context.value)
-        except Exception as err:
-            raise PFASemanticException("error interpreting base64: " + str(err))
+
+        elif isinstance(context, Cell.Context):
+            raise NotImplementedError("Cell")
+
+        elif isinstance(context, Pool.Context):
+            raise NotImplementedError("Pool")
+
+        elif isinstance(context, FcnDef.Context):
+            raise NotImplementedError("FcnDef")
+
+        elif isinstance(context, FcnRef.Context):
+            raise NotImplementedError("FcnRef")
+
+        elif isinstance(context, Call.Context):
+            return context.fcn.genpy(context.paramTypes, context.args)
+
+        elif isinstance(context, Ref.Context):
+            return "scope.get({})".format(repr(context.name))
+
+        elif isinstance(context, LiteralNull.Context):
+            return "None"
+
+        elif isinstance(context, LiteralBoolean.Context):
+            return str(context.value)
+
+        elif isinstance(context, LiteralInt.Context):
+            return str(context.value)
+
+        elif isinstance(context, LiteralLong.Context):
+            return str(context.value)
+
+        elif isinstance(context, LiteralFloat.Context):
+            return str(float(context.value))
+
+        elif isinstance(context, LiteralDouble.Context):
+            return str(float(context.value))
+
+        elif isinstance(context, LiteralString.Context):
+            return repr(context.value)
+
+        elif isinstance(context, LiteralBase64.Context):
+            try:
+                data = base64.decode(context.value)
+            except Exception as err:
+                raise PFASemanticException("error interpreting base64: " + str(err))
+            else:
+                return repr(data)
+
+        elif isinstance(context, Literal.Context):
+            raise NotImplementedError("Literal")
+
+        elif isinstance(context, NewObject.Context):
+            raise NotImplementedError("NewObject")
+
+        elif isinstance(context, NewArray.Context):
+            raise NotImplementedError("NewArray")
+
+        elif isinstance(context, Do.Context):
+            raise NotImplementedError("Do")
+
+        elif isinstance(context, Let.Context):
+            return "scope.let({" + ", ".join(repr(n) + ": " + e for n, t, e in context.nameTypeExpr) + "})"
+
+        elif isinstance(context, SetVar.Context):
+            return "scope.set({" + ", ".join(repr(n) + ": " + e for n, t, e in context.nameTypeExpr) + "})"
+
+        elif isinstance(context, AttrGet.Context):
+            raise NotImplementedError("AttrGet")
+
+        elif isinstance(context, AttrTo.Context):
+            raise NotImplementedError("AttrTo")
+
+        elif isinstance(context, CellGet.Context):
+            raise NotImplementedError("CellGet")
+
+        elif isinstance(context, CellTo.Context):
+            raise NotImplementedError("CellTo")
+
+        elif isinstance(context, PoolGet.Context):
+            raise NotImplementedError("PoolGet")
+
+        elif isinstance(context, PoolTo.Context):
+            raise NotImplementedError("PoolTo")
+
+        elif isinstance(context, If.Context):
+            if context.elseClause is None:
+                return "ifThen(DynamicScope(scope), DynamicScope(scope), lambda scope: {}, lambda scope: do({}))".format(context.predicate, ", ".join(context.thenClause))
+            else:
+                return "ifThenElse(DynamicScope(scope), DynamicScope(scope), DynamicScope(scope), lambda scope: {}, lambda scope: do({}), lambda scope: do({}))".format(context.predicate, ", ".join(context.thenClause), ", ".join(context.elseClause))
+
+        elif isinstance(context, Cond.Context):
+            raise NotImplementedError("Cond")
+
+        elif isinstance(context, While.Context):
+            raise NotImplementedError("While")
+
+        elif isinstance(context, DoUntil.Context):
+            raise NotImplementedError("DoUntil")
+
+        elif isinstance(context, For.Context):
+            raise NotImplementedError("For")
+
+        elif isinstance(context, Foreach.Context):
+            raise NotImplementedError("Foreach")
+
+        elif isinstance(context, Forkeyval.Context):
+            raise NotImplementedError("Forkeyval")
+
+        elif isinstance(context, CastCase.Context):
+            raise NotImplementedError("CastCase")
+
+        elif isinstance(context, CastBlock.Context):
+            raise NotImplementedError("CastBlock")
+
+        elif isinstance(context, Upcast.Context):
+            raise NotImplementedError("Upcast")
+
+        elif isinstance(context, IfNotNull.Context):
+            raise NotImplementedError("IfNotNull")
+
+        elif isinstance(context, Doc.Context):
+            raise NotImplementedError("Doc")
+
+        elif isinstance(context, Error.Context):
+            raise NotImplementedError("Error")
+
+        elif isinstance(context, Log.Context):
+            raise NotImplementedError("Log")
+
         else:
-            return repr(data)
-    
-    def doLiteral(self, context):
-        raise NotImplementedError("doLiteral")
-    
-    def doNewObject(self, context):
-        raise NotImplementedError("doNewObject")
-    
-    def doNewArray(self, context):
-        raise NotImplementedError("doNewArray")
-    
-    def doDo(self, context):
-        raise NotImplementedError("doDo")
-    
-    def doLet(self, context):
-        raise NotImplementedError("doLet")
-    
-    def doSetVar(self, context):
-        raise NotImplementedError("doSetVar")
-    
-    def doAttrGet(self, context):
-        raise NotImplementedError("doAttrGet")
-    
-    def doAttrTo(self, context):
-        raise NotImplementedError("doAttrTo")
-    
-    def doCellGet(self, context):
-        raise NotImplementedError("doCellGet")
-    
-    def doCellTo(self, context):
-        raise NotImplementedError("doCellTo")
-    
-    def doPoolGet(self, context):
-        raise NotImplementedError("doPoolGet")
-    
-    def doPoolTo(self, context):
-        raise NotImplementedError("doPoolTo")
-    
-    def doIf(self, context):
-        raise NotImplementedError("doIf")
-    
-    def doCond(self, context):
-        raise NotImplementedError("doCond")
-    
-    def doWhile(self, context):
-        raise NotImplementedError("doWhile")
-    
-    def doDoUntil(self, context):
-        raise NotImplementedError("doDoUntil")
-    
-    def doFor(self, context):
-        raise NotImplementedError("doFor")
-    
-    def doForeach(self, context):
-        raise NotImplementedError("doForeach")
-    
-    def doForkeyval(self, context):
-        raise NotImplementedError("doForkeyval")
-    
-    def doCastCase(self, context):
-        raise NotImplementedError("doCastCase")
-    
-    def doCastBlock(self, context):
-        raise NotImplementedError("doCastBlock")
-    
-    def doUpcast(self, context):
-        raise NotImplementedError("doUpcast")
-    
-    def doIfNotNull(self, context):
-        raise NotImplementedError("doIfNotNull")
-    
-    def doDoc(self, context):
-        raise NotImplementedError("doDoc")
-    
-    def doError(self, context):
-        raise NotImplementedError("doError")
-    
-    def doLog(self, context):
-        raise NotImplementedError("doLog")
+            raise PFASemanticException("unrecognized context class: " + str(type(context)), "")
 
 class GeneratePythonPure(GeneratePython):
     pass
@@ -312,16 +232,34 @@ class DynamicScope(object):
         else:
             raise RuntimeError()
 
-    def let(self, symbol, init):
-        self.symbols[symbol] = init
+    def let(self, nameExpr):
+        for symbol, init in nameExpr.items():
+            self.symbols[symbol] = init
 
-    def set(self, symbol, value):
-        if symbol in self.symbols:
-            self.symbols[symbol] = value
-        elif self.parent is not None:
-            self.parent.set(symbol, value)
-        else:
-            raise RuntimeError()
+    def set(self, nameExpr):
+        for symbol, value in nameExpr.items():
+            if symbol in self.symbols:
+                self.symbols[symbol] = value
+            elif self.parent is not None:
+                self.parent.set(nameExpr)
+            else:
+                raise RuntimeError()
+
+def do(*exprs):
+    if len(exprs) > 0:
+        return exprs[-1]
+    else:
+        return None
+
+def ifThen(predicateScope, thenScope, predicate, thenClause):
+    if predicate(predicateScope):
+        thenClause(thenScope)
+
+def ifThenElse(predicateScope, thenScope, elseScope, predicate, thenClause, elseClause):
+    if predicate(predicateScope):
+        return thenClause(thenScope)
+    else:
+        return elseClause(elseScope)
 
 class PFAEngine(object):
     @staticmethod
@@ -331,7 +269,14 @@ class PFAEngine(object):
         if debug:
             print code
 
-        local = {"PFAEngine": PFAEngine, "DynamicScope": DynamicScope, "functionTable": functionTable, "math": math}
+        local = {"PFAEngine": PFAEngine,
+                 "DynamicScope": DynamicScope,
+                 "functionTable": functionTable,
+                 "do": do,
+                 "ifThen": ifThen,
+                 "ifThenElse": ifThenElse,
+                 "math": math,
+                 }
 
         exec(code, globals(), local)
         cls = [x for x in local.values() if getattr(x, "__bases__", None) == (PFAEngine,)][0]
