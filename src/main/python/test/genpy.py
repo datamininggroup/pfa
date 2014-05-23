@@ -14,14 +14,12 @@ input: double
 output: double
 action:
   - let: {x: 10}
-  - cond:
-      - if: false
-        then: {set: {x: 100}}
-      - if: false
-        then: {set: {x: -100}}
-      - if: false
-        then: {set: {x: 100}}
+  - until: false
+    do:
+      - set: {x: {+: [x, 1]}}
   - {+: [input, x]}
+options:
+  timeout: 1000
 ''', debug=True)
         print engine.action(12)
 

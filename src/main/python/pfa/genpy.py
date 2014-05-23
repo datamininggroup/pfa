@@ -2,11 +2,13 @@
 
 import math
 import base64
+import time
 
 import pfa.ast
 import pfa.util
 import pfa.reader
-from pfa.errors import PFASemanticException
+from pfa.errors import *
+from pfa.options import EngineOptions
 
 from pfa.ast import EngineConfig
 from pfa.ast import Cell
@@ -72,10 +74,11 @@ class GeneratePython(pfa.ast.Task):
                 name = context.name
 
             return """class PFA_{name}(PFAEngine):
-    def __init__(self):
-        pass
+    def __init__(self, options):
+        self.options = options
 
     def action(self, input):
+        state = ExecutionState(self.options, 'action')
         scope = DynamicScope(None)
         scope.let({{'input': input}})
 {action}
@@ -168,21 +171,21 @@ PFA_{name}.functionTable = functionTable
 
         elif isinstance(context, If.Context):
             if context.elseClause is None:
-                return "ifThen(scope, lambda scope: {}, lambda scope: do({}))".format(context.predicate, ", ".join(context.thenClause))
+                return "ifThen(state, scope, lambda scope: {}, lambda scope: do({}))".format(context.predicate, ", ".join(context.thenClause))
             else:
-                return "ifThenElse(scope, lambda scope: {}, lambda scope: do({}), lambda scope: do({}))".format(context.predicate, ", ".join(context.thenClause), ", ".join(context.elseClause))
+                return "ifThenElse(state, scope, lambda scope: {}, lambda scope: do({}), lambda scope: do({}))".format(context.predicate, ", ".join(context.thenClause), ", ".join(context.elseClause))
 
         elif isinstance(context, Cond.Context):
             if not context.complete:
-                return "cond(scope, [{}])".format(", ".join("(lambda scope: {}, lambda scope: do({}))".format(walkBlock.pred, ", ".join(walkBlock.exprs)) for walkBlock in context.walkBlocks))
+                return "cond(state, scope, [{}])".format(", ".join("(lambda scope: {}, lambda scope: do({}))".format(walkBlock.pred, ", ".join(walkBlock.exprs)) for walkBlock in context.walkBlocks))
             else:
-                return "condElse(scope, [{}], lambda scope: do({}))".format(", ".join("(lambda scope: {}, lambda scope: do({}))".format(walkBlock.pred, ", ".join(walkBlock.exprs)) for walkBlock in context.walkBlocks[:-1]), ", ".join(context.walkBlocks[-1].exprs))
+                return "condElse(state, scope, [{}], lambda scope: do({}))".format(", ".join("(lambda scope: {}, lambda scope: do({}))".format(walkBlock.pred, ", ".join(walkBlock.exprs)) for walkBlock in context.walkBlocks[:-1]), ", ".join(context.walkBlocks[-1].exprs))
 
         elif isinstance(context, While.Context):
-            raise NotImplementedError("While")
+            return "doWhile(state, scope, lambda scope: {}, lambda scope: do({}))".format(context.predicate, ", ".join(context.loopBody))
 
         elif isinstance(context, DoUntil.Context):
-            raise NotImplementedError("DoUntil")
+            return "doUntil(state, scope, lambda scope: {}, lambda scope: do({}))".format(context.predicate, ", ".join(context.loopBody))
 
         elif isinstance(context, For.Context):
             raise NotImplementedError("For")
@@ -222,6 +225,21 @@ class GeneratePythonPure(GeneratePython):
 
 ###########################################################################
 
+class ExecutionState(object):
+    def __init__(self, options, routine):
+        if routine == "begin":
+            self.timeout = options.timeout_begin
+        elif routine == "action":
+            self.timeout = options.timeout_action
+        elif routine == "end":
+            self.timeout = options.timeout_end
+
+        self.startTime = time.time()
+
+    def checkTime(self):
+        if self.timeout > 0 and (time.time() - self.startTime) * 1000 > self.timeout:
+            raise PFATimeoutException("exceeded timeout of {} milliseconds".format(self.timeout))
+
 class DynamicScope(object):
     def __init__(self, parent):
         self.parent = parent
@@ -254,30 +272,48 @@ def do(*exprs):
     else:
         return None
 
-def ifThen(scope, predicate, thenClause):
+def ifThen(state, scope, predicate, thenClause):
     if predicate(DynamicScope(scope)):
         thenClause(DynamicScope(scope))
     return None
 
-def ifThenElse(scope, predicate, thenClause, elseClause):
+def ifThenElse(state, scope, predicate, thenClause, elseClause):
     if predicate(DynamicScope(scope)):
         return thenClause(DynamicScope(scope))
     else:
         return elseClause(DynamicScope(scope))
 
-def cond(scope, ifThens):
+def cond(state, scope, ifThens):
     for predicate, thenClause in ifThens:
         if predicate(DynamicScope(scope)):
             thenClause(DynamicScope(scope))
             break
     return None
 
-def condElse(scope, ifThens, elseClause):
+def condElse(state, scope, ifThens, elseClause):
     for predicate, thenClause in ifThens:
         if predicate(DynamicScope(scope)):
             return thenClause(DynamicScope(scope))
     return elseClause(DynamicScope(scope))
     
+def doWhile(state, scope, predicate, loopBody):
+    predScope = DynamicScope(scope)
+    bodyScope = DynamicScope(scope)
+    while predicate(predScope):
+        state.checkTime()
+        loopBody(bodyScope)
+    return None
+    
+def doUntil(state, scope, predicate, loopBody):
+    predScope = DynamicScope(scope)
+    bodyScope = DynamicScope(scope)
+    while True:
+        state.checkTime()
+        loopBody(bodyScope)
+        if predicate(predScope):
+            break
+    return None
+
 class PFAEngine(object):
     @staticmethod
     def fromAst(engineConfig, options=None, sharedState=None, multiplicity=1, style="pure", debug=False):
@@ -287,6 +323,7 @@ class PFAEngine(object):
             print code
 
         sandbox = {"PFAEngine": PFAEngine,
+                   "ExecutionState": ExecutionState,
                    "DynamicScope": DynamicScope,
                    "functionTable": functionTable,
                    "do": do,
@@ -294,13 +331,16 @@ class PFAEngine(object):
                    "ifThenElse": ifThenElse,
                    "cond": cond,
                    "condElse": condElse,
+                   "doWhile": doWhile,
+                   "doUntil": doUntil,
                    "math": math,
                    }
 
         exec(code, sandbox)
         cls = [x for x in sandbox.values() if getattr(x, "__bases__", None) == (PFAEngine,)][0]
 
-        return [cls() for x in xrange(multiplicity)]
+        return [cls(EngineOptions(engineConfig.options, {} if options is None else options))
+                for x in xrange(multiplicity)]
 
     @staticmethod
     def fromJson(src, options=None, sharedState=None, multiplicity=1, style="pure", debug=False):
