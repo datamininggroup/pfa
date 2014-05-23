@@ -14,12 +14,14 @@ input: double
 output: double
 action:
   - let: {x: 10}
-  - let:
-      y:
-        if: false
-        then: 100
-        else: 1000000
-  - {+: [input, y]}
+  - cond:
+      - if: false
+        then: {set: {x: 100}}
+      - if: false
+        then: {set: {x: -100}}
+      - if: false
+        then: {set: {x: 100}}
+  - {+: [input, x]}
 ''', debug=True)
         print engine.action(12)
 

@@ -168,12 +168,15 @@ PFA_{name}.functionTable = functionTable
 
         elif isinstance(context, If.Context):
             if context.elseClause is None:
-                return "ifThen(DynamicScope(scope), DynamicScope(scope), lambda scope: {}, lambda scope: do({}))".format(context.predicate, ", ".join(context.thenClause))
+                return "ifThen(scope, lambda scope: {}, lambda scope: do({}))".format(context.predicate, ", ".join(context.thenClause))
             else:
-                return "ifThenElse(DynamicScope(scope), DynamicScope(scope), DynamicScope(scope), lambda scope: {}, lambda scope: do({}), lambda scope: do({}))".format(context.predicate, ", ".join(context.thenClause), ", ".join(context.elseClause))
+                return "ifThenElse(scope, lambda scope: {}, lambda scope: do({}), lambda scope: do({}))".format(context.predicate, ", ".join(context.thenClause), ", ".join(context.elseClause))
 
         elif isinstance(context, Cond.Context):
-            raise NotImplementedError("Cond")
+            if not context.complete:
+                return "cond(scope, [{}])".format(", ".join("(lambda scope: {}, lambda scope: do({}))".format(walkBlock.pred, ", ".join(walkBlock.exprs)) for walkBlock in context.walkBlocks))
+            else:
+                return "condElse(scope, [{}], lambda scope: do({}))".format(", ".join("(lambda scope: {}, lambda scope: do({}))".format(walkBlock.pred, ", ".join(walkBlock.exprs)) for walkBlock in context.walkBlocks[:-1]), ", ".join(context.walkBlocks[-1].exprs))
 
         elif isinstance(context, While.Context):
             raise NotImplementedError("While")
@@ -251,16 +254,30 @@ def do(*exprs):
     else:
         return None
 
-def ifThen(predicateScope, thenScope, predicate, thenClause):
-    if predicate(predicateScope):
-        thenClause(thenScope)
+def ifThen(scope, predicate, thenClause):
+    if predicate(DynamicScope(scope)):
+        thenClause(DynamicScope(scope))
+    return None
 
-def ifThenElse(predicateScope, thenScope, elseScope, predicate, thenClause, elseClause):
-    if predicate(predicateScope):
-        return thenClause(thenScope)
+def ifThenElse(scope, predicate, thenClause, elseClause):
+    if predicate(DynamicScope(scope)):
+        return thenClause(DynamicScope(scope))
     else:
-        return elseClause(elseScope)
+        return elseClause(DynamicScope(scope))
 
+def cond(scope, ifThens):
+    for predicate, thenClause in ifThens:
+        if predicate(DynamicScope(scope)):
+            thenClause(DynamicScope(scope))
+            break
+    return None
+
+def condElse(scope, ifThens, elseClause):
+    for predicate, thenClause in ifThens:
+        if predicate(DynamicScope(scope)):
+            return thenClause(DynamicScope(scope))
+    return elseClause(DynamicScope(scope))
+    
 class PFAEngine(object):
     @staticmethod
     def fromAst(engineConfig, options=None, sharedState=None, multiplicity=1, style="pure", debug=False):
@@ -269,17 +286,19 @@ class PFAEngine(object):
         if debug:
             print code
 
-        local = {"PFAEngine": PFAEngine,
-                 "DynamicScope": DynamicScope,
-                 "functionTable": functionTable,
-                 "do": do,
-                 "ifThen": ifThen,
-                 "ifThenElse": ifThenElse,
-                 "math": math,
-                 }
+        sandbox = {"PFAEngine": PFAEngine,
+                   "DynamicScope": DynamicScope,
+                   "functionTable": functionTable,
+                   "do": do,
+                   "ifThen": ifThen,
+                   "ifThenElse": ifThenElse,
+                   "cond": cond,
+                   "condElse": condElse,
+                   "math": math,
+                   }
 
-        exec(code, globals(), local)
-        cls = [x for x in local.values() if getattr(x, "__bases__", None) == (PFAEngine,)][0]
+        exec(code, sandbox)
+        cls = [x for x in sandbox.values() if getattr(x, "__bases__", None) == (PFAEngine,)][0]
 
         return [cls() for x in xrange(multiplicity)]
 
