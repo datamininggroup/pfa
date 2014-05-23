@@ -13,11 +13,13 @@ name: test
 input: double
 output: double
 action:
-  - let: {x: 10}
-  - until: false
+  - let: {y: 0}
+  - for: {x: 0}
+    while: {"<": [x, 100]}
+    step: {x: {+: [x, 1]}}
     do:
-      - set: {x: {+: [x, 1]}}
-  - {+: [input, x]}
+      - {set: {y: {+: [y, 1]}}}
+  - {+: [input, y]}
 options:
   timeout: 1000
 ''', debug=True)

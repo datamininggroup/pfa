@@ -121,7 +121,7 @@ provide(Comparison())
 
 class Equal(LibFcn):
     name = "=="
-    sig = Sig([{"x": P.Wildcard("A")}, {"y": P.Wildcard("A")}], P.Boolean)
+    sig = Sig([{"x": P.Wildcard("A")}, {"y": P.Wildcard("A")}], P.Boolean())
     def genpy(self, paramTypes, args):
         return "({} == {})".format(*args)
     def __call__(self, paramTypes, x, y):
@@ -130,7 +130,7 @@ provide(Equal())
 
 class GreaterOrEqual(LibFcn):
     name = ">="
-    sig = Sig([{"x": P.Wildcard("A")}, {"y": P.Wildcard("A")}], P.Boolean)
+    sig = Sig([{"x": P.Wildcard("A")}, {"y": P.Wildcard("A")}], P.Boolean())
     def genpy(self, paramTypes, args):
         return "({} >= {})".format(*args)
     def __call__(self, paramTypes, x, y):
@@ -139,7 +139,7 @@ provide(GreaterOrEqual())
 
 class GreaterThan(LibFcn):
     name = ">"
-    sig = Sig([{"x": P.Wildcard("A")}, {"y": P.Wildcard("A")}], P.Boolean)
+    sig = Sig([{"x": P.Wildcard("A")}, {"y": P.Wildcard("A")}], P.Boolean())
     def genpy(self, paramTypes, args):
         return "({} > {})".format(*args)
     def __call__(self, paramTypes, x, y):
@@ -148,7 +148,7 @@ provide(GreaterThan())
 
 class NotEqual(LibFcn):
     name = "!="
-    sig = Sig([{"x": P.Wildcard("A")}, {"y": P.Wildcard("A")}], P.Boolean)
+    sig = Sig([{"x": P.Wildcard("A")}, {"y": P.Wildcard("A")}], P.Boolean())
     def genpy(self, paramTypes, args):
         return "({} != {})".format(*args)
     def __call__(self, paramTypes, x, y):
@@ -157,7 +157,7 @@ provide(NotEqual())
 
 class LessThan(LibFcn):
     name = "<"
-    sig = Sig([{"x": P.Wildcard("A")}, {"y": P.Wildcard("A")}], P.Boolean)
+    sig = Sig([{"x": P.Wildcard("A")}, {"y": P.Wildcard("A")}], P.Boolean())
     def genpy(self, paramTypes, args):
         return "({} < {})".format(*args)
     def __call__(self, paramTypes, x, y):
@@ -166,7 +166,7 @@ provide(LessThan())
 
 class LessOrEqual(LibFcn):
     name = "<="
-    sig = Sig([{"x": P.Wildcard("A")}, {"y": P.Wildcard("A")}], P.Boolean)
+    sig = Sig([{"x": P.Wildcard("A")}, {"y": P.Wildcard("A")}], P.Boolean())
     def genpy(self, paramTypes, args):
         return "({} <= {})".format(*args)
     def __call__(self, paramTypes, x, y):

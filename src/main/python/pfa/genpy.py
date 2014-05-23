@@ -171,24 +171,24 @@ PFA_{name}.functionTable = functionTable
 
         elif isinstance(context, If.Context):
             if context.elseClause is None:
-                return "ifThen(state, scope, lambda scope: {}, lambda scope: do({}))".format(context.predicate, ", ".join(context.thenClause))
+                return "ifThen(state, scope, lambda state, scope: {}, lambda state, scope: do({}))".format(context.predicate, ", ".join(context.thenClause))
             else:
-                return "ifThenElse(state, scope, lambda scope: {}, lambda scope: do({}), lambda scope: do({}))".format(context.predicate, ", ".join(context.thenClause), ", ".join(context.elseClause))
+                return "ifThenElse(state, scope, lambda state, scope: {}, lambda state, scope: do({}), lambda state, scope: do({}))".format(context.predicate, ", ".join(context.thenClause), ", ".join(context.elseClause))
 
         elif isinstance(context, Cond.Context):
             if not context.complete:
-                return "cond(state, scope, [{}])".format(", ".join("(lambda scope: {}, lambda scope: do({}))".format(walkBlock.pred, ", ".join(walkBlock.exprs)) for walkBlock in context.walkBlocks))
+                return "cond(state, scope, [{}])".format(", ".join("(lambda state, scope: {}, lambda state, scope: do({}))".format(walkBlock.pred, ", ".join(walkBlock.exprs)) for walkBlock in context.walkBlocks))
             else:
-                return "condElse(state, scope, [{}], lambda scope: do({}))".format(", ".join("(lambda scope: {}, lambda scope: do({}))".format(walkBlock.pred, ", ".join(walkBlock.exprs)) for walkBlock in context.walkBlocks[:-1]), ", ".join(context.walkBlocks[-1].exprs))
+                return "condElse(state, scope, [{}], lambda state, scope: do({}))".format(", ".join("(lambda state, scope: {}, lambda state, scope: do({}))".format(walkBlock.pred, ", ".join(walkBlock.exprs)) for walkBlock in context.walkBlocks[:-1]), ", ".join(context.walkBlocks[-1].exprs))
 
         elif isinstance(context, While.Context):
-            return "doWhile(state, scope, lambda scope: {}, lambda scope: do({}))".format(context.predicate, ", ".join(context.loopBody))
+            return "doWhile(state, scope, lambda state, scope: {}, lambda state, scope: do({}))".format(context.predicate, ", ".join(context.loopBody))
 
         elif isinstance(context, DoUntil.Context):
-            return "doUntil(state, scope, lambda scope: {}, lambda scope: do({}))".format(context.predicate, ", ".join(context.loopBody))
+            return "doUntil(state, scope, lambda state, scope: {}, lambda state, scope: do({}))".format(context.predicate, ", ".join(context.loopBody))
 
         elif isinstance(context, For.Context):
-            raise NotImplementedError("For")
+            return "doFor(state, scope, lambda state, scope: scope.let({" + ", ".join(repr(n) + ": " + e for n, t, e in context.initNameTypeExpr) + "}), lambda state, scope: " + context.predicate + ", lambda state, scope: scope.set({" + ", ".join(repr(n) + ": " + e for n, t, e in context.stepNameTypeExpr) + "}), lambda state, scope: do(" + ", ".join(context.loopBody) + "))"
 
         elif isinstance(context, Foreach.Context):
             raise NotImplementedError("Foreach")
@@ -267,41 +267,42 @@ class DynamicScope(object):
                 raise RuntimeError()
 
 def do(*exprs):
+    # You've already done them; just return the right value.
     if len(exprs) > 0:
         return exprs[-1]
     else:
         return None
 
 def ifThen(state, scope, predicate, thenClause):
-    if predicate(DynamicScope(scope)):
-        thenClause(DynamicScope(scope))
+    if predicate(state, DynamicScope(scope)):
+        thenClause(state, DynamicScope(scope))
     return None
 
 def ifThenElse(state, scope, predicate, thenClause, elseClause):
-    if predicate(DynamicScope(scope)):
-        return thenClause(DynamicScope(scope))
+    if predicate(state, DynamicScope(scope)):
+        return thenClause(state, DynamicScope(scope))
     else:
-        return elseClause(DynamicScope(scope))
+        return elseClause(state, DynamicScope(scope))
 
 def cond(state, scope, ifThens):
     for predicate, thenClause in ifThens:
-        if predicate(DynamicScope(scope)):
-            thenClause(DynamicScope(scope))
+        if predicate(state, DynamicScope(scope)):
+            thenClause(state, DynamicScope(scope))
             break
     return None
 
 def condElse(state, scope, ifThens, elseClause):
     for predicate, thenClause in ifThens:
-        if predicate(DynamicScope(scope)):
-            return thenClause(DynamicScope(scope))
-    return elseClause(DynamicScope(scope))
+        if predicate(state, DynamicScope(scope)):
+            return thenClause(state, DynamicScope(scope))
+    return elseClause(state, DynamicScope(scope))
     
 def doWhile(state, scope, predicate, loopBody):
     predScope = DynamicScope(scope)
     bodyScope = DynamicScope(scope)
-    while predicate(predScope):
+    while predicate(state, predScope):
         state.checkTime()
-        loopBody(bodyScope)
+        loopBody(state, bodyScope)
     return None
     
 def doUntil(state, scope, predicate, loopBody):
@@ -309,9 +310,20 @@ def doUntil(state, scope, predicate, loopBody):
     bodyScope = DynamicScope(scope)
     while True:
         state.checkTime()
-        loopBody(bodyScope)
-        if predicate(predScope):
+        loopBody(state, bodyScope)
+        if predicate(state, predScope):
             break
+    return None
+
+def doFor(state, scope, initLet, predicate, stepSet, loopBody):
+    loopScope = DynamicScope(scope)
+    predScope = DynamicScope(loopScope)
+    bodyScope = DynamicScope(loopScope)
+    initLet(state, loopScope)
+    while predicate(state, predScope):
+        state.checkTime()
+        loopBody(state, bodyScope)
+        stepSet(state, loopScope)
     return None
 
 class PFAEngine(object):
@@ -322,10 +334,12 @@ class PFAEngine(object):
         if debug:
             print code
 
-        sandbox = {"PFAEngine": PFAEngine,
+        sandbox = {# Scoring engine architecture
+                   "PFAEngine": PFAEngine,
                    "ExecutionState": ExecutionState,
                    "DynamicScope": DynamicScope,
                    "functionTable": functionTable,
+                   # Python statement --> expression wrappers
                    "do": do,
                    "ifThen": ifThen,
                    "ifThenElse": ifThenElse,
@@ -333,6 +347,8 @@ class PFAEngine(object):
                    "condElse": condElse,
                    "doWhile": doWhile,
                    "doUntil": doUntil,
+                   "doFor": doFor,
+                   # Python libraries
                    "math": math,
                    }
 
