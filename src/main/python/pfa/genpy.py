@@ -54,19 +54,49 @@ from pfa.ast import Doc
 from pfa.ast import Error
 from pfa.ast import Log
 
+from pfa.ast import ArrayIndex
+from pfa.ast import MapIndex
+from pfa.ast import RecordIndex
+
 class GeneratePython(pfa.ast.Task):
     @staticmethod
     def makeTask(style):
         if style == "pure":
             return GeneratePythonPure()
         else:
-            raise NotImplementedException("unrecognized style " + style)
+            raise NotImplementedError("unrecognized style " + style)
 
     def returnLast(self, codes, indent):
         return "".join(indent + x + "\n" for x in codes[:-1]) + indent + "return " + codes[-1] + "\n"
 
     def returnNone(self, codes, indent):
         return "".join(indent + x + "\n" for x in codes)
+
+    def expandPath(self, path):
+        out = []
+        for p in path:
+            if isinstance(p, ArrayIndex):
+                out.append("[" + p.i + "]")
+            elif isinstance(p, MapIndex):
+                out.append("[" + p.k + "]")
+            elif isinstance(p, RecordIndex):
+                out.append("[" + repr(p.f) + "]")
+            else:
+                raise Exception
+        return "".join(out)
+
+    def reprPath(self, path):
+        out = []
+        for p in path:
+            if isinstance(p, ArrayIndex):
+                out.append(p.i)
+            elif isinstance(p, MapIndex):
+                out.append(p.k)
+            elif isinstance(p, RecordIndex):
+                out.append(repr(p.f))
+            else:
+                raise Exception
+        return ", ".join(out)
 
     def __call__(self, context):
         if isinstance(context, EngineConfig.Context):
@@ -135,16 +165,16 @@ class GeneratePython(pfa.ast.Task):
                 return repr(data)
 
         elif isinstance(context, Literal.Context):
-            raise NotImplementedError("Literal")
+            return repr(pfa.datatype.jsonDecoder(context.retType, json.loads(context.value)))
 
         elif isinstance(context, NewObject.Context):
-            raise NotImplementedError("NewObject")
+            return "{" + ", ".join(repr(k) + ": " + v for k, v in context.fields.items()) + "}"
 
         elif isinstance(context, NewArray.Context):
-            raise NotImplementedError("NewArray")
+            return "[" + ", ".join(context.items) + "]"
 
         elif isinstance(context, Do.Context):
-            raise NotImplementedError("Do")
+            return "do(" + ", ".join(context.exprs) + ")"
 
         elif isinstance(context, Let.Context):
             return "scope.let({" + ", ".join(repr(n) + ": " + e for n, t, e in context.nameTypeExpr) + "})"
@@ -153,10 +183,10 @@ class GeneratePython(pfa.ast.Task):
             return "scope.set({" + ", ".join(repr(n) + ": " + e for n, t, e in context.nameTypeExpr) + "})"
 
         elif isinstance(context, AttrGet.Context):
-            raise NotImplementedError("AttrGet")
+            return context.expr + self.expandPath(context.path)
 
         elif isinstance(context, AttrTo.Context):
-            raise NotImplementedError("AttrTo")
+            return "update({}, [{}], {})".format(context.expr, self.reprPath(context.path), context.to)
 
         elif isinstance(context, CellGet.Context):
             raise NotImplementedError("CellGet")
@@ -264,6 +294,37 @@ class DynamicScope(object):
             else:
                 raise RuntimeError()
 
+def update(obj, path, to):
+    if len(path) > 0:
+        head, tail = path[0], path[1:]
+
+        if isinstance(obj, dict):
+            out = {}
+            for k, v in obj.items():
+                if k == head:
+                    out[k] = update(v, tail, to)
+                else:
+                    out[k] = v
+            return out
+
+        elif isinstance(obj, (list, tuple)):
+            out = []
+            for i, x in enumerate(obj):
+                if i == head:
+                    out.append(update(x, tail, to))
+                else:
+                    out.append(x)
+            return out
+
+        else:
+            raise Exception
+
+    elif callable(to):
+        return to(obj)
+
+    else:
+        return to
+        
 def do(*exprs):
     # You've already done them; just return the right value.
     if len(exprs) > 0:
@@ -356,6 +417,7 @@ class PFAEngine(object):
                    "DynamicScope": DynamicScope,
                    "functionTable": functionTable,
                    # Python statement --> expression wrappers
+                   "update": update,
                    "do": do,
                    "ifThen": ifThen,
                    "ifThenElse": ifThenElse,

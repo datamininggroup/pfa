@@ -7,6 +7,7 @@ import avro.schema
 
 import pfa.errors
 import pfa.util
+from pfa.errors import AvroException
 
 ######################################################### the most general types
 
