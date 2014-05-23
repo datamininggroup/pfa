@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+class AvroException(RuntimeError): pass
 class SchemaParseException(RuntimeError): pass
 
 class PFAException(RuntimeError): pass

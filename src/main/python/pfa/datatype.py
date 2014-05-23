@@ -94,6 +94,10 @@ class AvroType(Type):
     def schema(self):
         return self._schema
 
+    @property
+    def name(self):
+        return None
+
     def __eq__(self, other):
         if isinstance(other, AvroType):
             return self.schema == other.schema
@@ -213,18 +217,45 @@ class AvroMapping(AvroType): pass
 
 class AvroNull(AvroType):
     _schema = avro.schema.PrimitiveSchema("null")
+    @property
+    def name(self):
+        return "null"
+
 class AvroBoolean(AvroType):
     _schema = avro.schema.PrimitiveSchema("boolean")
+    @property
+    def name(self):
+        return "boolean"
+
 class AvroInt(AvroNumber):
     _schema = avro.schema.PrimitiveSchema("int")
+    @property
+    def name(self):
+        return "int"
+
 class AvroLong(AvroNumber):
     _schema = avro.schema.PrimitiveSchema("long")
+    @property
+    def name(self):
+        return "long"
+
 class AvroFloat(AvroNumber):
     _schema = avro.schema.PrimitiveSchema("float")
+    @property
+    def name(self):
+        return "float"
+
 class AvroDouble(AvroNumber):
     _schema = avro.schema.PrimitiveSchema("double")
+    @property
+    def name(self):
+        return "double"
+
 class AvroBytes(AvroRaw):
     _schema = avro.schema.PrimitiveSchema("bytes")
+    @property
+    def name(self):
+        return "bytes"
 
 class AvroFixed(AvroRaw, AvroCompiled):
     def __init__(self, size, name=None, namespace=None):
@@ -237,6 +268,9 @@ class AvroFixed(AvroRaw, AvroCompiled):
 
 class AvroString(AvroIdentifier): 
     _schema = avro.schema.PrimitiveSchema("string")
+    @property
+    def name(self):
+        return "string"
 
 class AvroEnum(AvroIdentifier, AvroCompiled):
     def __init__(self, symbols, name=None, namespace=None):
@@ -254,6 +288,9 @@ class AvroArray(AvroContainer):
     @property
     def items(self):
         return schemaToAvroType(self.schema.items)
+    @property
+    def name(self):
+        return "array"
 
 class AvroMap(AvroContainer, AvroMapping):
     def __init__(self, values):
@@ -262,6 +299,9 @@ class AvroMap(AvroContainer, AvroMapping):
     @property
     def values(self):
         return schemaToAvroType(self.schema.values)
+    @property
+    def name(self):
+        return "map"
 
 class AvroRecord(AvroContainer, AvroMapping, AvroCompiled):
     def __init__(self, fields, name=None, namespace=None):
@@ -283,11 +323,19 @@ class AvroRecord(AvroContainer, AvroMapping, AvroCompiled):
 
 class AvroUnion(AvroType):
     def __init__(self, types):
+        names = set([x.name for x in types])
+        if len(types) != len(names):
+            raise pfa.errors.AvroException("duplicate in union")
+        if "union" in names:
+            raise pfa.errors.AvroException("nested union")
         self._schema = avro.schema.UnionSchema([], avro.schema.Names())
         self._schema._schemas = [x.schema for x in types]
     @property
     def types(self):
         return [schemaToAvroType(x) for x in self._schema._schemas]
+    @property
+    def name(self):
+        return "union"
 
 class AvroField(object):
     @staticmethod
@@ -440,3 +488,76 @@ class AvroTypeBuilder(object):
 
     def resolveOneType(self, avroJsonString):
         return ForwardDeclarationParser().parse([avroJsonString])[avroJsonString]
+
+########################### Avro-Python is missing a JSON decoder
+
+def jsonDecoder(avroType, value):
+    if isinstance(avroType, AvroNull):
+        if value is None:
+            return value
+    elif isinstance(avroType, AvroBoolean):
+        if value is True or value is False:
+            return value
+    elif isinstance(avroType, AvroInt):
+        try:
+            return int(value)
+        except ValueError:
+            pass
+    elif isinstance(avroType, AvroLong):
+        try:
+            return long(value)
+        except ValueError:
+            pass
+    elif isinstance(avroType, AvroFloat):
+        try:
+            return float(value)
+        except ValueError:
+            pass
+    elif isinstance(avroType, AvroDouble):
+        try:
+            return float(value)
+        except ValueError:
+            pass
+    elif isinstance(avroType, AvroBytes):
+        if isinstance(value, basestring):
+            return bytes(value)
+    elif isinstance(avroType, AvroFixed):
+        if isinstance(value, basestring):
+            out = bytes(value)
+            if len(out) == avroType.size:
+                return out
+    elif isinstance(avroType, AvroString):
+        if isinstance(value, basestring):
+            return value
+    elif isinstance(avroType, AvroEnum):
+        if isinstance(value, basestring) and value in avroType.symbols:
+            return value
+    elif isinstance(avroType, AvroArray):
+        if isinstance(value, (list, tuple)):
+            return [jsonDecoder(avroType.items, x) for x in value]
+    elif isinstance(avroType, AvroMap):
+        if isinstance(value, dict):
+            return dict((k, jsonDecoder(avroType.values, v)) for k, v in value.items())
+    elif isinstance(avroType, AvroRecord):
+        if isinstance(value, dict):
+            out = {}
+            for field in avroType.fields:
+                if field.name in value:
+                    out[field.name] = jsonDecoder(field.avroType, value[field.name])
+                elif field.default is not None:
+                    out[field.name] = jsonDecoder(field.avroType, field.default)
+                elif isinstance(field.avroType, AvroNull):
+                    out[field.name] = None
+                else:
+                    raise AvroException("{} does not match schema {}".format(json.dumps(value), avroType))
+            return out
+    elif isinstance(avroType, AvroUnion):
+        if isinstance(value, dict) and len(value) == 1:
+            tag, = value.keys()
+            val, = value.values()
+            types = dict((x.name, x) for x in avroType.types)
+            if tag in types:
+                return {tag: jsonDecoder(types[tag], val)}
+    else:
+        raise Exception
+    raise AvroException("{} does not match schema {}".format(json.dumps(value), avroType))

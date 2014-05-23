@@ -3,12 +3,14 @@
 import math
 import base64
 import time
+import json
 
 import pfa.ast
 import pfa.util
 import pfa.reader
+import pfa.datatype
+import options
 from pfa.errors import *
-from pfa.options import EngineOptions
 
 from pfa.ast import EngineConfig
 from pfa.ast import Cell
@@ -74,7 +76,8 @@ class GeneratePython(pfa.ast.Task):
                 name = context.name
 
             return """class PFA_{name}(PFAEngine):
-    def __init__(self, options):
+    def __init__(self, functionTable, options):
+        self.functionTable = functionTable
         self.options = options
 
     def action(self, input):
@@ -82,8 +85,6 @@ class GeneratePython(pfa.ast.Task):
         scope = DynamicScope(None)
         scope.let({{'input': input}})
 {action}
-
-PFA_{name}.functionTable = functionTable
 """.format(name=name, action=self.returnLast(context.action, "        "))
 
         elif isinstance(context, Cell.Context):
@@ -191,25 +192,22 @@ PFA_{name}.functionTable = functionTable
             return "doFor(state, scope, lambda state, scope: scope.let({" + ", ".join(repr(n) + ": " + e for n, t, e in context.initNameTypeExpr) + "}), lambda state, scope: " + context.predicate + ", lambda state, scope: scope.set({" + ", ".join(repr(n) + ": " + e for n, t, e in context.stepNameTypeExpr) + "}), lambda state, scope: do(" + ", ".join(context.loopBody) + "))"
 
         elif isinstance(context, Foreach.Context):
-            raise NotImplementedError("Foreach")
+            return "doForeach(state, scope, {}, {}, lambda state, scope: do({}))".format(repr(context.name), context.objExpr, ", ".join(context.loopBody))
 
         elif isinstance(context, Forkeyval.Context):
-            raise NotImplementedError("Forkeyval")
+            return "doForkeyval(state, scope, {}, {}, {}, lambda state, scope: do({}))".format(repr(context.forkey), repr(context.forval), context.objExpr, ", ".join(context.loopBody))
 
         elif isinstance(context, CastCase.Context):
             raise NotImplementedError("CastCase")
 
-        elif isinstance(context, CastBlock.Context):
-            raise NotImplementedError("CastBlock")
-
         elif isinstance(context, Upcast.Context):
-            raise NotImplementedError("Upcast")
+            return context.expr
 
         elif isinstance(context, IfNotNull.Context):
             raise NotImplementedError("IfNotNull")
 
         elif isinstance(context, Doc.Context):
-            raise NotImplementedError("Doc")
+            return "None"
 
         elif isinstance(context, Error.Context):
             raise NotImplementedError("Error")
@@ -326,6 +324,24 @@ def doFor(state, scope, initLet, predicate, stepSet, loopBody):
         stepSet(state, loopScope)
     return None
 
+def doForeach(state, scope, name, array, loopBody):
+    loopScope = DynamicScope(scope)
+    bodyScope = DynamicScope(loopScope)
+    for item in array:
+        state.checkTime()
+        loopScope.let({name: item})
+        loopBody(state, bodyScope)
+    return None
+
+def doForkeyval(state, scope, forkey, forval, mapping, loopBody):
+    loopScope = DynamicScope(scope)
+    bodyScope = DynamicScope(loopScope)
+    for key, val in mapping.items():
+        state.checkTime()
+        loopScope.let({forkey: key, forval: val})
+        loopBody(state, bodyScope)
+    return None
+
 class PFAEngine(object):
     @staticmethod
     def fromAst(engineConfig, options=None, sharedState=None, multiplicity=1, style="pure", debug=False):
@@ -348,6 +364,8 @@ class PFAEngine(object):
                    "doWhile": doWhile,
                    "doUntil": doUntil,
                    "doFor": doFor,
+                   "doForeach": doForeach,
+                   "doForkeyval": doForkeyval,
                    # Python libraries
                    "math": math,
                    }
@@ -355,7 +373,7 @@ class PFAEngine(object):
         exec(code, sandbox)
         cls = [x for x in sandbox.values() if getattr(x, "__bases__", None) == (PFAEngine,)][0]
 
-        return [cls(EngineOptions(engineConfig.options, {} if options is None else options))
+        return [cls(functionTable, pfa.options.EngineOptions(engineConfig.options, options))
                 for x in xrange(multiplicity)]
 
     @staticmethod

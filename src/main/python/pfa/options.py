@@ -6,8 +6,9 @@ class EngineOptions(object):
     recognizedKeys = set(["@", "timeout", "timeout.begin", "timeout.action", "timeout.end"])
 
     def __init__(self, requestedOptions, hostOptions):
-        combinedOptions = dict(requestedOptions)
-        combinedOptions.update(hostOptions)
+        combinedOptions = {} if requestedOptions is None else dict(requestedOptions)
+        if hostOptions is not None:
+            combinedOptions.update(hostOptions)
         unrecognizedKeys = set(combinedOptions.keys()) - self.recognizedKeys
 
         if len(unrecognizedKeys) > 0:
