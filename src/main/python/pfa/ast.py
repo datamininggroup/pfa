@@ -149,6 +149,10 @@ class UserFcn(Fcn):
         self.name = name
         self.sig = sig
 
+    def genpy(self, paramTypes, args):
+        parNames = [x.keys()[0] for x in self.sig.params]
+        return "call(self.f[" + repr(self.name) + "], state, DynamicScope(None), {" + ", ".join([repr(k) + ": " + v for k, v in zip(parNames, args)]) + "})"
+
     @staticmethod
     def fromFcnDef(n, fcnDef):
         return UserFcn(n, Sig([{k: P.fromType(t)} for k, t in fcnDef.params.items()], P.fromType(fcnDef.ret)))
@@ -298,7 +302,7 @@ class EngineConfig(Ast):
             ufname = "u." + fname
             if not validFunctionName(ufname):
                 raise PFASemanticException("\"{}\" is not a valid function name".format(fname), self.pos)
-            userFunctions.put(ufname, UserFcn.fromFcnDef(ufname, fcnDef))
+            userFunctions[ufname] = UserFcn.fromFcnDef(ufname, fcnDef)
 
         if self.method == Method.EMIT:
             emitFcn = {"emit": EmitFcn(self.output)}

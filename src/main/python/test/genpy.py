@@ -10,18 +10,19 @@ class TestGeneratePython(unittest.TestCase):
     def testSimple(self):
         engine, = PFAEngine.fromYaml('''
 name: test
-input: "null"
-output: R
+input: double
+output: double
 action:
-  - let:
-      stuff: {type: {type: record, name: R, fields: [{name: one, type: int}, {name: two, type: double}, {name: three, type: string}]}, new: {"one": 1, "two": 2.0, "three": ["THREE"]}}
-  - attr: stuff
-    path: [[two]]
-    to: 999
+  - {u.plus: [input, 1]}
+fcns:
+  plus:
+    params: [{x: double}, {y: double}]
+    ret: double
+    do: {+: [x, y]}
 options:
   timeout: 1000
 ''', debug=True)
-        print engine.action(None)
+        print engine.action(12)
 
 if __name__ == "__main__":
     unittest.main()

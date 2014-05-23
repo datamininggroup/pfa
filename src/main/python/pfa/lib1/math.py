@@ -22,7 +22,7 @@ class Pi(LibFcn):
     sig = Sig([], P.Double())
     def genpy(self, paramTypes, args):
         return "math.pi"
-    def __call__(self, paramTypes):
+    def __call__(self, state, scope, paramTypes):
         return math.pi
 provide(Pi)
 
@@ -31,7 +31,7 @@ class E(LibFcn):
     sig = Sig([], P.Double())
     def genpy(self, paramTypes, args):
         return "math.e"
-    def __call__(self, paramTypes):
+    def __call__(self, state, scope, paramTypes):
         return math.e
 provide(E)
 
@@ -44,7 +44,7 @@ class Abs(LibFcn):
     sig = Sig([{"x": P.Wildcard("A", anyNumber)}], P.Wildcard("A"))
     def genpy(self, paramTypes, args):
         return "abs({})".format(*args)
-    def __call__(self, paramTypes, x):
+    def __call__(self, state, scope, paramTypes, x):
         return abs(x)
 provide(Abs)
 
@@ -53,7 +53,7 @@ class ACos(LibFcn):
     sig = Sig([{"x": P.Double()}], P.Double())
     def genpy(self, paramTypes, args):
         return "math.acos({})".format(*args)
-    def __call__(self, paramTypes, x):
+    def __call__(self, state, scope, paramTypes, x):
         return math.acos(x)
 provide(ACos)
 
@@ -62,7 +62,7 @@ class ASin(LibFcn):
     sig = Sig([{"x": P.Double()}], P.Double())
     def genpy(self, paramTypes, args):
         return "math.asin({})".format(*args)
-    def __call__(self, paramTypes, x):
+    def __call__(self, state, scope, paramTypes, x):
         return math.asin(x)
 provide(ASin)
 
@@ -71,7 +71,7 @@ class ATan(LibFcn):
     sig = Sig([{"x": P.Double()}], P.Double())
     def genpy(self, paramTypes, args):
         return "math.atan({})".format(*args)
-    def __call__(self, paramTypes, x):
+    def __call__(self, state, scope, paramTypes, x):
         return math.atan(x)
 provide(ATan)
 
@@ -80,7 +80,7 @@ class ATan2(LibFcn):
     sig = Sig([{"y": P.Double()}, {"x": P.Double()}], P.Double())
     def genpy(self, paramTypes, args):
         return "math.atan2({})".format(*args)
-    def __call__(self, paramTypes, x, y):
+    def __call__(self, state, scope, paramTypes, x, y):
         return math.atan2(x, y)
 provide(ATan2)
 
@@ -89,7 +89,7 @@ class Ceil(LibFcn):
     sig = Sig([{"x": P.Double()}], P.Double())
     def genpy(self, paramTypes, args):
         return "math.ceil({})".format(*args)
-    def __call__(self, paramTypes, x):
+    def __call__(self, state, scope, paramTypes, x):
         return math.ceil(x)
 provide(Ceil)
 
@@ -105,7 +105,7 @@ class Cos(LibFcn):
     sig = Sig([{"x": P.Double()}], P.Double())
     def genpy(self, paramTypes, args):
         return "math.cos({})".format(*args)
-    def __call__(self, paramTypes, x):
+    def __call__(self, state, scope, paramTypes, x):
         return math.cos(x)
 provide(Cos)
 
@@ -114,7 +114,7 @@ class CosH(LibFcn):
     sig = Sig([{"x": P.Double()}], P.Double())
     def genpy(self, paramTypes, args):
         return "math.cosh({})".format(*args)
-    def __call__(self, paramTypes, x):
+    def __call__(self, state, scope, paramTypes, x):
         return math.cosh(x)
 provide(CosH)
 
@@ -123,14 +123,14 @@ class Exp(LibFcn):
     sig = Sig([{"x": P.Double()}], P.Double())
     def genpy(self, paramTypes, args):
         return "math.exp({})".format(*args)
-    def __call__(self, paramTypes, x):
+    def __call__(self, state, scope, paramTypes, x):
         return math.exp(x)
 provide(Exp)
 
 class ExpM1(LibFcn):
     name = prefix + "expm1"
     sig = Sig([{"x": P.Double()}], P.Double())
-    def __call__(self, paramTypes, x):
+    def __call__(self, state, scope, paramTypes, x):
         raise NotImplementedError
 provide(ExpM1)
 
@@ -139,14 +139,14 @@ class Floor(LibFcn):
     sig = Sig([{"x": P.Double()}], P.Double())
     def genpy(self, paramTypes, args):
         return "math.floor({})".format(*args)
-    def __call__(self, paramTypes, x):
+    def __call__(self, state, scope, paramTypes, x):
         return math.floor(x)
 provide(Floor)
 
 class Hypot(LibFcn):
     name = prefix + "hypot"
     sig = Sig([{"x": P.Double()}, {"y": P.Double()}], P.Double())
-    def __call__(self, paramTypes, x, y):
+    def __call__(self, state, scope, paramTypes, x, y):
         return math.sqrt(x**2 + y**2)
 provide(Hypot)
 
@@ -155,7 +155,7 @@ class Ln(LibFcn):
     sig = Sig([{"x": P.Double()}], P.Double())
     def genpy(self, paramTypes, args):
         return "math.log({})".format(*args)
-    def __call__(self, paramTypes, x):
+    def __call__(self, state, scope, paramTypes, x):
         return math.log(x)
 provide(Ln)
 
@@ -164,7 +164,7 @@ class Log10(LibFcn):
     sig = Sig([{"x": P.Double()}], P.Double())
     def genpy(self, paramTypes, args):
         return "math.log10({})".format(*args)
-    def __call__(self, paramTypes, x):
+    def __call__(self, state, scope, paramTypes, x):
         return math.log10(x)
 provide(Log10)
 
@@ -173,14 +173,14 @@ class Log(LibFcn):
     sig = Sig([{"x": P.Double()}, {"base": P.Int()}], P.Double())
     def genpy(self, paramTypes, args):
         return "math.log({}, {})".format(*args)
-    def __call__(self, paramTypes, x, base):
+    def __call__(self, state, scope, paramTypes, x, base):
         return math.log(x, base)
 provide(Log)
 
 class Ln1p(LibFcn):
     name = prefix + "ln1p"
     sig = Sig([{"x": P.Double()}], P.Double())
-    def __call__(self, paramTypes, x):
+    def __call__(self, state, scope, paramTypes, x):
         raise NotImplementedError
 provide(Ln1p)
 
@@ -190,21 +190,21 @@ class Round(LibFcn):
                 Sig([{"x": P.Double()}], P.Long())])
     def genpy(self, paramTypes, args):
         return "round({})".format(*args)
-    def __call__(self, paramTypes, x):
+    def __call__(self, state, scope, paramTypes, x):
         return round(x)
 provide(Round)
 
 class RInt(LibFcn):
     name = prefix + "rint"
     sig = Sig([{"x": P.Double()}], P.Double())
-    def __call__(self, paramTypes, x):
+    def __call__(self, state, scope, paramTypes, x):
         raise NotImplementedError
 provide(RInt)
 
 class Signum(LibFcn):
     name = prefix + "signum"
     sig = Sig([{"x": P.Double()}], P.Int())
-    def __call__(self, paramTypes, x):
+    def __call__(self, state, scope, paramTypes, x):
         if x == 0:
             return 0
         elif x > 1:
@@ -218,7 +218,7 @@ class Sin(LibFcn):
     sig = Sig([{"x": P.Double()}], P.Double())
     def genpy(self, paramTypes, args):
         return "math.sin({})".format(*args)
-    def __call__(self, paramTypes, x):
+    def __call__(self, state, scope, paramTypes, x):
         return math.sin(x)
 provide(Sin)
 
@@ -227,7 +227,7 @@ class SinH(LibFcn):
     sig = Sig([{"x": P.Double()}], P.Double())
     def genpy(self, paramTypes, args):
         return "math.sinh({})".format(*args)
-    def __call__(self, paramTypes, x):
+    def __call__(self, state, scope, paramTypes, x):
         return math.sinh(x)
 provide(SinH)
 
@@ -236,7 +236,7 @@ class Sqrt(LibFcn):
     sig = Sig([{"x": P.Double()}], P.Double())
     def genpy(self, paramTypes, args):
         return "math.sqrt({})".format(*args)
-    def __call__(self, paramTypes, x):
+    def __call__(self, state, scope, paramTypes, x):
         return math.sqrt(x)
 provide(Sqrt)
 
@@ -245,7 +245,7 @@ class Tan(LibFcn):
     sig = Sig([{"x": P.Double()}], P.Double())
     def genpy(self, paramTypes, args):
         return "math.tan({})".format(*args)
-    def __call__(self, paramTypes, x):
+    def __call__(self, state, scope, paramTypes, x):
         return math.tan(x)
 provide(Tan)
 
@@ -254,6 +254,6 @@ class TanH(LibFcn):
     sig = Sig([{"x": P.Double()}], P.Double())
     def genpy(self, paramTypes, args):
         return "math.tanh({})".format(*args)
-    def __call__(self, paramTypes, x):
+    def __call__(self, state, scope, paramTypes, x):
         return math.tanh(x)
 provide(TanH)

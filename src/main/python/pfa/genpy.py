@@ -105,17 +105,23 @@ class GeneratePython(pfa.ast.Task):
             else:
                 name = context.name
 
-            return """class PFA_{name}(PFAEngine):
+            out = ["class PFA_" + name + """(PFAEngine):
     def __init__(self, functionTable, options):
-        self.functionTable = functionTable
+        self.f = functionTable.functions
         self.options = options
+"""]
 
+            for ufname, fcnContext in context.fcns:
+                out.append("        self.f[" + repr(ufname) + "] = " + self(fcnContext))
+
+            out.append("""
     def action(self, input):
         state = ExecutionState(self.options, 'action')
         scope = DynamicScope(None)
-        scope.let({{'input': input}})
-{action}
-""".format(name=name, action=self.returnLast(context.action, "        "))
+        scope.let({'input': input})
+""" + self.returnLast(context.action, "        "))
+
+            return "".join(out)
 
         elif isinstance(context, Cell.Context):
             raise NotImplementedError("Cell")
@@ -124,10 +130,10 @@ class GeneratePython(pfa.ast.Task):
             raise NotImplementedError("Pool")
 
         elif isinstance(context, FcnDef.Context):
-            raise NotImplementedError("FcnDef")
+            return "lambda state, scope: do(" + ", ".join(context.exprs) + ")"
 
         elif isinstance(context, FcnRef.Context):
-            raise NotImplementedError("FcnRef")
+            return "self.f[" + repr(context.fcn.name) + "]"
 
         elif isinstance(context, Call.Context):
             return context.fcn.genpy(context.paramTypes, context.args)
@@ -294,6 +300,11 @@ class DynamicScope(object):
             else:
                 raise RuntimeError()
 
+def call(fcn, state, scope, args):
+    callScope = DynamicScope(scope)
+    callScope.let(args)
+    return fcn(state, callScope)
+
 def update(obj, path, to):
     if len(path) > 0:
         head, tail = path[0], path[1:]
@@ -417,6 +428,7 @@ class PFAEngine(object):
                    "DynamicScope": DynamicScope,
                    "functionTable": functionTable,
                    # Python statement --> expression wrappers
+                   "call": call,
                    "update": update,
                    "do": do,
                    "ifThen": ifThen,
