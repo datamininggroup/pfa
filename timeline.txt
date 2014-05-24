@@ -131,6 +131,8 @@
 2014-05-20:
 2014-05-21:   propagated "@"-signs through Python implementation; renamed files
 2014-05-22:   started work on Python implementation
+2014-05-23:   some Python functions
+2014-05-24:   all of the Python core
 
 
 Tomorrow:     Clustering (with metrics under m.metric.*)
