@@ -462,17 +462,65 @@ class ForwardDeclarationParser(object):
         return result
 
     def getSchema(self, description):
-        if self.names.has_name(description, None):
-            return self.names.get_name(description, None)
-        else:
-            raise NotImplementedError   # straightforward to implement, but not needed yet...
-
-    def getAvroType(self, description):
-        schema = self.getSchema(description)
-        if schema is None:
+        result = self.getAvroType(description)
+        if result is None:
             return None
         else:
-            return schemaToAvroType(schema)
+            return result.avroType
+
+    def getAvroType(self, description):
+        if isinstance(description, basestring):
+            if self.names.has_name(description, None):
+                return schemaToAvroType(self.names.get_name(description, None))
+            elif description == "null":
+                return AvroNull()
+            elif description == "boolean":
+                return AvroBoolean()
+            elif description == "int":
+                return AvroInt()
+            elif description == "long":
+                return AvroLong()
+            elif description == "float":
+                return AvroFloat()
+            elif description == "double":
+                return AvroDouble()
+            elif description == "bytes":
+                return AvroBytes()
+            elif description == "string":
+                return AvroString()
+            else:
+                try:
+                    obj = json.loads(description)
+                except ValueError:
+                    return None
+                else:
+                    return self.getSchema(obj)
+        elif isinstance(description, dict):
+            if description == {"type": "null"}:
+                return AvroNull()
+            elif description == {"type": "boolean"}:
+                return AvroBoolean()
+            elif description == {"type": "int"}:
+                return AvroInt()
+            elif description == {"type": "long"}:
+                return AvroLong()
+            elif description == {"type": "float"}:
+                return AvroFloat()
+            elif description == {"type": "double"}:
+                return AvroDouble()
+            elif description == {"type": "bytes"}:
+                return AvroBytes()
+            elif description == {"type": "string"}:
+                return AvroString()
+            elif description.get("type") == "array" and "items" in description:
+                return AvroArray(self.getSchema(description["items"]))
+            elif description.get("type") == "map" and "values" in description:
+                return AvroArray(self.getSchema(description["values"]))
+            elif description.get("type") in ("fixed", "enum", "record"):
+                raise AvroException("new types, like {}, cannot be defined with the parser.getAvroType or parser.getSchema methods (use parse)".format(json.dumps(description)))
+        elif isinstance(description, (tuple, list)):
+            return AvroUnion([self.getSchema(x) for x in description])
+        return None
 
 class AvroTypeBuilder(object):
     def __init__(self):

@@ -417,22 +417,24 @@ def doForkeyval(state, scope, forkey, forval, mapping, loopBody):
         loopBody(state, bodyScope)
     return None
 
-def castMatch(toType, fromType, value):
-    try:
-        pfa.datatype.jsonDecoder(json.dumps(toType), value)
-    except AvroException:
-        return False
-    else:
-        return True
-
 def cast(state, scope, expr, fromType, cases, partial, parser):
-    fromType = parser.getAvroType(json.dumps(fromType))
+    fromType = parser.getAvroType(fromType)
 
     for name, toType, clause in cases:
         toType = parser.getAvroType(toType)
-        if castMatch(toType, fromType, expr):
+
+        if isinstance(fromType, pfa.datatype.AvroUnion) and isinstance(expr, dict) and len(expr) == 1:
+            value, = expr.values()
+        else:
+            value = expr
+
+        try:
+            castValue = pfa.datatype.jsonDecoder(toType, value)
+        except AvroException:
+            pass
+        else:
             clauseScope = DynamicScope(scope)
-            clauseScope.let({name: expr})
+            clauseScope.let({name: castValue})
             out = clause(state, clauseScope)
             if partial:
                 return None
