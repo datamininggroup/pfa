@@ -121,13 +121,26 @@ class GeneratePython(pfa.ast.Task):
     def action(self, input):
         state = ExecutionState(self.options, 'action')
         scope = DynamicScope(None)
-        scope.let({'input': input})
-""" + self.returnLast(context.action, "        "))
+        for cell in self.cells.values():
+            cell.maybeSaveBackup()
+        for pool in self.pools.values():
+            pool.maybeSaveBackup()
+        try:
+            scope.let({'input': input})
+""" + self.returnLast(context.action, "            "))
+
+            out.append("""        except Exception:
+            for cell in self.cells.values():
+                cell.maybeRestoreBackup()
+            for pool in self.pools.values():
+                pool.maybeRestoreBackup()
+            raise
+""")
 
             return "".join(out)
 
         elif isinstance(context, FcnDef.Context):
-            return "lambda state, scope: do(" + ", ".join(context.exprs) + ")"
+            return "labeledFcn(lambda state, scope: do(" + ", ".join(context.exprs) + "), [" + ", ".join(map(repr, context.params.keys())) + "])"
 
         elif isinstance(context, FcnRef.Context):
             return "self.f[" + repr(context.fcn.name) + "]"
@@ -189,19 +202,19 @@ class GeneratePython(pfa.ast.Task):
             return context.expr + self.expandPath(context.path)
 
         elif isinstance(context, AttrTo.Context):
-            return "update({}, [{}], {})".format(context.expr, self.reprPath(context.path), context.to)
+            return "update(state, scope, {}, [{}], {})".format(context.expr, self.reprPath(context.path), context.to)
 
         elif isinstance(context, CellGet.Context):
-            return "self.cells[" + repr(context.cell) + "]" + self.expandPath(context.path)
+            return "self.cells[" + repr(context.cell) + "].value" + self.expandPath(context.path)
 
         elif isinstance(context, CellTo.Context):
-            return "self.cells[{}].update([{}], {})".format(repr(context.cell), self.reprPath(context.path), context.to)
+            return "self.cells[{}].update(state, scope, [{}], {})".format(repr(context.cell), self.reprPath(context.path), context.to)
 
         elif isinstance(context, PoolGet.Context):
-            return "self.pools[" + repr(context.pool) + "]" + self.expandPath(context.path)
+            return "self.pools[" + repr(context.pool) + "].value" + self.expandPath(context.path)
 
         elif isinstance(context, PoolTo.Context):
-            return "self.pools[{}].update([{}], {}, {})".format(repr(context.pool), self.reprPath(context.path), context.to, context.init)
+            return "self.pools[{}].update(state, scope, [{}], {}, {})".format(repr(context.pool), self.reprPath(context.path), context.to, context.init)
 
         elif isinstance(context, If.Context):
             if context.elseClause is None:
@@ -326,13 +339,13 @@ class Cell(PersistentStorageItem):
             contents = contents[:27] + "..."
         return "Cell(" + ("shared, " if self.shared else "") + ("rollback, " if self.rollback else "") + contents + ")"
 
-    def update(self, path, to):
+    def update(self, state, scope, path, to):
         if self.shared:
             self.lock.acquire()
-            self.value = update(self.value, path, to)
+            self.value = update(state, scope, self.value, path, to)
             self.lock.release()
         else:
-            self.value = update(self.value, path, to)
+            self.value = update(state, scope, self.value, path, to)
 
     def maybeSaveBackup(self):
         if self.rollback:
@@ -355,7 +368,7 @@ class Pool(PersistentStorageItem):
             contents = contents[:27] + "..."
         return "Pool(" + ("shared, " if self.shared else "") + ("rollback, " if self.rollback else "") + contents + ")"
 
-    def update(self, path, to, init):
+    def update(self, state, scope, path, to, init):
         head, tail = path[0], path[1:]
 
         if self.shared:
@@ -369,12 +382,12 @@ class Pool(PersistentStorageItem):
             if head not in self.value:
                 self.value[head] = init
             else:
-                self.value[head] = update(self.value[head], tail, to)
+                self.value[head] = update(state, scope, self.value[head], tail, to)
 
             self.locks[head].release()
 
         else:
-            self.value[head] = update(self.value[head], tail, to)
+            self.value[head] = update(state, scope, self.value[head], tail, to)
 
     def maybeSaveBackup(self):
         if self.rollback:
@@ -384,12 +397,16 @@ class Pool(PersistentStorageItem):
         if self.rollback:
             self.value = self.oldvalue
 
-def call(fcn, state, scope, args):
+def labeledFcn(fcn, paramNames):
+    fcn.paramNames = paramNames
+    return fcn
+
+def call(state, scope, fcn, args):
     callScope = DynamicScope(scope)
     callScope.let(args)
     return fcn(state, callScope)
 
-def update(obj, path, to):
+def update(state, scope, obj, path, to):
     if len(path) > 0:
         head, tail = path[0], path[1:]
 
@@ -415,7 +432,9 @@ def update(obj, path, to):
             raise Exception
 
     elif callable(to):
-        return to(obj)
+        callScope = DynamicScope(scope)
+        callScope.let({to.paramNames[0]: obj})
+        return to(state, callScope)
 
     else:
         return to
@@ -531,6 +550,9 @@ def ifNotNull(state, scope, nameExpr, thenClause, elseClause):
     else:
         elseClause(state, scope)
 
+def error(message, code):
+    raise PFAUserException(message, code)
+
 def genericLogger(message, namespace):
     if namespace is None:
         print " ".join(map(repr, message))
@@ -551,6 +573,7 @@ class PFAEngine(object):
                    "DynamicScope": DynamicScope,
                    "functionTable": functionTable,
                    # Python statement --> expression wrappers
+                   "labeledFcn": labeledFcn,
                    "call": call,
                    "update": update,
                    "do": do,
@@ -564,6 +587,8 @@ class PFAEngine(object):
                    "doForeach": doForeach,
                    "doForkeyval": doForkeyval,
                    "cast": cast,
+                   "ifNotNull": ifNotNull,
+                   "error": error,
                    # Python libraries
                    "math": math,
                    }

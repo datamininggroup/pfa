@@ -5,37 +5,35 @@ import unittest
 
 from pfa.reader import yamlToAst
 from pfa.genpy import PFAEngine
+from pfa.errors import PFAUserException
 
 class TestGeneratePython(unittest.TestCase):
     def testSimple(self):
         engine, = PFAEngine.fromYaml('''
 name: test
-input: [double, string]
-output: double
+input: int
+output: int
 cells:
   stuff:
-    init: 999
+    init: 0
     type: int
+    rollback: true
 action:
-  - {cell: stuff, to: 123}
-  - log: [["hey there"], 3.14, 5]
-  - cast: input
-    cases:
-      - as: double
-        named: x
-        do: x
-      - as: string
-        named: x
-        do: {cell: stuff}
-fcns:
-  plus:
-    params: [{x: double}, {y: double}]
-    ret: double
-    do: {+: [x, y]}
-options:
-  timeout: 1000
+  - cell: stuff
+    to:
+      params: [{x: int}]
+      ret: int
+      do: {+: [x, 1]}
+  - if: {"<": [input, 5]}
+    then: {error: "whatever"}
+  - cell: stuff
 ''', debug=True)
-        print engine.action({"string": "hey"})
+
+        for x in xrange(10):
+            try:
+                print engine.action(x)
+            except PFAUserException:
+                pass
 
 if __name__ == "__main__":
     unittest.main()

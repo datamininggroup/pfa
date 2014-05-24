@@ -151,7 +151,7 @@ class UserFcn(Fcn):
 
     def genpy(self, paramTypes, args):
         parNames = [x.keys()[0] for x in self.sig.params]
-        return "call(self.f[" + repr(self.name) + "], state, DynamicScope(None), {" + ", ".join([repr(k) + ": " + v for k, v in zip(parNames, args)]) + "})"
+        return "call(state, DynamicScope(None), self.f[" + repr(self.name) + "], {" + ", ".join([repr(k) + ": " + v for k, v in zip(parNames, args)]) + "})"
 
     @staticmethod
     def fromFcnDef(n, fcnDef):

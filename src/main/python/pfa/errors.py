@@ -28,8 +28,8 @@ class PFARuntimeException(PFAException):
         super(PFARuntimeException, self).__init__("PFA runtime error: " + message)
 
 class PFAUserException(PFAException):
-    def __init__(self, message):
-        super(PFAUserException, self).__init__("PFA user-defined error: " + message)
+    def __init__(self, message, code):
+        super(PFAUserException, self).__init__("PFA user-defined error: " + message + ("" if code is None else "(code {})".format(code)))
 
 class PFATimeoutException(PFAException):
     def __init__(self, message):
