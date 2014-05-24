@@ -13,6 +13,7 @@ name: test
 input: [double, string]
 output: double
 action:
+  - log: [["hey there"], 3.14, 5]
   - cast: input
     cases:
       - as: double

@@ -106,9 +106,10 @@ class GeneratePython(pfa.ast.Task):
                 name = context.name
 
             out = ["class PFA_" + name + """(PFAEngine):
-    def __init__(self, functionTable, options):
+    def __init__(self, functionTable, options, logger):
         self.f = functionTable.functions
         self.options = options
+        self.logger = logger
 """]
 
             for ufname, fcnContext in context.fcns:
@@ -243,7 +244,7 @@ class GeneratePython(pfa.ast.Task):
             return context.expr
 
         elif isinstance(context, IfNotNull.Context):
-            raise NotImplementedError("IfNotNull")
+            return "ifNotNull(state, scope, {" + ", ".join(repr(n) + ": " + e for n, t, e in context.symbolTypeResult) + "}, lambda state, scope: do(" + ", ".join(context.thenClause) + "), lambda state, scope: do(" + ", ".join(context.elseClause) + "))"
 
         elif isinstance(context, Doc.Context):
             return "None"
@@ -252,7 +253,7 @@ class GeneratePython(pfa.ast.Task):
             return "error(" + repr(context.message) + ", " + repr(context.code) + ")"
 
         elif isinstance(context, Log.Context):
-            raise NotImplementedError("Log")
+            return "self.logger([{}], {})".format(", ".join(x[1] for x in context.exprTypes), context.namespace)
 
         else:
             raise PFASemanticException("unrecognized context class: " + str(type(context)), "")
@@ -442,6 +443,20 @@ def cast(state, scope, expr, fromType, cases, partial, parser):
                 return out
     return None
 
+def ifNotNull(state, scope, nameExpr, thenClause, elseClause):
+    if all(x is not None for x in nameExpr.values()):
+        thenScope = DynamicScope(scope)
+        thenScope.let(nameExpr)
+        thenClause(state, thenScope)
+    else:
+        elseClause(state, scope)
+
+def genericLogger(message, namespace):
+    if namespace is None:
+        print " ".join(map(repr, message))
+    else:
+        print namespace + ": " + " ".join(map(repr, message))
+
 class PFAEngine(object):
     @staticmethod
     def fromAst(engineConfig, options=None, sharedState=None, multiplicity=1, style="pure", debug=False):
@@ -477,7 +492,7 @@ class PFAEngine(object):
         cls = [x for x in sandbox.values() if getattr(x, "__bases__", None) == (PFAEngine,)][0]
         cls.parser = context.parser
 
-        return [cls(functionTable, pfa.options.EngineOptions(engineConfig.options, options))
+        return [cls(functionTable, pfa.options.EngineOptions(engineConfig.options, options), genericLogger)
                 for x in xrange(multiplicity)]
 
     @staticmethod
