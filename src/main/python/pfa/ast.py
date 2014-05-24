@@ -364,7 +364,8 @@ class EngineConfig(Ast):
             self.randseed,
             self.doc,
             self.metadata,
-            self.options)
+            self.options,
+            self.inputPlaceholder.parser)
         return context, task(context)
 
     @property
@@ -425,7 +426,8 @@ class EngineConfig(Ast):
                      randseed,
                      doc,
                      metadata,
-                     options): pass
+                     options,
+                     parser): pass
 
 @pfa.util.case
 class Cell(Ast):

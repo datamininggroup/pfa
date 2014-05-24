@@ -559,6 +559,8 @@ def jsonDecoder(avroType, value):
             types = dict((x.name, x) for x in avroType.types)
             if tag in types:
                 return {tag: jsonDecoder(types[tag], val)}
+        elif value is None and "null" in [x.name for x in avroType.types]:
+            return None
     else:
         raise Exception
     raise AvroException("{} does not match schema {}".format(json.dumps(value), avroType))

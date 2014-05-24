@@ -904,7 +904,8 @@ package jvmcompiler {
         randseed: Option[Long],
         doc: Option[String],
         metadata: Option[JsonNode],
-        options: Map[String, JsonNode]) => {
+        options: Map[String, JsonNode],
+        parser: ForwardDeclarationParser) => {
 
         val thisClassName = "PFA_" + name
 

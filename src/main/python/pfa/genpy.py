@@ -234,7 +234,10 @@ class GeneratePython(pfa.ast.Task):
             return "doForkeyval(state, scope, {}, {}, {}, lambda state, scope: do({}))".format(repr(context.forkey), repr(context.forval), context.objExpr, ", ".join(context.loopBody))
 
         elif isinstance(context, CastCase.Context):
-            raise NotImplementedError("CastCase")
+            return "(" + repr(context.name) + ", " + repr(context.toType) + ", lambda state, scope: do(" + ", ".join(context.clause) + "))"
+
+        elif isinstance(context, CastBlock.Context):
+            return "cast(state, scope, " + context.expr + ", " + repr(context.exprType) + ", [" + ", ".join(caseRes for castCtx, caseRes in context.cases) + "], " + repr(context.partial) + ", self.parser)"
 
         elif isinstance(context, Upcast.Context):
             return context.expr
@@ -246,7 +249,7 @@ class GeneratePython(pfa.ast.Task):
             return "None"
 
         elif isinstance(context, Error.Context):
-            raise NotImplementedError("Error")
+            return "error(" + repr(context.message) + ", " + repr(context.code) + ")"
 
         elif isinstance(context, Log.Context):
             raise NotImplementedError("Log")
@@ -414,6 +417,29 @@ def doForkeyval(state, scope, forkey, forval, mapping, loopBody):
         loopBody(state, bodyScope)
     return None
 
+def castMatch(toType, fromType, value):
+    try:
+        pfa.datatype.jsonDecoder(json.dumps(toType), value)
+    except AvroException:
+        return False
+    else:
+        return True
+
+def cast(state, scope, expr, fromType, cases, partial, parser):
+    fromType = parser.getAvroType(json.dumps(fromType))
+
+    for name, toType, clause in cases:
+        toType = parser.getAvroType(toType)
+        if castMatch(toType, fromType, expr):
+            clauseScope = DynamicScope(scope)
+            clauseScope.let({name: expr})
+            out = clause(state, clauseScope)
+            if partial:
+                return None
+            else:
+                return out
+    return None
+
 class PFAEngine(object):
     @staticmethod
     def fromAst(engineConfig, options=None, sharedState=None, multiplicity=1, style="pure", debug=False):
@@ -440,12 +466,14 @@ class PFAEngine(object):
                    "doFor": doFor,
                    "doForeach": doForeach,
                    "doForkeyval": doForkeyval,
+                   "cast": cast,
                    # Python libraries
                    "math": math,
                    }
 
         exec(code, sandbox)
         cls = [x for x in sandbox.values() if getattr(x, "__bases__", None) == (PFAEngine,)][0]
+        cls.parser = context.parser
 
         return [cls(functionTable, pfa.options.EngineOptions(engineConfig.options, options))
                 for x in xrange(multiplicity)]

@@ -360,7 +360,8 @@ package ast {
         randseed,
         doc,
         metadata,
-        options)
+        options,
+        inputPlaceholder.parser)
       (context, task(context))
     }
 
@@ -451,7 +452,8 @@ package ast {
       randseed: Option[Long],
       doc: Option[String],
       metadata: Option[JsonNode],
-      options: Map[String, JsonNode]
+      options: Map[String, JsonNode],
+      parser: ForwardDeclarationParser
     ) extends AstContext
   }
 
