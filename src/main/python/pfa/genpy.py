@@ -106,8 +106,10 @@ class GeneratePython(pfa.ast.Task):
                 name = context.name
 
             out = ["class PFA_" + name + """(PFAEngine):
-    def __init__(self, functionTable, options, logger):
+    def __init__(self, functionTable, cells, pools, options, logger):
         self.f = functionTable.functions
+        self.cells = cells
+        self.pools = pools
         self.options = options
         self.logger = logger
 """]
@@ -123,12 +125,6 @@ class GeneratePython(pfa.ast.Task):
 """ + self.returnLast(context.action, "        "))
 
             return "".join(out)
-
-        elif isinstance(context, Cell.Context):
-            raise NotImplementedError("Cell")
-
-        elif isinstance(context, Pool.Context):
-            raise NotImplementedError("Pool")
 
         elif isinstance(context, FcnDef.Context):
             return "lambda state, scope: do(" + ", ".join(context.exprs) + ")"
@@ -196,16 +192,16 @@ class GeneratePython(pfa.ast.Task):
             return "update({}, [{}], {})".format(context.expr, self.reprPath(context.path), context.to)
 
         elif isinstance(context, CellGet.Context):
-            raise NotImplementedError("CellGet")
+            return "self.cells[" + repr(context.cell) + "]" + self.expandPath(context.path)
 
         elif isinstance(context, CellTo.Context):
-            raise NotImplementedError("CellTo")
+            return "self.cells[{}].update([{}], {})".format(repr(context.cell), self.reprPath(context.path), context.to)
 
         elif isinstance(context, PoolGet.Context):
-            raise NotImplementedError("PoolGet")
+            return "self.pools[" + repr(context.pool) + "]" + self.expandPath(context.path)
 
         elif isinstance(context, PoolTo.Context):
-            raise NotImplementedError("PoolTo")
+            return "self.pools[{}].update([{}], {}, {})".format(repr(context.pool), self.reprPath(context.path), context.to, context.init)
 
         elif isinstance(context, If.Context):
             if context.elseClause is None:
@@ -303,6 +299,90 @@ class DynamicScope(object):
                 self.parent.set(nameExpr)
             else:
                 raise RuntimeError()
+
+class SharedState(object):
+    def __init__(self):
+        self.cells = {}
+        self.pools = {}
+
+    def __repr__(self):
+        return "SharedState({} cells, {} pools)".format(len(self.cells), len(self.pools))
+
+class PersistentStorageItem(object):
+    def __init__(self, value, shared, rollback):
+        self.value = value
+        self.shared = shared
+        self.rollback = rollback
+
+class Cell(PersistentStorageItem):
+    def __init__(self, value, shared, rollback):
+        if shared:
+            self.lock = threading.Lock()
+        super(Cell, self).__init__(value, shared, rollback)
+
+    def __repr__(self):
+        contents = repr(self.value)
+        if len(contents) > 30:
+            contents = contents[:27] + "..."
+        return "Cell(" + ("shared, " if self.shared else "") + ("rollback, " if self.rollback else "") + contents + ")"
+
+    def update(self, path, to):
+        if self.shared:
+            self.lock.acquire()
+            self.value = update(self.value, path, to)
+            self.lock.release()
+        else:
+            self.value = update(self.value, path, to)
+
+    def maybeSaveBackup(self):
+        if self.rollback:
+            self.oldvalue = self.value
+
+    def maybeRestoreBackup(self):
+        if self.rollback:
+            self.value = self.oldvalue
+
+class Pool(PersistentStorageItem):
+    def __init__(self, value, shared, rollback):
+        if shared:
+            self.locklock = threading.Lock()
+            self.locks = {}
+        super(Pool, self).__init__(value, shared, rollback)
+
+    def __repr__(self):
+        contents = repr(self.value)
+        if len(contents) > 30:
+            contents = contents[:27] + "..."
+        return "Pool(" + ("shared, " if self.shared else "") + ("rollback, " if self.rollback else "") + contents + ")"
+
+    def update(self, path, to, init):
+        head, tail = path[0], path[1:]
+
+        if self.shared:
+            self.locklock.acquire()
+            if head in self.locks:
+                self.locks[head].acquire()
+            else:
+                self.locks[head] = threading.Lock()
+            self.locklock.release()
+
+            if head not in self.value:
+                self.value[head] = init
+            else:
+                self.value[head] = update(self.value[head], tail, to)
+
+            self.locks[head].release()
+
+        else:
+            self.value[head] = update(self.value[head], tail, to)
+
+    def maybeSaveBackup(self):
+        if self.rollback:
+            self.oldvalue = dict(self.value)
+
+    def maybeRestoreBackup(self):
+        if self.rollback:
+            self.value = self.oldvalue
 
 def call(fcn, state, scope, args):
     callScope = DynamicScope(scope)
@@ -464,7 +544,7 @@ class PFAEngine(object):
         context, code = engineConfig.walk(GeneratePython.makeTask(style), pfa.ast.SymbolTable.blank(), functionTable)
         if debug:
             print code
-
+        
         sandbox = {# Scoring engine architecture
                    "PFAEngine": PFAEngine,
                    "ExecutionState": ExecutionState,
@@ -492,8 +572,43 @@ class PFAEngine(object):
         cls = [x for x in sandbox.values() if getattr(x, "__bases__", None) == (PFAEngine,)][0]
         cls.parser = context.parser
 
-        return [cls(functionTable, pfa.options.EngineOptions(engineConfig.options, options), genericLogger)
-                for x in xrange(multiplicity)]
+        if sharedState is None:
+            sharedState = SharedState()
+
+        for cellName, cellConfig in engineConfig.cells.items():
+            if cellConfig.shared and cellName not in sharedState.cells:
+                value = pfa.datatype.jsonDecoder(cellConfig.avroType, json.loads(cellConfig.init))
+                sharedState.cells[cellName] = Cell(value, cellConfig.shared, cellConfig.rollback)
+
+        for poolName, poolConfig in engineConfig.pools.items():
+            if poolConfig.shared and poolName not in sharedState.pools:
+                if poolConfig.init is None:
+                    value = {}
+                else:
+                    value = pfa.datatype.jsonDecoder(poolConfig.avroType, json.loads(poolConfig.init))
+                sharedState.pools[poolName] = Pool(value, poolConfig.shared, poolConfig.rollback)
+
+        out = []
+        for index in xrange(multiplicity):
+            cells = dict(sharedState.cells)
+            pools = dict(sharedState.pools)
+
+            for cellName, cellConfig in engineConfig.cells.items():
+                if not cellConfig.shared:
+                    value = pfa.datatype.jsonDecoder(cellConfig.avroType, json.loads(cellConfig.init))
+                    cells[cellName] = Cell(value, cellConfig.shared, cellConfig.rollback)
+
+            for poolName, poolConfig in engineConfig.pools.items():
+                if not poolConfig.shared:
+                    if poolConfig.init is None:
+                        value = {}
+                    else:
+                        value = pfa.datatype.jsonDecoder(poolConfig.avroType, json.loads(poolConfig.init))
+                        pools[poolName] = Pool(value, poolConfig.shared, poolConfig.rollback)
+
+            out.append(cls(functionTable, cells, pools, pfa.options.EngineOptions(engineConfig.options, options), genericLogger))
+
+        return out
 
     @staticmethod
     def fromJson(src, options=None, sharedState=None, multiplicity=1, style="pure", debug=False):

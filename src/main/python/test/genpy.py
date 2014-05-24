@@ -12,7 +12,12 @@ class TestGeneratePython(unittest.TestCase):
 name: test
 input: [double, string]
 output: double
+cells:
+  stuff:
+    init: 999
+    type: int
 action:
+  - {cell: stuff, to: 123}
   - log: [["hey there"], 3.14, 5]
   - cast: input
     cases:
@@ -21,7 +26,7 @@ action:
         do: x
       - as: string
         named: x
-        do: 5
+        do: {cell: stuff}
 fcns:
   plus:
     params: [{x: double}, {y: double}]
