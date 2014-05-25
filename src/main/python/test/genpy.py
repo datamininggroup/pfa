@@ -1611,7 +1611,69 @@ action:
 ''')
         self.assertEqual(engine.action(None), "there")
 
-        
+    def testMinimallyWork(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - input
+''')
+        self.assertEqual(engine.action("hello"), "hello")
+
+    def testHandleNestedScopes(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - do:
+    - input
+''')
+        self.assertEqual(engine.action("hello"), "hello")
+
+    def testCallFunctions(self):
+        engine, = PFAEngine.fromYaml('''
+input: double
+output: double
+action:
+  - {+: [input, input]}
+''')
+        self.assertEqual(engine.action(2), 4)
+
+    def testIdentifyTypeErrors1(self):
+        self.assertRaises(PFASemanticException, lambda: PFAEngine.fromYaml('''
+input: double
+output: string
+action:
+  - {+: [input, input]}
+'''))
+
+    def testIdentifyTypeErrors2(self):
+        self.assertRaises(PFASemanticException, lambda: PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {+: [input, input]}
+'''))
+
+    def testDefineFunctions(self):
+        engine, = PFAEngine.fromYaml('''
+input: double
+output: double
+action:
+  - {u.plus: [input, input]}
+fcns:
+  plus:
+    params: [{x: double}, {y: double}]
+    ret: double
+    do:
+      - {+: [x, y]}
+  minus:
+    params: [{x: double}, {y: double}]
+    ret: double
+    do:
+      - {-: [x, y]}
+''')
+        self.assertEqual(engine.action(2), 4)
 
 
 

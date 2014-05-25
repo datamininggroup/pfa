@@ -133,6 +133,7 @@
 2014-05-22:   started work on Python implementation
 2014-05-23:   some Python functions
 2014-05-24:   all of the Python core
+2014-05-25:   testing of Python genpy.py and shaking out of bugs; got up to the point of emit method, which hasn't been implemented
 
 
 Tomorrow:     Clustering (with metrics under m.metric.*)

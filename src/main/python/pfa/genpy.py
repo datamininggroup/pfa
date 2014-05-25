@@ -115,7 +115,7 @@ class GeneratePython(pfa.ast.Task):
 """]
 
             for ufname, fcnContext in context.fcns:
-                out.append("        self.f[" + repr(ufname) + "] = " + self(fcnContext))
+                out.append("        self.f[" + repr(ufname) + "] = " + self(fcnContext) + "\n")
 
             action, actionSymbols, actionCalls = context.action
 
