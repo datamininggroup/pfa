@@ -250,7 +250,10 @@ class GeneratePython(pfa.ast.Task):
             return context.expr
 
         elif isinstance(context, IfNotNull.Context):
-            return "ifNotNull(state, scope, {" + ", ".join(repr(n) + ": " + e for n, t, e in context.symbolTypeResult) + "}, lambda state, scope: do(" + ", ".join(context.thenClause) + "), lambda state, scope: do(" + ", ".join(context.elseClause) + "))"
+            if context.elseClause is None:
+                return "ifNotNull(state, scope, {" + ", ".join(repr(n) + ": " + e for n, t, e in context.symbolTypeResult) + "}, lambda state, scope: do(" + ", ".join(context.thenClause) + "))"
+            else:
+                return "ifNotNullElse(state, scope, {" + ", ".join(repr(n) + ": " + e for n, t, e in context.symbolTypeResult) + "}, lambda state, scope: do(" + ", ".join(context.thenClause) + "), lambda state, scope: do(" + ", ".join(context.elseClause) + "))"
 
         elif isinstance(context, Doc.Context):
             return "None"
@@ -259,7 +262,7 @@ class GeneratePython(pfa.ast.Task):
             return "error(" + repr(context.message) + ", " + repr(context.code) + ")"
 
         elif isinstance(context, Log.Context):
-            return "self.logger([{}], {})".format(", ".join(x[1] for x in context.exprTypes), context.namespace)
+            return "self.logger([{}], {})".format(", ".join(x[1] for x in context.exprTypes), repr(context.namespace))
 
         else:
             raise PFASemanticException("unrecognized context class: " + str(type(context)), "")
@@ -468,16 +471,16 @@ def condElse(state, scope, ifThens, elseClause):
     return elseClause(state, DynamicScope(scope))
     
 def doWhile(state, scope, predicate, loopBody):
-    predScope = DynamicScope(scope)
     bodyScope = DynamicScope(scope)
+    predScope = DynamicScope(bodyScope)
     while predicate(state, predScope):
         state.checkTime()
         loopBody(state, bodyScope)
     return None
     
 def doUntil(state, scope, predicate, loopBody):
-    predScope = DynamicScope(scope)
     bodyScope = DynamicScope(scope)
+    predScope = DynamicScope(bodyScope)
     while True:
         state.checkTime()
         loopBody(state, bodyScope)
@@ -521,7 +524,15 @@ def cast(state, scope, expr, fromType, cases, partial, parser):
         toType = parser.getAvroType(toType)
 
         if isinstance(fromType, pfa.datatype.AvroUnion) and isinstance(expr, dict) and len(expr) == 1:
+            tag, = expr.keys()
             value, = expr.values()
+
+            if not ((tag == toType.name) or \
+                    (tag == "int" and toType.name in ("long", "float", "double")) or \
+                    (tag == "long" and toType.name in ("float", "double")) or \
+                    (tag == "float" and toType.name == "double")):
+                continue
+
         else:
             value = expr
 
@@ -533,28 +544,35 @@ def cast(state, scope, expr, fromType, cases, partial, parser):
             clauseScope = DynamicScope(scope)
             clauseScope.let({name: castValue})
             out = clause(state, clauseScope)
+
             if partial:
                 return None
             else:
                 return out
     return None
 
-def ifNotNull(state, scope, nameExpr, thenClause, elseClause):
+def ifNotNull(state, scope, nameExpr, thenClause):
     if all(x is not None for x in nameExpr.values()):
         thenScope = DynamicScope(scope)
         thenScope.let(nameExpr)
         thenClause(state, thenScope)
+
+def ifNotNullElse(state, scope, nameExpr, thenClause, elseClause):
+    if all(x is not None for x in nameExpr.values()):
+        thenScope = DynamicScope(scope)
+        thenScope.let(nameExpr)
+        return thenClause(state, thenScope)
     else:
-        elseClause(state, scope)
+        return elseClause(state, scope)
 
 def error(message, code):
     raise PFAUserException(message, code)
 
 def genericLogger(message, namespace):
     if namespace is None:
-        print " ".join(map(repr, message))
+        print " ".join(map(json.dumps, message))
     else:
-        print namespace + ": " + " ".join(map(repr, message))
+        print namespace + ": " + " ".join(map(json.dumps, message))
 
 class PFAEngine(object):
     @staticmethod
@@ -585,6 +603,7 @@ class PFAEngine(object):
                    "doForkeyval": doForkeyval,
                    "cast": cast,
                    "ifNotNull": ifNotNull,
+                   "ifNotNullElse": ifNotNullElse,
                    "error": error,
                    # Python libraries
                    "math": math,

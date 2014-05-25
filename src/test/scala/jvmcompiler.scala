@@ -463,105 +463,105 @@ else: [2]
 """, """"int"""").apply should be (1)
   }
 
-//   it must "do cond expressions" taggedAs(JVMCompilation) in {
-//     compileExpression("""
-// cond:
-//   - {if: false, then: [1]}
-//   - {if: true, then: [2]}
-//   - {if: true, then: [3]}
-// else: [4]
-// """, """"int"""").apply should be (2)
+  it must "do cond expressions" taggedAs(JVMCompilation) in {
+    compileExpression("""
+cond:
+  - {if: false, then: [1]}
+  - {if: true, then: [2]}
+  - {if: true, then: [3]}
+else: [4]
+""", """"int"""").apply should be (2)
 
-//     compileExpression("""
-// cond:
-//   - {if: false, then: [1]}
-//   - {if: false, then: [2]}
-//   - {if: false, then: [3]}
-// else: [4]
-// """, """"int"""").apply should be (4)
+    compileExpression("""
+cond:
+  - {if: false, then: [1]}
+  - {if: false, then: [2]}
+  - {if: false, then: [3]}
+else: [4]
+""", """"int"""").apply should be (4)
 
-//     compileExpression("""
-// cond:
-//   - {if: false, then: [1]}
-//   - {if: false, then: [2]}
-//   - {if: false, then: [3]}
-// """, """"null"""").apply should be (null.asInstanceOf[java.lang.Void])
+    compileExpression("""
+cond:
+  - {if: false, then: [1]}
+  - {if: false, then: [2]}
+  - {if: false, then: [3]}
+""", """"null"""").apply should be (null.asInstanceOf[java.lang.Void])
 
-//     compileExpression("""
-// cond:
-//   - {if: false, then: [{let: {x: 5}}, 1]}
-//   - {if: false, then: [{let: {x: 5}}, 2]}
-//   - {if: false, then: [{let: {x: 5}}, 3]}
-// else: [{let: {x: 5}}, 4]
-// """, """"int"""").apply should be (4)
+    compileExpression("""
+cond:
+  - {if: false, then: [{let: {x: 5}}, 1]}
+  - {if: false, then: [{let: {x: 5}}, 2]}
+  - {if: false, then: [{let: {x: 5}}, 3]}
+else: [{let: {x: 5}}, 4]
+""", """"int"""").apply should be (4)
 
-//     compileExpression("""
-// cond:
-//   - {if: false, then: [{let: {x: 5}}, 1]}
-//   - {if: false, then: [{let: {x: 5}}, 2]}
-//   - {if: false, then: [{let: {x: 5}}, 3]}
-// """, """"null"""").apply should be (null.asInstanceOf[java.lang.Void])
+    compileExpression("""
+cond:
+  - {if: false, then: [{let: {x: 5}}, 1]}
+  - {if: false, then: [{let: {x: 5}}, 2]}
+  - {if: false, then: [{let: {x: 5}}, 3]}
+""", """"null"""").apply should be (null.asInstanceOf[java.lang.Void])
 
-//     evaluating { compileExpression("""
-// cond:
-//   - {if: false, then: [{let: {x: 5}}, 1]}
-//   - {if: false, then: [{let: {x: 5}}, 2]}
-//   - {if: false, then: [{let: {x: 5}}, 3]}
-// else: [{set: {x: 5}}, 4]
-// """, """"int"""") } should produce [PFASemanticException]
+    evaluating { compileExpression("""
+cond:
+  - {if: false, then: [{let: {x: 5}}, 1]}
+  - {if: false, then: [{let: {x: 5}}, 2]}
+  - {if: false, then: [{let: {x: 5}}, 3]}
+else: [{set: {x: 5}}, 4]
+""", """"int"""") } should produce [PFASemanticException]
 
-//     evaluating { compileExpression("""
-// cond:
-//   - {if: false, then: [{let: {x: 5}}, 1]}
-//   - {if: false, then: [{set: {x: 5}}, 2]}
-//   - {if: false, then: [{set: {x: 5}}, 3]}
-// """, """"null"""") } should produce [PFASemanticException]
+    evaluating { compileExpression("""
+cond:
+  - {if: false, then: [{let: {x: 5}}, 1]}
+  - {if: false, then: [{set: {x: 5}}, 2]}
+  - {if: false, then: [{set: {x: 5}}, 3]}
+""", """"null"""") } should produce [PFASemanticException]
 
-//     compileExpression("""
-// cond:
-//   - {if: {do: [{let: {x: 5}}, false]}, then: [{let: {x: 5}}, 1]}
-//   - {if: {do: [{let: {x: 5}}, false]}, then: [{let: {x: 5}}, 2]}
-//   - {if: {do: [{let: {x: 5}}, false]}, then: [{let: {x: 5}}, 3]}
-// else: [{let: {x: 5}}, 4]
-// """, """"int"""").apply should be (4)
+    compileExpression("""
+cond:
+  - {if: {do: [{let: {x: 5}}, false]}, then: [{let: {x: 5}}, 1]}
+  - {if: {do: [{let: {x: 5}}, false]}, then: [{let: {x: 5}}, 2]}
+  - {if: {do: [{let: {x: 5}}, false]}, then: [{let: {x: 5}}, 3]}
+else: [{let: {x: 5}}, 4]
+""", """"int"""").apply should be (4)
 
-//     compileExpression("""
-// cond:
-//   - {if: {do: [{let: {x: 5}}, true]}, then: [{let: {x: 5}}, 1]}
-//   - {if: {do: [{let: {x: 5}}, false]}, then: [{let: {x: 5}}, 2]}
-//   - {if: {do: [{let: {x: 5}}, false]}, then: [{let: {x: 5}}, 3]}
-// else: [{let: {x: 5}}, 4]
-// """, """"int"""").apply should be (1)
+    compileExpression("""
+cond:
+  - {if: {do: [{let: {x: 5}}, true]}, then: [{let: {x: 5}}, 1]}
+  - {if: {do: [{let: {x: 5}}, false]}, then: [{let: {x: 5}}, 2]}
+  - {if: {do: [{let: {x: 5}}, false]}, then: [{let: {x: 5}}, 3]}
+else: [{let: {x: 5}}, 4]
+""", """"int"""").apply should be (1)
 
-//     evaluating { compileExpression("""
-// do:
-//   - {let: {x: 3}}
-//   - cond:
-//       - {if: {do: [{let: {x: 5}}, true]}, then: [1]}
-//       - {if: {do: [{let: {x: 5}}, false]}, then: [2]}
-//       - {if: {do: [{let: {x: 5}}, false]}, then: [3]}
-//     else: [{let: {x: 5}}, 4]
-// """, """"int"""") } should produce [PFASemanticException]
+    evaluating { compileExpression("""
+do:
+  - {let: {x: 3}}
+  - cond:
+      - {if: {do: [{let: {x: 5}}, true]}, then: [1]}
+      - {if: {do: [{let: {x: 5}}, false]}, then: [2]}
+      - {if: {do: [{let: {x: 5}}, false]}, then: [3]}
+    else: [{let: {x: 5}}, 4]
+""", """"int"""") } should produce [PFASemanticException]
 
-//     evaluating { compileExpression("""
-// do:
-//   - {let: {x: 3}}
-//   - cond:
-//       - {if: {do: [{set: {x: 1}}, true]}, then: [1]}
-//       - {if: {do: [{set: {x: 2}}, false]}, then: [2]}
-//       - {if: {do: [{set: {x: 3}}, false]}, then: [3]}
-//     else: [4]
-//   - x
-// """, """"int"""") } should produce [PFASemanticException]
+    evaluating { compileExpression("""
+do:
+  - {let: {x: 3}}
+  - cond:
+      - {if: {do: [{set: {x: 1}}, true]}, then: [1]}
+      - {if: {do: [{set: {x: 2}}, false]}, then: [2]}
+      - {if: {do: [{set: {x: 3}}, false]}, then: [3]}
+    else: [4]
+  - x
+""", """"int"""") } should produce [PFASemanticException]
 
-//     compileExpression("""
-// cond:
-//   - {if: false, then: [1]}
-//   - {if: true, then: [[two]]}
-//   - {if: true, then: [3.0]}
-// else: [4]
-// """, """["string", "int", "double"]""").apply should be ("two")
-//   }
+    compileExpression("""
+cond:
+  - {if: false, then: [1]}
+  - {if: true, then: [[two]]}
+  - {if: true, then: [3.0]}
+else: [4]
+""", """["string", "int", "double"]""").apply should be ("two")
+  }
 
   it must "do while loops" taggedAs(JVMCompilation) in {
     collectLogs(compileExpressionEngine("""

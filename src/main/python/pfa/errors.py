@@ -7,6 +7,7 @@ class PFAException(RuntimeError): pass
 
 class PFASyntaxException(PFAException):
     def __init__(self, message, pos):
+        self.pos = pos
         if pos is None or pos == "":
             super(PFASyntaxException, self).__init__("PFA syntax error: " + message)
         else:
@@ -14,6 +15,7 @@ class PFASyntaxException(PFAException):
 
 class PFASemanticException(PFAException):
     def __init__(self, message, pos):
+        self.pos = pos
         if pos is None or pos == "":
             super(PFASemanticException, self).__init__("PFA semantic error: " + message)
         else:
@@ -29,6 +31,7 @@ class PFARuntimeException(PFAException):
 
 class PFAUserException(PFAException):
     def __init__(self, message, code):
+        self.code = code
         super(PFAUserException, self).__init__("PFA user-defined error: " + message + ("" if code is None else "(code {})".format(code)))
 
 class PFATimeoutException(PFAException):
