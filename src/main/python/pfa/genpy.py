@@ -117,6 +117,8 @@ class GeneratePython(pfa.ast.Task):
             for ufname, fcnContext in context.fcns:
                 out.append("        self.f[" + repr(ufname) + "] = " + self(fcnContext))
 
+            action, actionSymbols, actionCalls = context.action
+
             out.append("""
     def action(self, input):
         state = ExecutionState(self.options, 'action')
@@ -127,7 +129,7 @@ class GeneratePython(pfa.ast.Task):
             pool.maybeSaveBackup()
         try:
             scope.let({'input': input})
-""" + self.returnLast(context.action, "            "))
+""" + self.returnLast(action, "            "))
 
             out.append("""        except Exception:
             for cell in self.cells.values():
