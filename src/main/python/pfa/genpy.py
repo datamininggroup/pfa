@@ -173,12 +173,7 @@ class GeneratePython(pfa.ast.Task):
             return repr(context.value)
 
         elif isinstance(context, LiteralBase64.Context):
-            try:
-                data = base64.decode(context.value)
-            except Exception as err:
-                raise PFASemanticException("error interpreting base64: " + str(err))
-            else:
-                return repr(data)
+            return repr(context.value)
 
         elif isinstance(context, Literal.Context):
             return repr(pfa.datatype.jsonDecoder(context.retType, json.loads(context.value)))

@@ -61,7 +61,6 @@ fcns:
   }
 
   it must "do complex literals" taggedAs(JVMCompilation) in {
-    // FIXME: this will need to be changed when the Avro data types get replaced
     compileExpression("""
 type: {type: array, items: string}
 value: [one, two, three]

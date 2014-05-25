@@ -15,7 +15,7 @@ package options {
     val unrecognizedKeys = combinedOptions.keys.toSet diff EngineOptions.recognizedKeys
 
     if (!unrecognizedKeys.isEmpty)
-      throw new PFAInitializationException("unrecognized options: " + unrecognizedKeys.sort.mkString(" "))
+      throw new PFAInitializationException("unrecognized options: " + unrecognizedKeys.toList.sorted.mkString(" "))
 
     private def longOpt(name: String, default: Long): Long = combinedOptions.get(name) match {
       case None => default

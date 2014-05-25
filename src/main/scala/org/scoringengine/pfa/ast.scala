@@ -57,6 +57,7 @@ import org.scoringengine.pfa.datatype.AvroField
 import org.scoringengine.pfa.datatype.AvroUnion
 import org.scoringengine.pfa.datatype.AvroPlaceholder
 import org.scoringengine.pfa.datatype.AvroTypeBuilder
+import org.scoringengine.pfa.datatype.ForwardDeclarationParser
 
 package object ast {
   def inferType(
@@ -344,15 +345,15 @@ package ast {
         input,
         output,
         inputPlaceholder.parser.compiledTypes,
-        beginResults,
-        beginScope.inThisScope,
-        beginCalls,
-        actionContextResults map {_._2},
-        actionScopeWrapper.inThisScope ++ actionScope.inThisScope,
-        actionCalls,
-        endResults,
-        endScope.inThisScope,
-        endCalls,
+        (beginResults,
+          beginScope.inThisScope,
+          beginCalls),
+        (actionContextResults map {_._2},
+          actionScopeWrapper.inThisScope ++ actionScope.inThisScope,
+          actionCalls),
+        (endResults,
+          endScope.inThisScope,
+          endCalls),
         userFcnContexts,
         zero,
         cells,
@@ -436,15 +437,9 @@ package ast {
       input: AvroType,
       output: AvroType,
       compiledTypes: Set[AvroCompiled],
-      begin: Seq[TaskResult],
-      beginSymbols: Map[String, AvroType],
-      beginCalls: Set[String],
-      action: Seq[TaskResult],
-      actionSymbols: Map[String, AvroType],
-      actionCalls: Set[String],
-      end: Seq[TaskResult],
-      endSymbols: Map[String, AvroType],
-      endCalls: Set[String],
+      begin: (Seq[TaskResult], Map[String, AvroType], Set[String]),
+      action: (Seq[TaskResult], Map[String, AvroType], Set[String]),
+      end: (Seq[TaskResult], Map[String, AvroType], Set[String]),
       fcns: Map[String, FcnDef.Context],
       zero: Option[String],
       cells: Map[String, Cell],

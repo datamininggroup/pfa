@@ -105,6 +105,7 @@ import org.scoringengine.pfa.datatype.AvroMap
 import org.scoringengine.pfa.datatype.AvroRecord
 import org.scoringengine.pfa.datatype.AvroField
 import org.scoringengine.pfa.datatype.AvroUnion
+import org.scoringengine.pfa.datatype.ForwardDeclarationParser
 
 import org.scoringengine.pfa.data.PFADatumReader
 import org.scoringengine.pfa.data.PFADatumWriter
@@ -500,9 +501,9 @@ package jvmcompiler {
       _options = options
       _callGraph =
         (context.fcns map {case (fname, fctx) => (fname, fctx.calls)}) ++
-          Map("(begin)" -> context.beginCalls) ++
-          Map("(action)" -> context.actionCalls) ++
-          Map("(end)" -> context.endCalls)
+          Map("(begin)" -> context.begin._3) ++
+          Map("(action)" -> context.action._3) ++
+          Map("(end)" -> context.end._3)
 
       // make sure that functions used in CellTo and PoolTo do not themselves call CellTo or PoolTo (which could lead to deadlock)
       config collect {
@@ -888,15 +889,15 @@ package jvmcompiler {
         input: AvroType,
         output: AvroType,
         compiledTypes: Set[AvroCompiled],
-        begin: Seq[TaskResult],
-        beginSymbols: Map[String, AvroType],
-        beginCalls: Set[String],
-        action: Seq[TaskResult],
-        actionSymbols: Map[String, AvroType],
-        actionCalls: Set[String],
-        end: Seq[TaskResult],
-        endSymbols: Map[String, AvroType],
-        endCalls: Set[String],
+        (begin: Seq[TaskResult],
+          beginSymbols: Map[String, AvroType],
+          beginCalls: Set[String]),
+        (action: Seq[TaskResult],
+          actionSymbols: Map[String, AvroType],
+          actionCalls: Set[String]),
+        (end: Seq[TaskResult],
+          endSymbols: Map[String, AvroType],
+          endCalls: Set[String]),
         fcn: Map[String, FcnDef.Context],
         zero: Option[String],
         cells: Map[String, Cell],

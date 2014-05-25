@@ -38,6 +38,10 @@ class PythonTestSuite extends FlatSpec with Matchers {
     run("test.datatype", "TestDataType", 2) should be (true)
   }
 
+  it must "TestGeneratePython" taggedAs(PythonTest) in {
+    run("test.genpy", "TestGeneratePython", 2) should be (true)
+  }
+
   it must "TestJsonToAst" taggedAs(PythonTest) in {
     run("test.jsontoast", "TestJsonToAst", 2) should be (true)
   }
