@@ -211,9 +211,9 @@ class NoTask(Task):
 class Ast(object):
     def collect(self, pf):
         if pf.isDefinedAt(self):
-            [pf(self)]
+            return [pf(self)]
         else:
-            []
+            return []
 
     def walk(self, task, symbolTable=None, functionTable=None):
         if symbolTable is None and functionTable is None:
@@ -295,7 +295,13 @@ class EngineConfig(Ast):
         return self.outputPlaceholder.avroType
 
     def collect(self, pf):
-        raise NotImplementedError
+        return super(EngineConfig, self).collect(pf) + \
+               pfa.util.flatten(x.collect(pf) for x in self.begin) + \
+               pfa.util.flatten(x.collect(pf) for x in self.action) + \
+               pfa.util.flatten(x.collect(pf) for x in self.end) + \
+               pfa.util.flatten(x.collect(pf) for x in self.fcns.values()) + \
+               pfa.util.flatten(x.collect(pf) for x in self.cells.values()) + \
+               pfa.util.flatten(x.collect(pf) for x in self.pools.values())
 
     def walk(self, task, symbolTable, functionTable):
         topWrapper = SymbolTable(symbolTable, {}, self.cells, self.pools, True, False)
@@ -445,9 +451,6 @@ class Cell(Ast):
     def avroType(self):
         return self.avroPlaceholder.avroType
 
-    def collect(self, pf):
-        raise NotImplementedError
-
     def walk(self, task, symbolTable, functionTable):
         context = self.Context()
         return context, task(context)
@@ -478,9 +481,6 @@ class Pool(Ast):
     @property
     def avroType(self):
         return self.avroPlaceholder.avroType
-
-    def collect(self, pf):
-        raise NotImplementedError
 
     def walk(self, task, symbolTable, functionTable):
         context = self.Context()
@@ -576,7 +576,8 @@ class FcnDef(Argument):
         return self.retPlaceholder.avroType
 
     def collect(self, pf):
-        raise NotImplementedError
+        return super(FcnDef, self).collect(pf) + \
+               pfa.util.flatten(x.collect(pf) for x in self.body)
 
     def walk(self, task, symbolTable, functionTable):
         if len(self.paramsPlaceholder) > 22:
@@ -608,9 +609,6 @@ class FcnDef(Argument):
 class FcnRef(Argument):
     def __init__(self, name, pos=None): pass
 
-    def collect(self, pf):
-        raise NotImplementedError
-
     def walk(self, task, symbolTable, functionTable):
         fcn = functionTable.functions.get(self.name, None)
         if fcn is None:
@@ -638,7 +636,8 @@ class Call(Expression):
     def __init__(self, name, args, pos=None): pass
 
     def collect(self, pf):
-        raise NotImplementedError
+        return super(Call, self).collect(pf) + \
+               pfa.util.flatten(x.collect(pf) for x in self.args)
 
     def walk(self, task, symbolTable, functionTable):
         fcn = functionTable.functions.get(self.name, None)
@@ -692,9 +691,6 @@ class Call(Expression):
 class Ref(Expression):
     def __init__(self, name, pos=None): pass
 
-    def collect(self, pf):
-        raise NotImplementedError
-
     def walk(self, task, symbolTable, functionTable):
         if symbolTable.get(self.name) is None:
             raise PFASemanticException("unknown symbol \"{}\"".format(self.name), self.pos)
@@ -712,9 +708,6 @@ class Ref(Expression):
 @pfa.util.case
 class LiteralNull(LiteralValue):
     def __init__(self, pos=None): pass
-
-    def collect(self, pf):
-        raise NotImplementedError
 
     def walk(self, task, symbolTable, functionTable):
         context = self.Context(AvroNull(), set([self.desc]))
@@ -734,9 +727,6 @@ class LiteralNull(LiteralValue):
 class LiteralBoolean(LiteralValue):
     def __init__(self, value, pos=None): pass
 
-    def collect(self, pf):
-        raise NotImplementedError
-
     def walk(self, task, symbolTable, functionTable):
         context = self.Context(AvroBoolean(), set([self.desc]), self.value)
         return context, task(context)
@@ -754,9 +744,6 @@ class LiteralBoolean(LiteralValue):
 @pfa.util.case
 class LiteralInt(LiteralValue):
     def __init__(self, value, pos=None): pass
-
-    def collect(self, pf):
-        raise NotImplementedError
 
     def walk(self, task, symbolTable, functionTable):
         context = self.Context(AvroInt(), set([self.desc]), self.value)
@@ -776,9 +763,6 @@ class LiteralInt(LiteralValue):
 class LiteralLong(LiteralValue):
     def __init__(self, value, pos=None): pass
 
-    def collect(self, pf):
-        raise NotImplementedError
-
     def walk(self, task, symbolTable, functionTable):
         context = self.Context(AvroLong(), set([self.desc]), self.value)
         return context, task(context)
@@ -796,9 +780,6 @@ class LiteralLong(LiteralValue):
 @pfa.util.case
 class LiteralFloat(LiteralValue):
     def __init__(self, value, pos=None): pass
-
-    def collect(self, pf):
-        raise NotImplementedError
 
     def walk(self, task, symbolTable, functionTable):
         context = self.Context(AvroFloat(), set([self.desc]), self.value)
@@ -818,9 +799,6 @@ class LiteralFloat(LiteralValue):
 class LiteralDouble(LiteralValue):
     def __init__(self, value, pos=None): pass
 
-    def collect(self, pf):
-        raise NotImplementedError
-
     def walk(self, task, symbolTable, functionTable):
         context = self.Context(AvroDouble(), set([self.desc]), self.value)
         return context, task(context)
@@ -839,9 +817,6 @@ class LiteralDouble(LiteralValue):
 class LiteralString(LiteralValue):
     def __init__(self, value, pos=None): pass
 
-    def collect(self, pf):
-        raise NotImplementedError
-
     def walk(self, task, symbolTable, functionTable):
         context = self.Context(AvroString(), set([self.desc]), self.value)
         return context, task(context)
@@ -859,9 +834,6 @@ class LiteralString(LiteralValue):
 @pfa.util.case
 class LiteralBase64(LiteralValue):
     def __init__(self, value, pos=None): pass
-
-    def collect(self, pf):
-        raise NotImplementedError
 
     def walk(self, task, symbolTable, functionTable):
         context = self.Context(AvroBytes(), set([self.desc]), self.value)
@@ -893,9 +865,6 @@ class Literal(LiteralValue):
     @property
     def avroType(self):
         return self.avroPlaceholder.avroType
-
-    def collect(self, pf):
-        raise NotImplementedError
 
     def walk(self, task, symbolTable, functionTable):
         context = self.Context(self.avroType, set([self.desc]), self.value)
@@ -929,7 +898,8 @@ class NewObject(Expression):
         return self.avroPlaceholder.avroType
 
     def collect(self, pf):
-        raise NotImplementedError
+        return super(NewObject, self).collect(pf) + \
+               pfa.util.flatten(x.collect(pf) for x in self.fields.values())
 
     def walk(self, task, symbolTable, functionTable):
         calls = set()
@@ -991,7 +961,8 @@ class NewArray(Expression):
         return self.avroPlaceholder.avroType
 
     def collect(self, pf):
-        raise NotImplementedError
+        return super(NewArray, self).collect(pf) + \
+               pfa.util.flatten(x.collect(pf) for x in self.items)
 
     def walk(self, task, symbolTable, functionTable):
         calls = set()
@@ -1034,7 +1005,8 @@ class Do(Expression):
             raise PFASyntaxException("\"do\" block must contain at least one expression", self.pos)
 
     def collect(self, pf):
-        raise NotImplementedError
+        return super(Do, self).collect(pf) + \
+               pfa.util.flatten(x.collect(pf) for x in self.body)
 
     def walk(self, task, symbolTable, functionTable):
         scope = symbolTable.newScope(False, False)
@@ -1059,7 +1031,8 @@ class Let(Expression):
             raise PFASyntaxException("\"let\" must contain at least one declaration", self.pos)
 
     def collect(self, pf):
-        raise NotImplementedError
+        return super(Let, self).collect(pf) + \
+               pfa.util.flatten(x.collect(pf) for x in self.values.values())
 
     def walk(self, task, symbolTable, functionTable):
         if symbolTable.sealedWithin:
@@ -1102,7 +1075,8 @@ class SetVar(Expression):
             raise PFASyntaxException("\"set\" must contain at least one assignment", self.pos)
 
     def collect(self, pf):
-        raise NotImplementedError
+        return super(SetVar, self).collect(pf) + \
+               pfa.util.flatten(x.collect(pf) for x in self.values.values())
 
     def walk(self, task, symbolTable, functionTable):
         calls = set()
@@ -1143,7 +1117,9 @@ class AttrGet(Expression, HasPath):
             raise PFASyntaxException("attr path must have at least one key", self.pos)
 
     def collect(self, pf):
-        raise NotImplementedError
+        return super(AttrGet, self).collect(pf) + \
+               self.expr.collect(pf) + \
+               pfa.util.flatten(x.collect(pf) for x in self.path)
 
     def walk(self, task, symbolTable, functionTable):
         exprScope = symbolTable.newScope(True, True)
@@ -1173,7 +1149,10 @@ class AttrTo(Expression, HasPath):
             raise PFASyntaxException("attr path must have at least one key", self.pos)
 
     def collect(self, pf):
-        raise NotImplementedError
+        return super(AttrTo, self).collect(pf) + \
+               self.expr.collect(pf) + \
+               pfa.util.flatten(x.collect(pf) for x in self.path) + \
+               self.to.collect(pf)
 
     def walk(self, task, symbolTable, functionTable):
         exprScope = symbolTable.newScope(True, True)
@@ -1218,7 +1197,8 @@ class CellGet(Expression, HasPath):
     def __init__(self, cell, path, pos=None): pass
 
     def collect(self, pf):
-        raise NotImplementedError
+        return super(CellGet, self).collect(pf) + \
+               pfa.util.flatten(x.collect(pf) for x in self.path)
 
     def walk(self, task, symbolTable, functionTable):
         c = symbolTable.cell(self.cell)
@@ -1248,7 +1228,9 @@ class CellTo(Expression, HasPath):
     def __init__(self, cell, path, to, pos=None): pass
 
     def collect(self, pf):
-        raise NotImplementedError
+        return super(CellTo, self).collect(pf) + \
+               pfa.util.flatten(x.collect(pf) for x in self.path) + \
+               self.to.collect(pf)
 
     def walk(self, task, symbolTable, functionTable):
         c = symbolTable.cell(self.cell)
@@ -1297,7 +1279,8 @@ class PoolGet(Expression, HasPath):
             raise PFASyntaxException("pool path must have at least one key", self.pos)
 
     def collect(self, pf):
-        raise NotImplementedError
+        return super(PoolGet, self).collect(pf) + \
+               pfa.util.flatten(x.collect(pf) for x in self.path)
 
     def walk(self, task, symbolTable, functionTable):
         p = symbolTable.pool(self.pool)
@@ -1326,7 +1309,10 @@ class PoolTo(Expression, HasPath):
             raise PFASyntaxException("pool path must have at least one key", self.pos)
 
     def collect(self, pf):
-        raise NotImplementedError
+        return super(PoolTo, self).collect(pf) + \
+               pfa.util.flatten(x.collect(pf) for x in self.path) + \
+               self.to.collect(pf) + \
+               (self.init.collect(pf) if self.init is not None else [])
 
     def walk(self, task, symbolTable, functionTable):
         p = symbolTable.pool(self.pool)
@@ -1390,7 +1376,10 @@ class If(Expression):
             raise PFASyntaxException("\"else\" clause must contain at least one expression", self.pos)
 
     def collect(self, pf):
-        raise NotImplementedError
+        return super(If, self).collect(pf) + \
+               self.predicate.collect(pf) + \
+               pfa.util.flatten(x.collect(pf) for x in self.thenClause) + \
+               (pfa.util.flatten(x.collect(pf) for x in self.elseClause) if self.elseClause is not None else [])
 
     def walk(self, task, symbolTable, functionTable):
         calls = set()
@@ -1454,7 +1443,9 @@ class Cond(Expression):
             raise PFASyntaxException("\"else\" clause must contain at least one expression", self.pos)
 
     def collect(self, pf):
-        raise NotImplementedError
+        return super(Cond, self).collect(pf) + \
+               pfa.util.flatten(x.collect(pf) for x in self.ifthens) + \
+               (pfa.util.flatten(x.collect(pf) for x in self.elseClause) if self.elseClause is not None else [])
 
     def walk(self, task, symbolTable, functionTable):
         calls = set()
@@ -1520,7 +1511,9 @@ class While(Expression):
     def __init__(self, predicate, body, pos=None): pass
 
     def collect(self, pf):
-        raise NotImplementedError
+        return super(While, self).collect(pf) + \
+               self.predicate.collect(pf) + \
+               pfa.util.flatten(x.collect(pf) for x in self.body)
 
     def walk(self, task, symbolTable, functionTable):
         calls = set()
@@ -1554,7 +1547,9 @@ class DoUntil(Expression):
     def __init__(self, body, predicate, pos=None): pass
 
     def collect(self, pf):
-        raise NotImplementedError
+        return super(DoUntil, self).collect(pf) + \
+               pfa.util.flatten(x.collect(pf) for x in self.body) + \
+               self.predicate.collect(pf)
 
     def walk(self, task, symbolTable, functionTable):
         calls = set()
@@ -1596,7 +1591,11 @@ class For(Expression):
             raise PFASyntaxException("\"do\" must contain at least one statement", self.pos)
 
     def collect(self, pf):
-        raise NotImplementedError
+        return super(For, self).collect(pf) + \
+               pfa.util.flatten(x.collect(pf) for x in self.init.values()) + \
+               self.predicate.collect(pf) + \
+               pfa.util.flatten(x.collect(pf) for x in self.step.values()) + \
+               pfa.util.flatten(x.collect(pf) for x in self.body)
 
     def walk(self, task, symbolTable, functionTable):
         calls = set()
@@ -1664,7 +1663,9 @@ class Foreach(Expression):
             raise PFASyntaxException("\"do\" must contain at least one statement", self.pos)
 
     def collect(self, pf):
-        raise NotImplementedError
+        return super(Foreach, self).collect(pf) + \
+               self.array.collect(pf) + \
+               pfa.util.flatten(x.collect(pf) for x in self.body)
 
     def walk(self, task, symbolTable, functionTable):
         calls = set()
@@ -1711,7 +1712,9 @@ class Forkeyval(Expression):
             raise PFASyntaxException("\"do\" must contain at least one statement", self.pos)
 
     def collect(self, pf):
-        raise NotImplementedError
+        return super(Forkeyval, self).collect(pf) + \
+               self.map.collect(pf) + \
+               pfa.util.flatten(x.collect(pf) for x in self.body)
 
     def walk(self, task, symbolTable, functionTable):
         calls = set()
@@ -1770,7 +1773,8 @@ class CastCase(Ast):
         return self.avroPlaceholder.avroType
 
     def collect(self, pf):
-        raise NotImplementedError
+        return super(CastCase, self).collect(pf) + \
+               pfa.util.flatten(x.collect(pf) for x in self.body)
 
     def walk(self, task, symbolTable, functionTable):
         scope = symbolTable.newScope(False, False)
@@ -1793,7 +1797,9 @@ class CastBlock(Expression):
     def __init__(self, expr, castCases, partial, pos=None): pass
 
     def collect(self, pf):
-        raise NotImplementedError
+        return super(CastBlock, self).collect(pf) + \
+               self.expr.collect(pf) + \
+               pfa.util.flatten(x.collect(pf) for x in self.castCases)
 
     def walk(self, task, symbolTable, functionTable):
         calls = set()
@@ -1854,7 +1860,8 @@ class Upcast(Expression):
         return self.avroPlaceholder.avroType
 
     def collect(self, pf):
-        raise NotImplementedError
+        return super(Upcast, self).collect(pf) + \
+               self.expr.collect(pf)
 
     def walk(self, task, symbolTable, functionTable):
         scope = symbolTable.newScope(True, True)
@@ -1889,7 +1896,10 @@ class IfNotNull(Expression):
             raise PFASyntaxException("\"else\" clause must contain at least one expression", self.pos)
 
     def collect(self, pf):
-        raise NotImplementedError
+        return super(IfNotNull, self).collect(pf) + \
+               pfa.util.flatten(x.collect(pf) for x in self.exprs.values()) + \
+               pfa.util.flatten(x.collect(pf) for x in self.thenClause) + \
+               (pfa.util.flatten(x.collect(pf) for x in self.elseClause) if self.elseClause is not None else [])
 
     def walk(self, task, symbolTable, functionTable):
         calls = set()
@@ -1965,9 +1975,6 @@ class IfNotNull(Expression):
 class Doc(Expression):
     def __init__(self, comment, pos=None): pass
 
-    def collect(self, pf):
-        raise NotImplementedError
-
     def walk(self, task, symbolTable, functionTable):
         context = self.Context(AvroNull(), set([self.desc]))
         return context, task(context)
@@ -1985,9 +1992,6 @@ class Doc(Expression):
 @pfa.util.case
 class Error(Expression):
     def __init__(self, message, code, pos=None): pass
-
-    def collect(self, pf):
-        raise NotImplementedError
 
     def walk(self, task, symbolTable, functionTable):
         context = self.Context(AvroNull(), set([self.desc]), self.message, self.code)
@@ -2011,7 +2015,8 @@ class Log(Expression):
     def __init__(self, exprs, namespace, pos=None): pass
 
     def collect(self, pf):
-        raise NotImplementedError
+        return super(Log, self).collect(pf) + \
+               pfa.util.flatten(x.collect(pf) for x in self.exprs)
 
     def walk(self, task, symbolTable, functionTable):
         scope = symbolTable.newScope(True, True)

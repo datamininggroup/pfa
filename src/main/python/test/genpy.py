@@ -6,7 +6,7 @@ import unittest
 from pfa.reader import yamlToAst
 from pfa.genpy import PFAEngine
 from pfa.errors import *
-
+    
 class TestGeneratePython(unittest.TestCase):
     def testLiteralNull(self):
         engine, = PFAEngine.fromYaml('''
@@ -2802,10 +2802,118 @@ fcns:
         self.assertEqual(engine.callDepth("u.d"), float("inf"))
         self.assertEqual(engine.callDepth("u.c"), float("inf"))
 
+    def testRefuseSituationsThatCouldLeadToDeadlock(self):
+        engine, = PFAEngine.fromYaml("""
+input: string
+output: string
+action:
+  - input
+fcns:
+  a: {params: [{x: "null"}], ret: "null", do: [{cell: x, to: {fcnref: u.b}}]}
+  b: {params: [{x: "null"}], ret: "null", do: [{u.c: [null]}]}
+  c: {params: [{x: "null"}], ret: "null", do: [null]}
+cells:
+  x: {type: "null", init: null}
+  y: {type: "null", init: null}
+""")
+
+        engine, = PFAEngine.fromYaml("""
+input: string
+output: string
+action:
+  - input
+fcns:
+  a: {params: [{x: "null"}], ret: "null", do: [{cell: x, to: {params: [{x: "null"}], ret: "null", do: [{u.c: [null]}]}}]}
+  c: {params: [{x: "null"}], ret: "null", do: [null]}
+cells:
+  x: {type: "null", init: null}
+  y: {type: "null", init: null}
+""")
+
+        self.assertRaises(PFAInitializationException, lambda: PFAEngine.fromYaml("""
+input: string
+output: string
+action:
+  - input
+fcns:
+  a: {params: [{x: "null"}], ret: "null", do: [{cell: x, to: {fcnref: u.b}}]}
+  b: {params: [{x: "null"}], ret: "null", do: [{u.c: [null]}]}
+  c: {params: [{x: "null"}], ret: "null", do: [{cell: y, to: null}]}
+cells:
+  x: {type: "null", init: null}
+  y: {type: "null", init: null}
+"""))
+
+        self.assertRaises(PFAInitializationException, lambda: PFAEngine.fromYaml("""
+input: string
+output: string
+action:
+  - input
+fcns:
+  a: {params: [{x: "null"}], ret: "null", do: [{cell: x, to: {params: [{x: "null"}], ret: "null", do: [{u.c: [null]}]}}]}
+  c: {params: [{x: "null"}], ret: "null", do: [{cell: y, to: null}]}
+cells:
+  x: {type: "null", init: null}
+  y: {type: "null", init: null}
+"""))
+
+        engine, = PFAEngine.fromYaml("""
+input: string
+output: string
+action:
+  - input
+fcns:
+  a: {params: [{x: "null"}], ret: "null", do: [{pool: x, path: [[whatever]], to: {fcnref: u.b}, init: null}]}
+  b: {params: [{x: "null"}], ret: "null", do: [{u.c: [null]}]}
+  c: {params: [{x: "null"}], ret: "null", do: [null]}
+pools:
+  x: {type: "null", init: {whatever: null}}
+  y: {type: "null", init: {whatever: null}}
+""")
+
+        engine, = PFAEngine.fromYaml("""
+input: string
+output: string
+action:
+  - input
+fcns:
+  a: {params: [{x: "null"}], ret: "null", do: [{pool: x, path: [[whatever]], to: {params: [{x: "null"}], ret: "null", do: [{u.c: [null]}]}, init: null}]}
+  c: {params: [{x: "null"}], ret: "null", do: [null]}
+pools:
+  x: {type: "null", init: {whatever: null}}
+  y: {type: "null", init: {whatever: null}}
+""")
+
+        self.assertRaises(PFAInitializationException, lambda: PFAEngine.fromYaml("""
+input: string
+output: string
+action:
+  - input
+fcns:
+  a: {params: [{x: "null"}], ret: "null", do: [{pool: x, path: [[whatever]], to: {fcnref: u.b}, init: null}]}
+  b: {params: [{x: "null"}], ret: "null", do: [{u.c: [null]}]}
+  c: {params: [{x: "null"}], ret: "null", do: [{pool: y, path: [[whatever]], to: null}]}
+pools:
+  x: {type: "null", init: {whatever: null}}
+  y: {type: "null", init: {whatever: null}}
+"""))
+
+        self.assertRaises(PFAInitializationException, lambda: PFAEngine.fromYaml("""
+input: string
+output: string
+action:
+  - input
+fcns:
+  a: {params: [{x: "null"}], ret: "null", do: [{pool: x, path: [[whatever]], to: {params: [{x: "null"}], ret: "null", do: [{u.c: [null]}]}, init: null}]}
+  c: {params: [{x: "null"}], ret: "null", do: [{pool: y, path: [[whatever]], to: null}]}
+pools:
+  x: {type: "null", init: {whatever: null}}
+  y: {type: "null", init: {whatever: null}}
+"""))
 
 
 
 
-        
+
 if __name__ == "__main__":
     unittest.main()

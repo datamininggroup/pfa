@@ -632,6 +632,36 @@ class FakeEmitForExecution(pfa.fcn.Fcn):
 def genericEmit(x):
     pass
 
+def checkForDeadlock(engineConfig, engine):
+    class WithFcnRef(object):
+        def isDefinedAt(self, ast):
+            return isinstance(ast, (CellTo, PoolTo)) and isinstance(ast.to, FcnRef)
+        def __call__(self, slotTo):
+            if engine.hasSideEffects(slotTo.to.name):
+                raise PFAInitializationException("{} references function \"{}\", which has side-effects".format(slotTo.desc, slotTo.to.name))
+    engineConfig.collect(WithFcnRef())
+
+    class CellToOrPoolTo(object):
+        def isDefinedAt(self, ast):
+            return isinstance(ast, (CellTo, PoolTo))
+        def __call__(self, slotTo):
+            raise PFAInitializationException("inline function in cell-to or pool-to invokes a " + slotTo.desc)
+
+    class SideEffectFunction(object):
+        def isDefinedAt(self, ast):
+            return isinstance(ast, Call) and engine.hasSideEffects(ast.name)
+        def __call__(self, call):
+            raise PFAInitializationException("inline function in cell-to or pool-to invokes function \"{}\", which has side-effects".format(call.name))
+
+    class WithFcnDef(object):
+        def isDefinedAt(self, ast):
+            return isinstance(ast, (CellTo, PoolTo)) and isinstance(ast.to, FcnDef)
+        def __call__(self, slotTo):
+            for x in slotTo.to.body:
+                x.collect(CellToOrPoolTo())
+                x.collect(SideEffectFunction())
+    engineConfig.collect(WithFcnDef())
+
 class PFAEngine(object):
     @staticmethod
     def fromAst(engineConfig, options=None, sharedState=None, multiplicity=1, style="pure", debug=False):
@@ -640,7 +670,7 @@ class PFAEngine(object):
         context, code = engineConfig.walk(GeneratePython.makeTask(style), pfa.ast.SymbolTable.blank(), functionTable)
         if debug:
             print code
-        
+
         sandbox = {# Scoring engine architecture
                    "PFAEngine": PFAEngine,
                    "ExecutionState": ExecutionState,
@@ -717,7 +747,9 @@ class PFAEngine(object):
             if engineConfig.method == Method.EMIT:
                 f["emit"] = FakeEmitForExecution(engine)
             engine.f = f
+            engine.config = engineConfig
 
+            checkForDeadlock(engineConfig, engine)
             engine.initialize()
 
             out.append(engine)
