@@ -1,19 +1,20 @@
 #!/usr/bin/env python
 
-import math
 import base64
-import time
 import json
+import math
+import threading
+import time
 
-import pfa.P as P
+from pfa.errors import *
 import pfa.ast
-import pfa.util
-import pfa.reader
 import pfa.datatype
 import pfa.fcn
 import pfa.options
+import pfa.P as P
+import pfa.reader
 import pfa.signature
-from pfa.errors import *
+import pfa.util
 
 from pfa.ast import EngineConfig
 from pfa.ast import Cell
@@ -81,19 +82,6 @@ class GeneratePython(pfa.ast.Task):
         suffix = indent + "self.tally = last\n" + \
                  indent + "return self.tally\n"
         return prefix + "".join(indent + x + "\n" for x in codes[:-1]) + indent + "last = " + codes[-1] + "\n" + suffix
-
-    def expandPath(self, path):
-        out = []
-        for p in path:
-            if isinstance(p, ArrayIndex):
-                out.append("[" + p.i + "]")
-            elif isinstance(p, MapIndex):
-                out.append("[" + p.k + "]")
-            elif isinstance(p, RecordIndex):
-                out.append("[" + repr(p.f) + "]")
-            else:
-                raise Exception
-        return "".join(out)
 
     def reprPath(self, path):
         out = []
@@ -220,19 +208,19 @@ class GeneratePython(pfa.ast.Task):
             return "scope.set({" + ", ".join(repr(n) + ": " + e for n, t, e in context.nameTypeExpr) + "})"
 
         elif isinstance(context, AttrGet.Context):
-            return context.expr + self.expandPath(context.path)
+            return "get(" + context.expr + ", [" + self.reprPath(context.path) + "])"
 
         elif isinstance(context, AttrTo.Context):
             return "update(state, scope, {}, [{}], {})".format(context.expr, self.reprPath(context.path), context.to)
 
         elif isinstance(context, CellGet.Context):
-            return "self.cells[" + repr(context.cell) + "].value" + self.expandPath(context.path)
+            return "get(self.cells[" + repr(context.cell) + "].value, [" + self.reprPath(context.path) + "])"
 
         elif isinstance(context, CellTo.Context):
             return "self.cells[{}].update(state, scope, [{}], {})".format(repr(context.cell), self.reprPath(context.path), context.to)
 
         elif isinstance(context, PoolGet.Context):
-            return "self.pools[" + repr(context.pool) + "].value" + self.expandPath(context.path)
+            return "get(self.pools[" + repr(context.pool) + "].value, [" + self.reprPath(context.path) + "])"
 
         elif isinstance(context, PoolTo.Context):
             return "self.pools[{}].update(state, scope, [{}], {}, {})".format(repr(context.pool), self.reprPath(context.path), context.to, context.init)
@@ -362,7 +350,7 @@ class Cell(PersistentStorageItem):
         if len(contents) > 30:
             contents = contents[:27] + "..."
         return "Cell(" + ("shared, " if self.shared else "") + ("rollback, " if self.rollback else "") + contents + ")"
-
+            
     def update(self, state, scope, path, to):
         if self.shared:
             self.lock.acquire()
@@ -401,16 +389,18 @@ class Pool(PersistentStorageItem):
                 self.locks[head].acquire()
             else:
                 self.locks[head] = threading.Lock()
+                self.locks[head].acquire()
             self.locklock.release()
 
             if head not in self.value:
                 self.value[head] = init
-            else:
-                self.value[head] = update(state, scope, self.value[head], tail, to)
+            self.value[head] = update(state, scope, self.value[head], tail, to)
 
             self.locks[head].release()
 
         else:
+            if head not in self.value:
+                self.value[head] = init
             self.value[head] = update(state, scope, self.value[head], tail, to)
 
     def maybeSaveBackup(self):
@@ -430,6 +420,20 @@ def call(state, scope, fcn, args):
     callScope.let(args)
     return fcn(state, callScope)
 
+def get(obj, path):
+    while len(path) > 0:
+        head, tail = path[0], path[1:]
+        try:
+            obj = obj[head]
+        except (KeyError, IndexError):
+            if isinstance(obj, (list, tuple)):
+                raise PFARuntimeException("index {} out of bounds for array of size {}".format(head, len(obj)))
+            else:
+                raise PFARuntimeException("key \"{}\" not found in map with size {}".format(head, len(obj)))
+        path = tail
+
+    return obj
+
 def update(state, scope, obj, path, to):
     if len(path) > 0:
         head, tail = path[0], path[1:]
@@ -438,7 +442,7 @@ def update(state, scope, obj, path, to):
             out = {}
             for k, v in obj.items():
                 if k == head:
-                    out[k] = update(v, tail, to)
+                    out[k] = update(state, scope, v, tail, to)
                 else:
                     out[k] = v
             return out
@@ -447,7 +451,7 @@ def update(state, scope, obj, path, to):
             out = []
             for i, x in enumerate(obj):
                 if i == head:
-                    out.append(update(x, tail, to))
+                    out.append(update(state, scope, x, tail, to))
                 else:
                     out.append(x)
             return out
@@ -621,6 +625,7 @@ class PFAEngine(object):
                    # Python statement --> expression wrappers
                    "labeledFcn": labeledFcn,
                    "call": call,
+                   "get": get,
                    "update": update,
                    "do": do,
                    "ifThen": ifThen,
@@ -654,10 +659,10 @@ class PFAEngine(object):
 
         for poolName, poolConfig in engineConfig.pools.items():
             if poolConfig.shared and poolName not in sharedState.pools:
-                if poolConfig.init is None:
-                    value = {}
-                else:
-                    value = pfa.datatype.jsonDecoder(poolConfig.avroType, json.loads(poolConfig.init))
+                init = {}
+                for k, v in poolConfig.init.items():
+                    init[k] = json.loads(v)
+                value = pfa.datatype.jsonDecoder(pfa.datatype.AvroMap(poolConfig.avroType), init)
                 sharedState.pools[poolName] = Pool(value, poolConfig.shared, poolConfig.rollback)
 
         out = []
@@ -672,11 +677,11 @@ class PFAEngine(object):
 
             for poolName, poolConfig in engineConfig.pools.items():
                 if not poolConfig.shared:
-                    if poolConfig.init is None:
-                        value = {}
-                    else:
-                        value = pfa.datatype.jsonDecoder(poolConfig.avroType, json.loads(poolConfig.init))
-                        pools[poolName] = Pool(value, poolConfig.shared, poolConfig.rollback)
+                    init = {}
+                    for k, v in poolConfig.init.items():
+                        init[k] = json.loads(v)
+                    value = pfa.datatype.jsonDecoder(pfa.datatype.AvroMap(poolConfig.avroType), init)
+                    pools[poolName] = Pool(value, poolConfig.shared, poolConfig.rollback)
 
             if engineConfig.method == Method.FOLD:
                 zero = pfa.datatype.jsonDecoder(engineConfig.output, json.loads(engineConfig.zero))

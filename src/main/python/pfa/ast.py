@@ -473,7 +473,7 @@ class Pool(Ast):
             return False
 
     def __hash__(self):
-        return hash((self.avroPlaceholder, json.loads(self.init), self.shared, self.rollback))
+        return hash((self.avroPlaceholder, dict((k, json.loads(v)) for k, v in self.init.items()), self.shared, self.rollback))
 
     @property
     def avroType(self):
@@ -668,9 +668,10 @@ class Call(Expression):
             argContexts = [x[0] for x in argResults]
             argTaskResults = [x[1] for x in argResults]
 
-            for i, a in enumerate(self.args):
-                if isinstance(a, FcnRef):
-                    argTaskResults[i] = task(argContexts[i], paramTypes[i])
+            # Two-parameter task?
+            # for i, a in enumerate(self.args):
+            #     if isinstance(a, FcnRef):
+            #         argTaskResults[i] = task(argContexts[i], paramTypes[i])
 
             context = self.Context(retType, calls, fcn, argTaskResults, argContexts, paramTypes)
 
@@ -1198,7 +1199,7 @@ class AttrTo(Expression, HasPath):
         elif isinstance(toContext, FcnRef.Context):
             if not FcnType([setType], setType).accepts(toContext.fcnType):
                 raise PFASemanticException("attr-and-path has type {} but attempting to assign with a function of type {}".format(repr(setType), repr(toContext.fcnType)), self.pos)
-            context = self.Context(exprContext.retType, calls.union(toContext.calls).union(set([self.desc])), exprResult, exprContext.retType, setType, pathResult, task(toContext, toContext.fcnType), toContext.fcnType)
+            context = self.Context(exprContext.retType, calls.union(toContext.calls).union(set([self.desc])), exprResult, exprContext.retType, setType, pathResult, task(toContext), toContext.fcnType)   # Two-parameter task?  task(toContext, toContext.fcnType)
 
         return context, task(context)
         
@@ -1272,7 +1273,7 @@ class CellTo(Expression, HasPath):
         elif isinstance(toContext, FcnRef.Context):
             if not FcnType([setType], setType).accepts(toContext.fcnType):
                 raise PFASemanticException("cell-and-path has type {} but attempting to assign with a function of type {}".format(repr(setType), repr(toContext.fcnType)), self.pos)
-            context = self.Context(AvroNull(), calls.union(toContext.calls).union(set([self.desc])), self.cell, cellType, setType, pathResult, task(toContext, toContext.fcnType), toContext.fcnType, shared)
+            context = self.Context(AvroNull(), calls.union(toContext.calls).union(set([self.desc])), self.cell, cellType, setType, pathResult, task(toContext), toContext.fcnType, shared)  # Two-parameter task?  task(toContext, toContext.fcnType)
 
         return context, task(context)
 
@@ -1362,7 +1363,7 @@ class PoolTo(Expression, HasPath):
             initContext, initResult = self.init.walk(task, symbolTable, functionTable)
             if not setType.accepts(initContext.retType):
                 raise PFASemanticException("pool-and-path has type {} but attempting to init with type {}".format(repr(setType), repr(initContext.retType)), self.pos)
-            context = self.Context(AvroNull(), calls.union(toContext.calls).union(set([self.desc])), self.pool, poolType, setType, pathResult, task(toContext, toContext.fcnType), toContext.fcnType, initResult, shared)
+            context = self.Context(AvroNull(), calls.union(toContext.calls).union(set([self.desc])), self.pool, poolType, setType, pathResult, task(toContext), toContext.fcnType, initResult, shared)  # Two-parameter task?  task(toContext, toContext.fcnType)
 
         return context, task(context)
 

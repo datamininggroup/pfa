@@ -1630,7 +1630,7 @@ action:
 ''')
         self.assertEqual(engine.action("hello"), "hello")
 
-    def testCallFunctions(self):
+    def testCallFunctions2(self):
         engine, = PFAEngine.fromYaml('''
 input: double
 output: double
@@ -1796,15 +1796,965 @@ action:
 ''')
         self.assertEqual(engine.action(None), 2)
         
-#     def testNotAcceptBadIndexes(self):
-#         engine, = PFAEngine.fromYaml('''
-# input: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}
-# output: int
-# action:
-#   - {let: {x: [two]}}
-#   - {attr: input, path: [[one], 3, x]}
-# ''')
-#         self.assertRaises(PFARuntimeException, lambda: 
+    def testNotAcceptBadIndexes(self):
+        engine, = PFAEngine.fromYaml('''
+input: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}
+output: int
+action:
+  - {let: {x: [two]}}
+  - {attr: input, path: [[one], 3, x]}
+''')
+        self.assertRaises(PFARuntimeException, lambda: engine.action({"one": [{"zero": 0}, {"one": 1}, {"two": 2}]}))
+
+        engine, = PFAEngine.fromYaml('''
+input: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}
+output: int
+action:
+  - {let: {x: [TWO]}}
+  - {attr: input, path: [[one], 2, x]}
+''')
+        self.assertRaises(PFARuntimeException, lambda: engine.action({"one": [{"zero": 0}, {"one": 1}, {"two": 2}]}))
+
+    def testNotAcceptBadIndexTypes(self):
+        self.assertRaises(PFASemanticException, lambda: PFAEngine.fromYaml('''
+input: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}
+output: int
+action:
+  - {let: {x: [two]}}
+  - {attr: input, path: [[ONE], 2, x]}
+'''))
+
+        self.assertRaises(PFASemanticException, lambda: PFAEngine.fromYaml('''
+input: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}
+output: int
+action:
+  - {let: {x: [two]}}
+  - {attr: input, path: [[one], x, x]}
+'''))
+
+        self.assertRaises(PFASemanticException, lambda: PFAEngine.fromYaml('''
+input: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}
+output: int
+action:
+  - {attr: input, path: [[one], 2, 2]}
+'''))
+
+    def testChangeADeepObject(self):
+        engine, = PFAEngine.fromYaml('''
+input: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}
+output: int
+action:
+  - {let: {x: [two]}}
+  - {let: {something: {attr: input, path: [[one], 2, x], to: 999}}}
+  - {attr: something, path: [[one], 2, x]}
+''')
+        self.assertEqual(engine.action({"one": [{"zero": 0}, {"one": 1}, {"two": 2}]}), 999)
+
+    def testChangeAnOnTheFlyGeneratedObject(self):
+        engine, = PFAEngine.fromYaml('''
+input: "null"
+output: int
+action:
+  - {let: {x: [two]}}
+  - let:
+      something:
+        attr:
+          value: {"one": [{"zero": 0}, {"one": 1}, {"two": 2}]}
+          type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}
+        path: [[one], 2, x]
+        to: 999
+  - {attr: something, path: [[one], 2, x]}
+''')
+        self.assertEqual(engine.action(None), 999)
+
+    def testChangeADeepObjectWithFcnDef(self):
+        engine, = PFAEngine.fromYaml('''
+input: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}
+output: int
+action:
+  - {let: {x: [two]}}
+  - {let: {something: {attr: input, path: [[one], 2, x], to: {params: [{z: int}], ret: int, do: [{+: [z, 1]}]}}}}
+  - {attr: something, path: [[one], 2, x]}
+''')
+        self.assertEqual(engine.action({"one": [{"zero": 0}, {"one": 1}, {"two": 2}]}), 3)
+
+    def testChangeADeepObjectWithFcnRef(self):
+        engine, = PFAEngine.fromYaml('''
+input: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}
+output: int
+action:
+  - {let: {x: [two]}}
+  - {let: {something: {attr: input, path: [[one], 2, x], to: {fcnref: u.inc}}}}
+  - {attr: something, path: [[one], 2, x]}
+fcns:
+  inc: {params: [{z: int}], ret: int, do: [{+: [z, 1]}]}
+''')
+        self.assertEqual(engine.action({"one": [{"zero": 0}, {"one": 1}, {"two": 2}]}), 3)
+
+    def testExtractPrivateCells(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - cell: x
+cells:
+  x: {type: int, init: 12}
+''')
+        self.assertEqual(engine.action("whatever"), 12)
+
+    def testExtractPublicCells(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - cell: x
+cells:
+  x: {type: int, init: 12, shared: true}
+''')
+        self.assertEqual(engine.action("whatever"), 12)
+
+    def testExtractDeepPrivateCells(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {cell: x, path: [[one], 2, input]}
+cells:
+  x: {type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}, init: {one: [{zero: 0}, {one: 1}, {two: 2}]}}
+''')
+        self.assertEqual(engine.action("two"), 2)
+
+    def testExtractDeepPublicCells(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {cell: x, path: [[one], 2, input]}
+cells:
+  x: {type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}, init: {one: [{zero: 0}, {one: 1}, {two: 2}]}, shared: true}
+''')
+        self.assertEqual(engine.action("two"), 2)
+
+    def testNotFindNonExistentCells(self):
+        self.assertRaises(PFASemanticException, lambda: PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - cell: y
+cells:
+  x: {type: int, init: 12}
+'''))
+
+    def testNotAcceptBadIndexes2(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {cell: x, path: [[one], 3, input]}
+cells:
+  x: {type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}, init: {one: [{zero: 0}, {one: 1}, {two: 2}]}}
+''')
+        self.assertRaises(PFARuntimeException, lambda: engine.action("two"))
+
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {cell: x, path: [[one], 2, input]}
+cells:
+  x: {type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}, init: {one: [{zero: 0}, {one: 1}, {two: 2}]}}
+''')
+        self.assertRaises(PFARuntimeException, lambda: engine.action("TWO"))
+
+    def testNotAcceptBadIndexTypes2(self):
+        self.assertRaises(PFASemanticException, lambda: PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {cell: x, path: [[ONE], 2, input]}
+cells:
+  x: {type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}, init: {one: [{zero: 0}, {one: 1}, {two: 2}]}}
+'''))
+
+        self.assertRaises(PFASemanticException, lambda: PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {cell: x, path: [[one], input, input]}
+cells:
+  x: {type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}, init: {one: [{zero: 0}, {one: 1}, {two: 2}]}}
+'''))
+
+        self.assertRaises(PFASemanticException, lambda: PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {cell: x, path: [[one], 2, 2]}
+cells:
+  x: {type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}, init: {one: [{zero: 0}, {one: 1}, {two: 2}]}}
+'''))
+        
+    def testChangePrivateCells(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {cell: x, to: 999}
+  - {cell: x}
+cells:
+  x: {type: int, init: 12}
+''')
+        self.assertEqual(engine.action("whatever"), 999)
+
+    def testChangePrivateCellsWithFcnDef(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {cell: x, to: {params: [{z: int}], ret: int, do: [{+: [z, 1]}]}}
+  - {cell: x}
+cells:
+  x: {type: int, init: 12}
+''')
+        self.assertEqual(engine.action("whatever"), 13)
+
+    def testChangePrivateCellsWithFcnRef(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {cell: x, to: {fcnref: u.inc}}
+  - {cell: x}
+cells:
+  x: {type: int, init: 12}
+fcns:
+  inc: {params: [{z: int}], ret: int, do: [{+: [z, 1]}]}
+''')
+        self.assertEqual(engine.action("whatever"), 13)
+
+    def testChangeDeepPrivateCells(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {cell: x, path: [[one], 2, input], to: 999}
+  - {cell: x, path: [[one], 2, input]}
+cells:
+  x: {type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}, init: {one: [{zero: 0}, {one: 1}, {two: 2}]}}
+''')
+        self.assertEqual(engine.action("two"), 999)
+
+    def testChangeDeepPrivateCellsWithFcnDef(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {cell: x, path: [[one], 2, input], to: {params: [{z: int}], ret: int, do: [{+: [z, 1]}]}}
+  - {cell: x, path: [[one], 2, input]}
+cells:
+  x: {type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}, init: {one: [{zero: 0}, {one: 1}, {two: 2}]}}
+''')
+        self.assertEqual(engine.action("two"), 3)
+
+    def testChangeDeepPrivateCellsWithFcnRef(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {cell: x, path: [[one], 2, input], to: {fcnref: u.inc}}
+  - {cell: x, path: [[one], 2, input]}
+cells:
+  x: {type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}, init: {one: [{zero: 0}, {one: 1}, {two: 2}]}}
+fcns:
+  inc: {params: [{z: int}], ret: int, do: [{+: [z, 1]}]}
+''')
+        self.assertEqual(engine.action("two"), 3)
+
+    def testChangePublicCells(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {cell: x, to: 999}
+  - {cell: x}
+cells:
+  x: {type: int, init: 12, shared: true}
+''')
+        self.assertEqual(engine.action("whatever"), 999)
+
+    def testChangePublicCellsWithFcnDef(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {cell: x, to: {params: [{z: int}], ret: int, do: [{+: [z, 1]}]}}
+  - {cell: x}
+cells:
+  x: {type: int, init: 12, shared: true}
+''')
+        self.assertEqual(engine.action("whatever"), 13)
+
+    def testChangePublicCellsWithFcnRef(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {cell: x, to: {fcnref: u.inc}}
+  - {cell: x}
+cells:
+  x: {type: int, init: 12, shared: true}
+fcns:
+  inc: {params: [{z: int}], ret: int, do: [{+: [z, 1]}]}
+''')
+        self.assertEqual(engine.action("whatever"), 13)
+
+    def testChangeDeepPublicCells(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {cell: x, path: [[one], 2, input], to: 999}
+  - {cell: x, path: [[one], 2, input]}
+cells:
+  x: {type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}, init: {one: [{zero: 0}, {one: 1}, {two: 2}]}, shared: true}
+''')
+        self.assertEqual(engine.action("two"), 999)
+
+    def testChangeDeepPublicCellsWithFcnDef(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {cell: x, path: [[one], 2, input], to: {params: [{z: int}], ret: int, do: [{+: [z, 1]}]}}
+  - {cell: x, path: [[one], 2, input]}
+cells:
+  x: {type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}, init: {one: [{zero: 0}, {one: 1}, {two: 2}]}, shared: true}
+''')
+        self.assertEqual(engine.action("two"), 3)
+
+    def testChangeDeepPublicCellsWithFcnRef(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {cell: x, path: [[one], 2, input], to: {fcnref: u.inc}}
+  - {cell: x, path: [[one], 2, input]}
+cells:
+  x: {type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}, init: {one: [{zero: 0}, {one: 1}, {two: 2}]}, shared: true}
+fcns:
+  inc: {params: [{z: int}], ret: int, do: [{+: [z, 1]}]}
+''')
+        self.assertEqual(engine.action("two"), 3)
+
+    def testExtractPrivatePools(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {pool: x, path: [input]}
+pools:
+  x: {type: int, init: {whatever: 12}}
+''')
+        self.assertEqual(engine.action("whatever"), 12)
+
+    def testExtractPublicPools(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {pool: x, path: [input]}
+pools:
+  x: {type: int, init: {whatever: 12}, shared: true}
+''')
+        self.assertEqual(engine.action("whatever"), 12)
+
+    def testExtractDeepPublicPools(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {pool: x, path: [[whatever], [one], 2, input]}
+pools:
+  x: {type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}, init: {whatever: {one: [{zero: 0}, {one: 1}, {two: 2}]}}}
+''')
+        self.assertEqual(engine.action("two"), 2)
+
+    def testExtractDeepPublicPools2(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {pool: x, path: [[whatever], [one], 2, input]}
+pools:
+  x: {type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}, init: {whatever: {one: [{zero: 0}, {one: 1}, {two: 2}]}}, shared: true}
+''')
+        self.assertEqual(engine.action("two"), 2)
+
+    def testNotFindNonExistentPools(self):
+        self.assertRaises(PFASemanticException, lambda: PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {pool: y, path: [input]}
+pools:
+  x: {type: int, init: {whatever: 12}}
+'''))
+
+    def testNotAcceptBadIndexes3(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {pool: x, path: [[whatever], [one], 3, input]}
+pools:
+  x: {type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}, init: {whatever: {one: [{zero: 0}, {one: 1}, {two: 2}]}}}
+''')
+        self.assertRaises(PFARuntimeException, lambda: engine.action("two"))
+
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {pool: x, path: [[whatever], [one], 2, input]}
+pools:
+  x: {type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}, init: {whatever: {one: [{zero: 0}, {one: 1}, {two: 2}]}}}
+''')
+        self.assertRaises(PFARuntimeException, lambda: engine.action("TWO"))
+
+    def testNotAcceptBadIndexTypes3(self):
+        self.assertRaises(PFASemanticException, lambda: PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {pool: x, path: [[whatever], [ONE], 2, input]}
+pools:
+  x: {type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}, init: {whatever: {one: [{zero: 0}, {one: 1}, {two: 2}]}}}
+'''))
+
+        self.assertRaises(PFASemanticException, lambda: PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {pool: x, path: [[whatever], [one], input, input]}
+pools:
+  x: {type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}, init: {whatever: {one: [{zero: 0}, {one: 1}, {two: 2}]}}}
+'''))
+
+        self.assertRaises(PFASemanticException, lambda: PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {pool: x, path: [[whatever], [one], 2, 2]}
+pools:
+  x: {type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}, init: {whatever: {one: [{zero: 0}, {one: 1}, {two: 2}]}}}
+'''))
+
+    def testChangePrivatePools(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {pool: x, path: [input], to: 999}
+  - {pool: x, path: [input]}
+pools:
+  x: {type: int, init: {whatever: 12}}
+''')
+        self.assertEqual(engine.action("whatever"), 999)
+
+    def testChangePrivatePoolsWithFcnDef(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {pool: x, path: [input], to: {params: [{z: int}], ret: int, do: [{+: [z, 1]}]}, init: 0}
+  - {pool: x, path: [input]}
+pools:
+  x: {type: int, init: {whatever: 12}}
+''')
+        self.assertEqual(engine.action("whatever"), 13)
+
+    def testChangePrivatePoolsWithFcnRef(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {pool: x, path: [input], to: {fcnref: u.inc}, init: 0}
+  - {pool: x, path: [input]}
+pools:
+  x: {type: int, init: {whatever: 12}}
+fcns:
+  inc: {params: [{z: int}], ret: int, do: [{+: [z, 1]}]}
+''')
+        self.assertEqual(engine.action("whatever"), 13)
+
+    def testChangeDeepPrivatePools(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {pool: x, path: [[whatever], [one], 2, input], to: 999}
+  - {pool: x, path: [[whatever], [one], 2, input]}
+pools:
+  x: {type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}, init: {whatever: {one: [{zero: 0}, {one: 1}, {two: 2}]}}}
+''')
+        self.assertEqual(engine.action("two"), 999)
+
+    def testChangeDeepPrivatePoolsWithFcnDef(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {pool: x, path: [[whatever], [one], 2, input], to: {params: [{z: int}], ret: int, do: [{+: [z, 1]}]}, init: 0}
+  - {pool: x, path: [[whatever], [one], 2, input]}
+pools:
+  x: {type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}, init: {whatever: {one: [{zero: 0}, {one: 1}, {two: 2}]}}}
+''')
+        self.assertEqual(engine.action("two"), 3)
+
+    def testChangeDeepPrivatePoolsWithFcnRef(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {pool: x, path: [[whatever], [one], 2, input], to: {fcnref: u.inc}, init: 0}
+  - {pool: x, path: [[whatever], [one], 2, input]}
+pools:
+  x: {type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}, init: {whatever: {one: [{zero: 0}, {one: 1}, {two: 2}]}}}
+fcns:
+  inc: {params: [{z: int}], ret: int, do: [{+: [z, 1]}]}
+''')
+        self.assertEqual(engine.action("two"), 3)
+
+    def testChangePublicPools(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {pool: x, path: [input], to: 999}
+  - {pool: x, path: [input]}
+pools:
+  x: {type: int, init: {whatever: 12}, shared: true}
+''')
+        self.assertEqual(engine.action("whatever"), 999)
+
+    def testChangePublicPoolsWithFcnDef(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {pool: x, path: [input], to: {params: [{z: int}], ret: int, do: [{+: [z, 1]}]}, init: 0}
+  - {pool: x, path: [input]}
+pools:
+  x: {type: int, init: {whatever: 12}, shared: true}
+''')
+        self.assertEqual(engine.action("whatever"), 13)
+
+    def testChangePublicPoolsWithFcnRef(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {pool: x, path: [input], to: {fcnref: u.inc}, init: 0}
+  - {pool: x, path: [input]}
+pools:
+  x: {type: int, init: {whatever: 12}, shared: true}
+fcns:
+  inc: {params: [{z: int}], ret: int, do: [{+: [z, 1]}]}
+''')
+        self.assertEqual(engine.action("whatever"), 13)
+
+    def testChangeDeepPublicPools(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {pool: x, path: [[whatever], [one], 2, input], to: 999}
+  - {pool: x, path: [[whatever], [one], 2, input]}
+pools:
+  x: {type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}, init: {whatever: {one: [{zero: 0}, {one: 1}, {two: 2}]}}, shared: true}
+''')
+        self.assertEqual(engine.action("two"), 999)
+
+    def testChangeDeepPublicPoolsFcnDef(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {pool: x, path: [[whatever], [one], 2, input], to: {params: [{z: int}], ret: int, do: [{+: [z, 1]}]}, init: 0}
+  - {pool: x, path: [[whatever], [one], 2, input]}
+pools:
+  x: {type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}, init: {whatever: {one: [{zero: 0}, {one: 1}, {two: 2}]}}, shared: true}
+''')
+        self.assertEqual(engine.action("two"), 3)
+
+    def testChangeDeepPublicPoolsFcnRef(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+action:
+  - {pool: x, path: [[whatever], [one], 2, input], to: {fcnref: u.inc}, init: 0}
+  - {pool: x, path: [[whatever], [one], 2, input]}
+pools:
+  x: {type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}, init: {whatever: {one: [{zero: 0}, {one: 1}, {two: 2}]}}, shared: true}
+fcns:
+  inc: {params: [{z: int}], ret: int, do: [{+: [z, 1]}]}
+''')
+        self.assertEqual(engine.action("two"), 3)
+
+    def testHandleNullCases(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {cell: notempty}
+  - input
+cells:
+  notempty: {type: "null", init: null}
+''')
+        engine.action("hey")
+
+        self.assertRaises(PFASemanticException, lambda: PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {cell: empty}
+  - input
+cells:
+  notempty: {type: "null", init: null}
+'''))
+
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {cell: notempty}
+  - {cell: notempty, path: [[set]]}
+  - input
+cells:
+  notempty: {type: {type: map, values: "null"}, init: {this: null, is: null, a: null, set: null}}
+''')
+        engine.action("hey")
+
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {cell: notempty}
+  - {cell: notempty, path: [[notinset]]}
+  - input
+cells:
+  notempty: {type: {type: map, values: "null"}, init: {this: null, is: null, a: null, set: null}}
+''')
+        self.assertRaises(PFARuntimeException, lambda: engine.action("hey"))
+
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {cell: notempty}
+  - {cell: notempty, path: [0]}
+  - input
+cells:
+  notempty: {type: {type: array, items: "null"}, init: [null, null, null, null]}
+''')
+        engine.action("hey")
+
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {cell: notempty}
+  - {cell: notempty, path: [999]}
+  - input
+cells:
+  notempty: {type: {type: array, items: "null"}, init: [null, null, null, null]}
+''')
+        self.assertRaises(PFARuntimeException, lambda: engine.action("hey"))
+
+    def testHandleNullCases2(self):
+        self.assertRaises(PFASyntaxException, lambda: PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {pool: notempty, path: []}
+  - input
+pools:
+  notempty: {type: "null", init: {whatever: null}}
+'''))
+
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {pool: notempty, path: [[whatever]]}
+  - input
+pools:
+  notempty: {type: "null", init: {whatever: null}}
+''')
+        engine.action("hey")
+
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {pool: notempty, path: [[shouldfail]]}
+  - input
+pools:
+  notempty: {type: "null", init: {whatever: null}}
+''')
+        self.assertRaises(PFARuntimeException, lambda: engine.action("hey"))
+
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {pool: notempty, path: [[whatever]]}
+  - {pool: notempty, path: [[whatever], [set]]}
+  - input
+pools:
+  notempty: {type: {type: map, values: "null"}, init: {whatever: {this: null, is: null, a: null, set: null}}}
+''')
+        engine.action("hey")
+
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {pool: notempty, path: [[whatever]]}
+  - {pool: notempty, path: [[whatever], [notinset]]}
+  - input
+pools:
+  notempty: {type: {type: map, values: "null"}, init: {whatever: {this: null, is: null, a: null, set: null}}}
+''')
+        self.assertRaises(PFARuntimeException, lambda: engine.action("hey"))
+
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {pool: notempty, path: [[whatever]]}
+  - {pool: notempty, path: [[whatever], 0]}
+  - input
+pools:
+  notempty: {type: {type: array, items: "null"}, init: {whatever: [null, null, null, null]}}
+''')
+        engine.action("hey")
+
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {pool: notempty, path: [[whatever]]}
+  - {pool: notempty, path: [[whatever], 999]}
+  - input
+pools:
+  notempty: {type: {type: array, items: "null"}, init: {whatever: [null, null, null, null]}}
+''')
+        self.assertRaises(PFARuntimeException, lambda: engine.action("hey"))
+
+    def testHandleNullCases3(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {cell: notempty}
+  - input
+cells:
+  notempty: {type: "null", init: null, shared: true}
+''')
+        engine.action("hey")
+
+        self.assertRaises(PFASemanticException, lambda: PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {cell: empty}
+  - input
+cells:
+  notempty: {type: "null", init: null, shared: true}
+'''))
+
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {cell: notempty}
+  - {cell: notempty, path: [[set]]}
+  - input
+cells:
+  notempty: {type: {type: map, values: "null"}, init: {this: null, is: null, a: null, set: null}, shared: true}
+''')
+        engine.action("hey")
+
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {cell: notempty}
+  - {cell: notempty, path: [[notinset]]}
+  - input
+cells:
+  notempty: {type: {type: map, values: "null"}, init: {this: null, is: null, a: null, set: null}, shared: true}
+''')
+        self.assertRaises(PFARuntimeException, lambda: engine.action("hey"))
+
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {cell: notempty}
+  - {cell: notempty, path: [0]}
+  - input
+cells:
+  notempty: {type: {type: array, items: "null"}, init: [null, null, null, null], shared: true}
+''')
+        engine.action("hey")
+
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {cell: notempty}
+  - {cell: notempty, path: [999]}
+  - input
+cells:
+  notempty: {type: {type: array, items: "null"}, init: [null, null, null, null], shared: true}
+''')
+        self.assertRaises(PFARuntimeException, lambda: engine.action("hey"))
+
+    def testHandleNullCases4(self):
+        self.assertRaises(PFASyntaxException, lambda: PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {pool: notempty, path: []}
+  - input
+pools:
+  notempty: {type: "null", init: {whatever: null}, shared: true}
+'''))
+
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {pool: notempty, path: [[whatever]]}
+  - input
+pools:
+  notempty: {type: "null", init: {whatever: null}, shared: true}
+''')
+        engine.action("hey")
+
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {pool: notempty, path: [[shouldfail]]}
+  - input
+pools:
+  notempty: {type: "null", init: {whatever: null}, shared: true}
+''')
+        self.assertRaises(PFARuntimeException, lambda: engine.action("hey"))
+
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {pool: notempty, path: [[whatever]]}
+  - {pool: notempty, path: [[whatever], [set]]}
+  - input
+pools:
+  notempty: {type: {type: map, values: "null"}, init: {whatever: {this: null, is: null, a: null, set: null}}, shared: true}
+''')
+        engine.action("hey")
+
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {pool: notempty, path: [[whatever]]}
+  - {pool: notempty, path: [[whatever], [notinset]]}
+  - input
+pools:
+  notempty: {type: {type: map, values: "null"}, init: {whatever: {this: null, is: null, a: null, set: null}}, shared: true}
+''')
+        self.assertRaises(PFARuntimeException, lambda: engine.action("hey"))
+
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {pool: notempty, path: [[whatever]]}
+  - {pool: notempty, path: [[whatever], 0]}
+  - input
+pools:
+  notempty: {type: {type: array, items: "null"}, init: {whatever: [null, null, null, null]}, shared: true}
+''')
+        engine.action("hey")
+
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: string
+action:
+  - {pool: notempty, path: [[whatever]]}
+  - {pool: notempty, path: [[whatever], 999]}
+  - input
+pools:
+  notempty: {type: {type: array, items: "null"}, init: {whatever: [null, null, null, null]}, shared: true}
+''')
+        self.assertRaises(PFARuntimeException, lambda: engine.action("hey"))
+
+    def testHandleATypicalUseCase(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+method: map
+action:
+  - {pool: tally, path: [[x]], to: {fcnref: u.inc}, init: 0}
+  - {pool: tally, path: [[x]], to: {fcnref: u.inc}, init: 0}
+  - {pool: tally, path: [[x]], to: {fcnref: u.inc}, init: 0}
+  - {pool: tally, path: [[y]], to: {fcnref: u.inc}, init: 0}
+  - {pool: tally, path: [[y]], to: {fcnref: u.inc}, init: 0}
+  - {pool: tally, path: [[x]]}
+pools:
+  tally: {type: int, init: {}}
+fcns:
+  inc: {params: [{i: int}], ret: int, do: [{+: [i, 1]}]}
+''')
+        self.assertEqual(engine.action("hey"), 3)
+
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+method: map
+action:
+  - {pool: tally, path: [[x]], to: {fcnref: u.inc}, init: 0}
+  - {pool: tally, path: [[x]], to: {fcnref: u.inc}, init: 0}
+  - {pool: tally, path: [[x]], to: {fcnref: u.inc}, init: 0}
+  - {pool: tally, path: [[y]], to: {fcnref: u.inc}, init: 0}
+  - {pool: tally, path: [[y]], to: {fcnref: u.inc}, init: 0}
+  - {pool: tally, path: [[y]]}
+pools:
+  tally: {type: int, init: {}}
+fcns:
+  inc: {params: [{i: int}], ret: int, do: [{+: [i, 1]}]}
+''')
+        self.assertEqual(engine.action("hey"), 2)
+
+    def testStopIntRunningProcess(self):
+        def go():
+            engine, = PFAEngine.fromYaml('''
+input: string
+output: "null"
+action:
+  - for: {x: 0}
+    while: {"!=": [x, -5]}
+    step: {x: {+: [x, 1]}}
+    do: [x]
+options:
+  timeout: 1000
+''')
+            engine.action("hey")
+        self.assertRaises(PFATimeoutException, go)
 
 
 

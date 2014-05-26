@@ -730,6 +730,7 @@ def _readPools(data, dot, avroTypeBuilder):
 def _readPool(data, dot, avroTypeBuilder):
     if isinstance(data, dict):
         at = data.get("@")
+        _init = {}
         _shared = False
         _rollback = False
         keys = set(x for x in data.keys() if x != "@")
@@ -745,6 +746,3 @@ def _readPool(data, dot, avroTypeBuilder):
             return Pool(_avroType, _init, _shared, _rollback, pos(dot, at))
     else:
         raise PFASyntaxException("expected pool, not " + _trunc(repr(data)), pos(dot, at))
-
-
-
