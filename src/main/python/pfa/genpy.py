@@ -106,6 +106,14 @@ class GeneratePython(pfa.ast.Task):
             else:
                 name = context.name
 
+            begin, beginSymbols, beginCalls = context.begin
+            action, actionSymbols, actionCalls = context.action
+            end, endSymbols, endCalls = context.end
+
+            callGraph = {"(begin)": beginCalls, "(action)": actionCalls, "(end)": endCalls}
+            for fname, fctx in context.fcns:
+                callGraph[fname] = fctx.calls
+
             out = ["class PFA_" + name + """(PFAEngine):
     def __init__(self, cells, pools, options, logger, emit, zero):
         self.cells = cells
@@ -113,7 +121,7 @@ class GeneratePython(pfa.ast.Task):
         self.options = options
         self.logger = logger
         self.emit = emit
-"""]
+        self.callGraph = """ + repr(callGraph) + "\n"]
 
             if context.method == Method.FOLD:
                 out.append("        self.tally = zero\n")
@@ -125,15 +133,12 @@ class GeneratePython(pfa.ast.Task):
             for ufname, fcnContext in context.fcns:
                 out.append("        self.f[" + repr(ufname) + "] = " + self(fcnContext) + "\n")
 
-            begin, beginSymbols, beginCalls = context.begin
             if len(begin) > 0:
                 out.append("""
     def begin(self):
         state = ExecutionState(self.options, 'action')
         scope = DynamicScope(None)
 """ + self.commandsBeginEnd(begin, "        "))
-
-            action, actionSymbols, actionCalls = context.action
 
             if context.method == Method.MAP:
                 commands = self.commandsMap(action, "            ")
@@ -162,7 +167,6 @@ class GeneratePython(pfa.ast.Task):
             raise
 """)
 
-            end, endSymbols, endCalls = context.end
             if len(end) > 0:
                 out.append("""
     def end(self):
@@ -727,3 +731,45 @@ class PFAEngine(object):
     @staticmethod
     def fromYaml(src, options=None, sharedState=None, multiplicity=1, style="pure", debug=False):
         return PFAEngine.fromAst(pfa.reader.yamlToAst(src), options, sharedState, multiplicity, style, debug)
+
+    def calledBy(self, fcnName, exclude=None):
+        if exclude is None:
+            exclude = set()
+        if fcnName in exclude:
+            return set()
+        else:
+            if fcnName in self.callGraph:
+                newExclude = exclude.union(set([fcnName]))
+                nextLevel = set([])
+                for f in self.callGraph[fcnName]:
+                    nextLevel = nextLevel.union(self.calledBy(f, newExclude))
+                return self.callGraph[fcnName].union(nextLevel)
+            else:
+                return set()
+
+    def callDepth(self, fcnName, exclude=None, startingDepth=0):
+        if exclude is None:
+            exclude = set()
+        if fcnName in exclude:
+            return float("inf")
+        else:
+            if fcnName in self.callGraph:
+                newExclude = exclude.union(set([fcnName]))
+                deepest = startingDepth
+                for f in self.callGraph[fcnName]:
+                    fdepth = self.callDepth(f, newExclude, startingDepth + 1)
+                    if fdepth > deepest:
+                        deepest = fdepth
+                return deepest
+            else:
+                return startingDepth
+
+    def isRecursive(self, fcnName):
+        return fcnName in self.calledBy(fcnName)
+
+    def hasRecursive(self, fcnName):
+        return self.callDepth(fcnName) == float("inf")
+
+    def hasSideEffects(self, fcnName):
+        reach = self.calledBy(fcnName)
+        return CellTo.desc in reach or PoolTo.desc in reach

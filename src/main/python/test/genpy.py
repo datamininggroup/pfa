@@ -2775,6 +2775,34 @@ cells:
         engine.end()
         self.assertEqual(engine.action("hey"), 206)
         
+    def testCallGraph(self):
+        engine, = PFAEngine.fromYaml("""
+input: string
+output: string
+action:
+  - input
+fcns:
+  a: {params: [], ret: int, do: [{+: [1, 1]}]}
+  b: {params: [], ret: int, do: [{u.a: []}]}
+  c: {params: [], ret: int, do: [{u.c: []}]}
+  d: {params: [], ret: int, do: [{+: [{u.b: []}, {u.c: []}]}]}
+  c1: {params: [], ret: int, do: [{u.c2: []}]}
+  c2: {params: [], ret: int, do: [{u.c1: []}]}
+""")
+        self.assertEqual(engine.callGraph, {"u.a": set(["+", "(int)"]), "u.b": set(["u.a"]), "u.c": set(["u.c"]), "u.d": set(["+", "u.b", "u.c"]), "u.c1": set(["u.c2"]), "u.c2": set(["u.c1"]), "(begin)": set([]), "(action)": set([]), "(end)": set([])})
+
+        self.assertEqual(engine.calledBy("u.d"), set(["+", "u.a", "u.b", "u.c", "(int)"]))
+        self.assertTrue(engine.isRecursive("u.c"))
+        self.assertTrue(engine.isRecursive("u.c1"))
+        self.assertFalse(engine.isRecursive("u.d"))
+        self.assertTrue(engine.hasRecursive("u.d"))
+
+        self.assertEqual(engine.callDepth("u.a"), 1)
+        self.assertEqual(engine.callDepth("u.b"), 2)
+        self.assertEqual(engine.callDepth("u.d"), float("inf"))
+        self.assertEqual(engine.callDepth("u.c"), float("inf"))
+
+
 
 
 
