@@ -8,7 +8,7 @@ PFA is a way of separating those concerns.  PFA is a mini-language whose only ca
 
 This repository contains two implementations of PFA hosts (compilers and runtime environments for PFA that connect to an external data pipeline) and the PFA specification.  The current status of each is:
   * [PFA specification](https://github.com/scoringengine/pfa/blob/master/doc/spec/PFA.pdf?raw=true): first draft complete (106 pages; half detailed explanations, half of which is function reference).
-  * [PFA-JVM (Scala)](https://github.com/scoringengine/pfa/tree/master/src/main/scala/org/scoringengine/pfa): static code analysis and on-the-fly bytecode compiler are complete.  This version has been embedded in [Google App Engine](https://github.com/scoringengine/pfa-gae), but it should also be embedded in large-scale data pipelines (Hadoop, Spark, Storm, etc.).
-  * [PFA-py (Python)](https://github.com/scoringengine/pfa/tree/master/src/main/python): static code analysis and on-the-fly interpreter are complete.  This version produces PFA from PMML, but it should also produce PFA from other common analysis tools (SciKit Learn, etc.).
+  * [PFA-JVM (Scala)](https://github.com/scoringengine/pfa/tree/master/src/main/scala/org/scoringengine/pfa): static code analysis and on-the-fly bytecode compiler are complete.  This version has been [embedded in Google App Engine](https://github.com/scoringengine/pfa-gae), but it should also be embedded in large-scale data pipelines (Hadoop, Spark, Storm, etc.).
+  * [PFA-py (Python)](https://github.com/scoringengine/pfa/tree/master/src/main/python): static code analysis and on-the-fly interpreter are complete.  This version produces PFA from PMML, but it should also produce PFA from other common analysis tools ([SciKit Learn](https://github.com/scoringengine/pfa-sklearn), etc.).
 
 Also, the library needs to be filled up with more statistical models and techniques.
