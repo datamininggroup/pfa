@@ -83,6 +83,9 @@ class GeneratePython(pfa.ast.Task):
                  indent + "return self.tally\n"
         return prefix + "".join(indent + x + "\n" for x in codes[:-1]) + indent + "last = " + codes[-1] + "\n" + suffix
 
+    def commandsBeginEnd(self, codes, indent):
+        return "".join(indent + x + "\n" for x in codes)
+
     def reprPath(self, path):
         out = []
         for p in path:
@@ -122,6 +125,14 @@ class GeneratePython(pfa.ast.Task):
             for ufname, fcnContext in context.fcns:
                 out.append("        self.f[" + repr(ufname) + "] = " + self(fcnContext) + "\n")
 
+            begin, beginSymbols, beginCalls = context.begin
+            if len(begin) > 0:
+                out.append("""
+    def begin(self):
+        state = ExecutionState(self.options, 'action')
+        scope = DynamicScope(None)
+""" + self.commandsBeginEnd(begin, "        "))
+
             action, actionSymbols, actionCalls = context.action
 
             if context.method == Method.MAP:
@@ -150,6 +161,14 @@ class GeneratePython(pfa.ast.Task):
                 pool.maybeRestoreBackup()
             raise
 """)
+
+            end, endSymbols, endCalls = context.end
+            if len(end) > 0:
+                out.append("""
+    def end(self):
+        state = ExecutionState(self.options, 'action')
+        scope = DynamicScope(None)
+""" + self.commandsBeginEnd(end, "        "))
 
             return "".join(out)
 

@@ -622,7 +622,7 @@ class FcnRef(Argument):
         else:
             raise PFASemanticException("only one-signature functions without constraints can be referenced (wrap \"{}\" in a function definition with the desired signature)".format(self.name), self.pos)
 
-        context = FcnRef.Context(fcnType, self.name, fcn)
+        context = FcnRef.Context(fcnType, set([self.name]), fcn)
         return context, task(context)
 
     @property
@@ -648,7 +648,7 @@ class Call(Expression):
         scope = symbolTable.newScope(True, True)
         argResults = [x.walk(task, scope, functionTable) for x in self.args]
 
-        calls = set()
+        calls = set([self.name])
         argTypes = []
         for ctx, res in argResults:
             if isinstance(ctx, ExpressionContext):

@@ -2756,6 +2756,26 @@ options:
             engine.action("hey")
         self.assertRaises(PFATimeoutException, go)
 
+    def testBeginAndEnd(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: int
+begin:
+  - {cell: x, to: {params: [{in: int}], ret: int, do: [{+: [in, 100]}]}}
+action:
+  - {cell: x, to: {params: [{in: int}], ret: int, do: [{+: [in, 33]}]}}
+  - {cell: x}
+end:
+  - {cell: x, to: {params: [{in: int}], ret: int, do: [{+: [in, 40]}]}}
+cells:
+  x: {type: int, init: 0}
+''')
+        engine.begin()
+        engine.action("hey")
+        engine.end()
+        self.assertEqual(engine.action("hey"), 206)
+        
+
 
 
         
