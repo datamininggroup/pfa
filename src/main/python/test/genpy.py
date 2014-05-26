@@ -2911,9 +2911,161 @@ pools:
   y: {type: "null", init: {whatever: null}}
 """))
 
+    def testCellRollback(self):
+        engine, = PFAEngine.fromYaml("""
+input: boolean
+output: int
+action:
+  - cell: x
+    to:
+      params: [{y: int}]
+      ret: int
+      do: {+: [y, 1]}
+  - if: input
+    then: {error: "crash!"}
+  - cell: x
+cells:
+  x: {type: int, init: 0, rollback: false}
+""")
+        self.assertEqual(engine.action(False), 1)
+        self.assertEqual(engine.action(False), 2)
+        try:
+            engine.action(True)
+        except PFAUserException:
+            pass
+        self.assertEqual(engine.action(False), 4)
+        try:
+            engine.action(True)
+        except PFAUserException:
+            pass
+        try:
+            engine.action(True)
+        except PFAUserException:
+            pass
+        try:
+            engine.action(True)
+        except PFAUserException:
+            pass
+        self.assertEqual(engine.action(False), 8)
+        self.assertEqual(engine.action(False), 9)
 
+        engine, = PFAEngine.fromYaml("""
+input: boolean
+output: int
+action:
+  - cell: x
+    to:
+      params: [{y: int}]
+      ret: int
+      do: {+: [y, 1]}
+  - if: input
+    then: {error: "crash!"}
+  - cell: x
+cells:
+  x: {type: int, init: 0, rollback: true}
+""")
+        self.assertEqual(engine.action(False), 1)
+        self.assertEqual(engine.action(False), 2)
+        try:
+            engine.action(True)
+        except PFAUserException:
+            pass
+        self.assertEqual(engine.action(False), 3)
+        try:
+            engine.action(True)
+        except PFAUserException:
+            pass
+        try:
+            engine.action(True)
+        except PFAUserException:
+            pass
+        try:
+            engine.action(True)
+        except PFAUserException:
+            pass
+        self.assertEqual(engine.action(False), 4)
+        self.assertEqual(engine.action(False), 5)
 
+    def testPoolRollback(self):
+        engine, = PFAEngine.fromYaml("""
+input: boolean
+output: int
+action:
+  - pool: x
+    path: [[z]]
+    init: 0
+    to:
+      params: [{y: int}]
+      ret: int
+      do: {+: [y, 1]}
+  - if: input
+    then: {error: "crash!"}
+  - pool: x
+    path: [[z]]
+pools:
+  x: {type: int, init: {z: 0}, rollback: false}
+""")
+        self.assertEqual(engine.action(False), 1)
+        self.assertEqual(engine.action(False), 2)
+        try:
+            engine.action(True)
+        except PFAUserException:
+            pass
+        self.assertEqual(engine.action(False), 4)
+        try:
+            engine.action(True)
+        except PFAUserException:
+            pass
+        try:
+            engine.action(True)
+        except PFAUserException:
+            pass
+        try:
+            engine.action(True)
+        except PFAUserException:
+            pass
+        self.assertEqual(engine.action(False), 8)
+        self.assertEqual(engine.action(False), 9)
 
+        engine, = PFAEngine.fromYaml("""
+input: boolean
+output: int
+action:
+  - pool: x
+    path: [[z]]
+    init: 0
+    to:
+      params: [{y: int}]
+      ret: int
+      do: {+: [y, 1]}
+  - if: input
+    then: {error: "crash!"}
+  - pool: x
+    path: [[z]]
+pools:
+  x: {type: int, init: {z: 0}, rollback: true}
+""")
+        self.assertEqual(engine.action(False), 1)
+        self.assertEqual(engine.action(False), 2)
+        try:
+            engine.action(True)
+        except PFAUserException:
+            pass
+        self.assertEqual(engine.action(False), 3)
+        try:
+            engine.action(True)
+        except PFAUserException:
+            pass
+        try:
+            engine.action(True)
+        except PFAUserException:
+            pass
+        try:
+            engine.action(True)
+        except PFAUserException:
+            pass
+        self.assertEqual(engine.action(False), 4)
+        self.assertEqual(engine.action(False), 5)
 
 if __name__ == "__main__":
     unittest.main()
