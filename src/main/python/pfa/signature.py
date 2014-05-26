@@ -358,4 +358,4 @@ class Sig(Signature):
             return assignments[pat.label]
 
         else:
-            raise Exception
+            raise Exception(repr(pat))

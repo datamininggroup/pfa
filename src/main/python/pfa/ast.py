@@ -159,7 +159,10 @@ class UserFcn(Fcn):
 
 class EmitFcn(Fcn):
     def __init__(self, outputType):
-        self.sig = Sig([{"output": P.fromType(outputType)}], P.Null)
+        self.sig = Sig([{"output": P.fromType(outputType)}], P.Null())
+
+    def genpy(self, paramTypes, args):
+        return "self.f[\"emit\"].engine.emit(" + args[0] + ")"
 
 class FunctionTable(object):
     def __init__(self, functions):
@@ -338,7 +341,7 @@ class EngineConfig(Ast):
         actionContextResults = [x.walk(task, actionScope, withUserFunctions) for x in self.action]
         actionCalls = set(pfa.util.flatten([x[0].calls for x in actionContextResults]))
 
-        if self.method == Method.MAP or method == Method.FOLD:
+        if self.method == Method.MAP or self.method == Method.FOLD:
             if not self.output.accepts(actionContextResults[-1][0].retType):
                 raise PFASemanticException("action's inferred output type is {} but the declared output type is {}".format(actionContextResults[-1][0].retType, self.output), self.pos)
 

@@ -5,11 +5,14 @@ import base64
 import time
 import json
 
+import pfa.P as P
 import pfa.ast
 import pfa.util
 import pfa.reader
 import pfa.datatype
-import options
+import pfa.fcn
+import pfa.options
+import pfa.signature
 from pfa.errors import *
 
 from pfa.ast import EngineConfig
@@ -54,6 +57,7 @@ from pfa.ast import Doc
 from pfa.ast import Error
 from pfa.ast import Log
 
+from pfa.ast import Method
 from pfa.ast import ArrayIndex
 from pfa.ast import MapIndex
 from pfa.ast import RecordIndex
@@ -106,18 +110,26 @@ class GeneratePython(pfa.ast.Task):
                 name = context.name
 
             out = ["class PFA_" + name + """(PFAEngine):
-    def __init__(self, functionTable, cells, pools, options, logger):
-        self.f = functionTable.functions
+    def __init__(self, cells, pools, options, logger, emit):
         self.cells = cells
         self.pools = pools
         self.options = options
         self.logger = logger
+        self.emit = emit
+
+    def initialize(self):
+        self
 """]
 
             for ufname, fcnContext in context.fcns:
                 out.append("        self.f[" + repr(ufname) + "] = " + self(fcnContext) + "\n")
 
             action, actionSymbols, actionCalls = context.action
+
+            if context.method == Method.EMIT:
+                commands = self.returnNone(action, "            ")
+            else:
+                commands = self.returnLast(action, "            ")
 
             out.append("""
     def action(self, input):
@@ -129,7 +141,7 @@ class GeneratePython(pfa.ast.Task):
             pool.maybeSaveBackup()
         try:
             scope.let({'input': input})
-""" + self.returnLast(action, "            "))
+""" + commands)
 
             out.append("""        except Exception:
             for cell in self.cells.values():
@@ -573,11 +585,19 @@ def genericLogger(message, namespace):
         print " ".join(map(json.dumps, message))
     else:
         print namespace + ": " + " ".join(map(json.dumps, message))
+    
+class FakeEmitForExecution(pfa.fcn.Fcn):
+    def __init__(self, engine):
+        self.engine = engine
+
+def genericEmit(x):
+    pass
 
 class PFAEngine(object):
     @staticmethod
     def fromAst(engineConfig, options=None, sharedState=None, multiplicity=1, style="pure", debug=False):
         functionTable = pfa.ast.FunctionTable.blank()
+
         context, code = engineConfig.walk(GeneratePython.makeTask(style), pfa.ast.SymbolTable.blank(), functionTable)
         if debug:
             print code
@@ -586,7 +606,6 @@ class PFAEngine(object):
                    "PFAEngine": PFAEngine,
                    "ExecutionState": ExecutionState,
                    "DynamicScope": DynamicScope,
-                   "functionTable": functionTable,
                    # Python statement --> expression wrappers
                    "labeledFcn": labeledFcn,
                    "call": call,
@@ -647,7 +666,16 @@ class PFAEngine(object):
                         value = pfa.datatype.jsonDecoder(poolConfig.avroType, json.loads(poolConfig.init))
                         pools[poolName] = Pool(value, poolConfig.shared, poolConfig.rollback)
 
-            out.append(cls(functionTable, cells, pools, pfa.options.EngineOptions(engineConfig.options, options), genericLogger))
+            engine = cls(cells, pools, pfa.options.EngineOptions(engineConfig.options, options), genericLogger, genericEmit)
+
+            f = dict(functionTable.functions)
+            if engineConfig.method == Method.EMIT:
+                f["emit"] = FakeEmitForExecution(engine)
+            engine.f = f
+
+            engine.initialize()
+
+            out.append(engine)
 
         return out
 

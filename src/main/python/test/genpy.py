@@ -1675,6 +1675,42 @@ fcns:
 ''')
         self.assertEqual(engine.action(2), 4)
 
+    def testMinimallyWorkForEmitTypeEngines(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: string
+method: emit
+action:
+  - {emit: [input]}
+  - input
+''')
+
+        out = []
+        engine.emit = lambda x: out.append(x)
+        engine.action("hello")
+        self.assertEqual(out, ["hello"])
+
+    def testEmitInUserFunctions(self):
+        engine, = PFAEngine.fromYaml('''
+input: string
+output: string
+method: emit
+action:
+  - emit: [input]
+  - u.callme: [input]
+fcns:
+  callme:
+    params:
+      - x: string
+    ret: "null"
+    do:
+      - emit: [x]
+''')
+
+        out = []
+        engine.emit = lambda x: out.append(x)
+        engine.action("hello")
+        self.assertEqual(out, ["hello", "hello"])
 
 
 
