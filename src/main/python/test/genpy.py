@@ -1712,8 +1712,102 @@ fcns:
         engine.action("hello")
         self.assertEqual(out, ["hello", "hello"])
 
+    def testMinimallyWorkForFoldTypeEngines(self):
+        engine, = PFAEngine.fromYaml('''
+input: double
+output: double
+method: fold
+zero: 0
+action:
+  - {+: [input, tally]}
+''')
+        
+        self.assertEqual(engine.action(5), 5.0)
+        self.assertEqual(engine.action(3), 8.0)
+        self.assertEqual(engine.action(2), 10.0)
+        self.assertEqual(engine.action(20), 30.0)
+
+        engine.tally = 1.0
+        self.assertEqual(engine.action(5), 6.0)
+
+    def testRefuseTallyInUserFunctions(self):
+        self.assertRaises(PFASemanticException, lambda: PFAEngine.fromYaml('''
+input: double
+output: double
+method: fold
+zero: 0
+action:
+  - u.callme: [input]
+fcns:
+  callme:
+    params:
+      - x: double
+    ret: double
+    do:
+      - {+: [x, tally]}
+'''))
+
+    def testButPassingTallyInIsFine(self):
+        engine, = PFAEngine.fromYaml('''
+input: double
+output: double
+method: fold
+zero: 0
+action:
+  - u.callme: [input, tally]
+fcns:
+  callme:
+    params:
+      - x: double
+      - t: double
+    ret: double
+    do:
+      - {+: [x, t]}
+''')
+        
+        self.assertEqual(engine.action(5), 5.0)
+        self.assertEqual(engine.action(3), 8.0)
+        self.assertEqual(engine.action(2), 10.0)
+        self.assertEqual(engine.action(20), 30.0)
+
+        engine.tally = 1.0
+        self.assertEqual(engine.action(5), 6.0)
+
+    def testExtractDeepWithinAnObject(self):
+        engine, = PFAEngine.fromYaml('''
+input: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}
+output: int
+action:
+  - {let: {x: [two]}}
+  - {attr: input, path: [[one], 2, x]}
+''')
+        self.assertEqual(engine.action({"one": [{"zero": 0}, {"one": 1}, {"two": 2}]}), 2)
+
+    def testExtractFromAnOnTheFlyGeneratedObject(self):
+        engine, = PFAEngine.fromYaml('''
+input: "null"
+output: int
+action:
+  - {let: {x: [two]}}
+  - attr:
+      value: {"one": [{"zero": 0}, {"one": 1}, {"two": 2}]}
+      type: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}
+    path: [[one], 2, x]
+''')
+        self.assertEqual(engine.action(None), 2)
+        
+#     def testNotAcceptBadIndexes(self):
+#         engine, = PFAEngine.fromYaml('''
+# input: {type: record, name: SimpleRecord, fields: [{name: one, type: {type: array, items: {type: map, values: int}}}]}
+# output: int
+# action:
+#   - {let: {x: [two]}}
+#   - {attr: input, path: [[one], 3, x]}
+# ''')
+#         self.assertRaises(PFARuntimeException, lambda: 
 
 
 
+        
 if __name__ == "__main__":
     unittest.main()

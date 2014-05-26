@@ -70,11 +70,17 @@ class GeneratePython(pfa.ast.Task):
         else:
             raise NotImplementedError("unrecognized style " + style)
 
-    def returnLast(self, codes, indent):
+    def commandsMap(self, codes, indent):
         return "".join(indent + x + "\n" for x in codes[:-1]) + indent + "return " + codes[-1] + "\n"
 
-    def returnNone(self, codes, indent):
+    def commandsEmit(self, codes, indent):
         return "".join(indent + x + "\n" for x in codes)
+
+    def commandsFold(self, codes, indent):
+        prefix = indent + "scope.let({'tally': self.tally})\n"
+        suffix = indent + "self.tally = last\n" + \
+                 indent + "return self.tally\n"
+        return prefix + "".join(indent + x + "\n" for x in codes[:-1]) + indent + "last = " + codes[-1] + "\n" + suffix
 
     def expandPath(self, path):
         out = []
@@ -110,26 +116,32 @@ class GeneratePython(pfa.ast.Task):
                 name = context.name
 
             out = ["class PFA_" + name + """(PFAEngine):
-    def __init__(self, cells, pools, options, logger, emit):
+    def __init__(self, cells, pools, options, logger, emit, zero):
         self.cells = cells
         self.pools = pools
         self.options = options
         self.logger = logger
         self.emit = emit
-
-    def initialize(self):
-        self
 """]
+
+            if context.method == Method.FOLD:
+                out.append("        self.tally = zero\n")
+
+            out.append("""    def initialize(self):
+        self
+""")
 
             for ufname, fcnContext in context.fcns:
                 out.append("        self.f[" + repr(ufname) + "] = " + self(fcnContext) + "\n")
 
             action, actionSymbols, actionCalls = context.action
 
-            if context.method == Method.EMIT:
-                commands = self.returnNone(action, "            ")
-            else:
-                commands = self.returnLast(action, "            ")
+            if context.method == Method.MAP:
+                commands = self.commandsMap(action, "            ")
+            elif context.method == Method.EMIT:
+                commands = self.commandsEmit(action, "            ")
+            elif context.method == Method.FOLD:
+                commands = self.commandsFold(action, "            ")
 
             out.append("""
     def action(self, input):
@@ -666,7 +678,12 @@ class PFAEngine(object):
                         value = pfa.datatype.jsonDecoder(poolConfig.avroType, json.loads(poolConfig.init))
                         pools[poolName] = Pool(value, poolConfig.shared, poolConfig.rollback)
 
-            engine = cls(cells, pools, pfa.options.EngineOptions(engineConfig.options, options), genericLogger, genericEmit)
+            if engineConfig.method == Method.FOLD:
+                zero = pfa.datatype.jsonDecoder(engineConfig.output, json.loads(engineConfig.zero))
+            else:
+                zero = None
+
+            engine = cls(cells, pools, pfa.options.EngineOptions(engineConfig.options, options), genericLogger, genericEmit, zero)
 
             f = dict(functionTable.functions)
             if engineConfig.method == Method.EMIT:
