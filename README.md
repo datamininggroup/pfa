@@ -4,7 +4,7 @@ Statistical model training and machine learning generally produce procedures as 
 
 PFA is a way of separating those concerns.  PFA is a mini-language whose only capability is to compute mathematical functions suitable for statistical analyses.  Since it is incapable of accessing or injuring its environment, PFA code reviews can focus on the analytic itself.  Also unlike traditional languages, PFA is intended to be generated programmatically, by the machine learning algorithm rather than by hand.  As such, it is enitely contained _within_ JSON, and can be manipulated by standard JSON tools.  It is the object language of statistical metaprogramming.
 
-See [scoringengine.org](http://scoringengine.org) for more details and interactive tutorials.
+**See [scoringengine.org](http://scoringengine.org) for more details and interactive tutorials.**
 
 This repository contains two implementations of PFA hosts (compilers and runtime environments for PFA that connect to an external data pipeline) and the PFA specification.  The current status of each is:
   * [PFA specification](https://github.com/scoringengine/pfa/blob/master/doc/spec/PFA.pdf?raw=true): first draft complete (106 pages; half detailed explanations, half of which is function reference).
@@ -12,5 +12,3 @@ This repository contains two implementations of PFA hosts (compilers and runtime
   * [PFA-py (Python)](https://github.com/scoringengine/pfa/tree/master/src/main/python): static code analysis and on-the-fly interpreter are complete.  This version produces PFA from PMML, but it should also produce PFA from other common analysis tools (SciKit Learn, etc.).
 
 Also, the library needs to be filled up with more statistical models and techniques.
-
-See [http://scoringengine.org](http://scoringengine.org/) for tutorials, references, and interactive examples.
