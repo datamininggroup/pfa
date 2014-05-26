@@ -1040,6 +1040,8 @@ class Let(Expression):
 
         calls = set()
 
+        newSymbols = {}
+
         nameTypeExpr = []
         for name, expr in self.values.items():
             if symbolTable.get(name) is not None:
@@ -1052,8 +1054,12 @@ class Let(Expression):
             exprContext, exprResult = expr.walk(task, scope, functionTable)
             calls = calls.union(exprContext.calls)
 
-            symbolTable.put(name, exprContext.retType)
+            newSymbols[name] = exprContext.retType
+
             nameTypeExpr.append((name, exprContext.retType, exprResult))
+
+        for name, avroType in newSymbols.items():
+            symbolTable.put(name, avroType)
 
         context = self.Context(AvroNull(), calls.union(set([self.desc])), nameTypeExpr)
         return context, task(context)
@@ -1601,6 +1607,8 @@ class For(Expression):
         calls = set()
         loopScope = symbolTable.newScope(False, False)
 
+        newSymbols = {}
+
         initNameTypeExpr = []
         for name, expr in self.init.items():
             if loopScope.get(name) is not None:
@@ -1613,8 +1621,12 @@ class For(Expression):
             exprContext, exprResult = expr.walk(task, initScope, functionTable)
             calls = calls.union(exprContext.calls)
 
-            loopScope.put(name, exprContext.retType)
+            newSymbols[name] = exprContext.retType
+            
             initNameTypeExpr.append((name, exprContext.retType, exprResult))
+
+        for name, avroType in newSymbols.items():
+            loopScope.put(name, avroType)
 
         predicateScope = loopScope.newScope(True, True)
         predicateContext, predicateResult = self.predicate.walk(task, predicateScope, functionTable)

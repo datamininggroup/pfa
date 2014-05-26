@@ -1147,6 +1147,8 @@ package ast {
 
       val calls = mutable.Set[String]()
 
+      val newSymbols = mutable.Map[String, AvroType]()
+
       val nameTypeExpr: Seq[(String, AvroType, TaskResult)] =
         for ((name, expr) <- values.toList) yield {
           if (symbolTable.get(name) != None)
@@ -1159,9 +1161,13 @@ package ast {
           val (exprContext: ExpressionContext, exprResult) = expr.walk(task, scope, functionTable)
           calls ++= exprContext.calls
 
-          symbolTable.put(name, exprContext.retType)
+          newSymbols(name) = exprContext.retType
+
           (name, exprContext.retType, exprResult)
         }
+
+      for ((name, avroType) <- newSymbols)
+        symbolTable.put(name, avroType)
 
       val context = Let.Context(AvroNull(), calls.toSet + Let.desc, nameTypeExpr)
       (context, task(context))
@@ -1896,6 +1902,8 @@ package ast {
       val calls = mutable.Set[String]()
       val loopScope = symbolTable.newScope(false, false)
 
+      val newSymbols = mutable.Map[String, AvroType]()
+
       val initNameTypeExpr: Seq[(String, AvroType, TaskResult)] =
         for ((name, expr) <- init.toList) yield {
           if (loopScope.get(name) != None)
@@ -1908,9 +1916,13 @@ package ast {
           val (exprContext: ExpressionContext, exprResult) = expr.walk(task, initScope, functionTable)
           calls ++= exprContext.calls
 
-          loopScope.put(name, exprContext.retType)
+          newSymbols(name) = exprContext.retType
+
           (name, exprContext.retType, exprResult)
         }
+
+      for ((name, avroType) <- newSymbols)
+          loopScope.put(name, avroType)
 
       val predicateScope = loopScope.newScope(true, true)
       val (predicateContext: ExpressionContext, predicateResult) = predicate.walk(task, predicateScope, functionTable)
@@ -2292,9 +2304,9 @@ package ast {
 
     override def collect[X](pf: PartialFunction[Ast, X]): Seq[X] =
       super.collect(pf) ++
-    exprs.values.flatMap(_.collect(pf)) ++
-    thenClause.flatMap(_.collect(pf)) ++
-    (if (elseClause == None) List[X]() else elseClause.get.flatMap(_.collect(pf)))
+        exprs.values.flatMap(_.collect(pf)) ++
+        thenClause.flatMap(_.collect(pf)) ++
+        (if (elseClause == None) List[X]() else elseClause.get.flatMap(_.collect(pf)))
 
     if (exprs.size < 1)
       throw new PFASyntaxException("\"ifnotnull\" must contain at least one symbol-expression mapping", pos)
