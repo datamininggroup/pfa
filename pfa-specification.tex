@@ -88,7 +88,7 @@ The syntax of PFA is better suited to automatic code generation than most progra
 
 Another benefit of PFA's simplicity relative to general programming languages is that it is more amenable to static analysis.  A PFA host can more thoroughly examine an incoming PFA document for undesirable features.  Although PFA makes use of callback functions to provide generic algorithms, functions are not first-class objects in the language, meaning that they cannot be dynamically assigned to variables.  The identity of every function call can be determined without running the engine, which makes it possible to statically generate a graph of function calls and identify recursive loops.  In very limited runtime environments, such as some GPUs, the compiler implicitly inlines all function calls, so recursion is not possible.  In cases like these, static analysis of the PFA document is a necessary step in generating the executable.
 
-A PFA document can also be statically type-checked.  This allows for faster execution times, since types do not need to be checked at run-time, but it also provides additional safety to the PFA host.
+A PFA document can also be statically type-checked.  This allows for faster execution times, since types do not need to be checked at runtime, but it also provides additional safety to the PFA host.
 
 PFA uses Apache Avro schemae for type annotations.  Avro is an open-source serialization protocol, widely used in Hadoop and related projects, whose type schemae are expressed as JSON objects and whose data structures can be expressed as JSON objects.  Therefore, all parts of the PFA engine, including control structures, type annotations, and embedded data are all expressed in one seamless JSON object.  Avro additionally has well-defined rules to resolve different but possibly compatible schemae, which PFA reinterprets as type promotion (allowing integers to be passed to a function that expects floating-point numbers, for instance).  When interpreted this way, Avro also has a type-safe null, which PFA uses to ensure that missing data are always explicitly handled.  Finally, the input and output of every PFA engine can always be readily (de)serialized into Avro's binary format or JSON representation, since Avro libraries are available on a wide variety of platforms.
 
@@ -1056,7 +1056,21 @@ The expression in each argument of a function call is evaluated in a separate, s
 \subsection{Special forms}
 \label{sec:special-forms}
 
-Special forms, are expressions that take arguments, perform an operation, and return a value, much like function calls.  Unlike function calls, however, they may have irregular syntax.  Whereas a function call is always a JSON object with one member name (the function name) and one member value (its arguments, interpreted as expressions), some special forms have multiple JSON object members and some special forms have custom interpretations for their member values.  These object members may appear in any order.  In addition, special forms have custom scoping rules when they do interpret values as expressions.
+Special forms are expressions that take arguments, perform an operation, and return a value, much like function calls.  Unlike function calls, however, they may have irregular syntax.  Whereas a function call is always a JSON object with one member name (the function name) and one member value (its arguments, interpreted as expressions), some special forms have multiple JSON object members and some special forms have custom interpretations for their member values.  These object members may appear in any order.  In addition, special forms have custom scoping rules when they do interpret values as expressions.
+
+\hypertarget{hsec:call-args}{}
+\subsection{Call a user-defined function that is specified at runtime}
+\label{sec:call-args}
+
+PFA excludes first class functions so that the call graph can be analyzed without running the analytic.  Therefore, all \hyperlink{hsec:function-call}{function calls} and \hyperlink{hsec:fcnref}{function references} are static strings in the JSON text.  However, it is sometimes useful to select a function to call at runtime, so the following special form is available to select a function from a small set.
+\begin{json}
+{"call": expression, "args": [argument1, argument2, ... argumentN]}
+\end{json}
+The {\PFAc expression} must resolve to an enumeration type, and the values of the enumeration type must be user-defined functions (without the ``{\PFAc u.}'' prefix).
+
+All functions referenced by the enumeration type must accept the argument types defined by {\PFAc args}.  The return type of this special form is the narrowest supertype of the return types of all referenced functions.  Therefore, the types are verified for all possible values of the {\PFAc expression}.
+
+In the call graph, this special form is presented as the union of all members of the enumeration type.  Therefore, if the enumeration type has symbols ``one'', ``two'', and ``three'', then there must be user-defined functions accepting the arguments presented with compatible return types, and the call graph would include ``u.one'', ``u.two'', and ``u.three'', as well as any functions called in the argument list.  Even if function ``u.three'' is never called at runtime, this special form reports it because it {\it might} be called.
 
 \hypertarget{hsec:new-form}{}
 \subsection{Creating arrays, maps, and records}
@@ -2106,6 +2120,9 @@ These are the standard functors found in most functional programming contexts.
 \subsubsection{Map array items with function (a.map)}
 \libfcn{a.map}
 
+\subsubsection{Map array items, providing access to the index (a.mapIndex)}
+\libfcn{a.mapIndex}
+
 \subsubsection{Filter array items with function (a.filter)}
 \libfcn{a.filter}
 
@@ -2228,6 +2245,9 @@ This library contains methods for characterizing a dataset empirically.  These a
 
 \subsubsection{Incremental count, mean, and/or variance (stat.sample.update)}
 \libfcn{stat.sample.update}
+
+\subsubsection{Incremental covariance matrix (stat.sample.updateCovariance)}
+\libfcn{stat.sample.updateCovariance}
 
 \subsubsection{Incremental count, mean, and/or variance in a window (stat.sample.updateWindow)}
 \libfcn{stat.sample.updateWindow}
