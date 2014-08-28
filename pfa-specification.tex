@@ -37,9 +37,9 @@
 
 \renewcommand{\arraystretch}{1.4}
 
-\title{PFA: Portable Format for Analytics}
+\title{PFA: Portable Format for Analytics (version 0.5)}
 \author{Jim Pivarski}
-\date{Sometime in 2014}
+\date{August 28, 2014}
 
 \input{libfcns}
 
@@ -151,7 +151,7 @@ Although these implementations are intended to help clarify the intent of the sp
 A PFA document is a serialized JSON object representing an executable scoring engine.  Only the following JSON object member names may appear at this JSON nesting level.  These are the top-level fields referred to in the \hyperlink{hsec:conformance}{conformance section} of this specification.  Three fields, {\PFAc action}, {\PFAc input}, and {\PFAc output}, are required for every PFA document and are therefore required for every PFA implementation.  The rest are optional for PFA documents and not strictly required for PFA implementations.  As explained in the conformance section, not implementing some top-level fields can make some special forms and functions unimplementable.
 
 \begin{allowedfields}
-\item[\PFAc name:] A string used to identify the scoring engine (has no effect on calculations).
+\item[\PFAc name:] A string used to identify the scoring engine.
 \item[\PFAc method:] A string that may be ``map'', ``emit'', or ``fold'' (\hyperlink{hsec:method}{see Sec.~\ref{sec:method}}).  If absent, the default value is ``map''.
 \item[\PFAc input:] An Avro schema representing the data type of data provided to the scoring engine (\hyperlink{hsec:input-output}{see Sec.~\ref{sec:input-output}}).
 \item[\PFAc output:] An Avro schema representing the data type of data produced by the scoring engine (\hyperlink{hsec:input-output}{see Sec.~\ref{sec:input-output}}).  The way that output is returned to the host system depends on the {\PFAc method}.
@@ -164,7 +164,8 @@ A PFA document is a serialized JSON object representing an executable scoring en
 \item[\PFAc pools:] A JSON object whose member values specify dynamically allocated namespaces of typed persistent state (\hyperlink{hsec:state}{see Sec.~\ref{sec:state}}).  The format of this JSON object is restricted: \hyperlink{hsec:cells-pools}{see Sec.~\ref{sec:cells-pools}}.
 \item[\PFAc randseed:] An integer which, if present, sets the seed for pseudorandom number generation (\hyperlink{hsec:method}{see Sec.~\ref{sec:random}}).
 \item[\PFAc doc:] A string used to describe the scoring engine or its provenance (has no effect on calculations).
-\item[\PFAc metadata:] A JSON object, array, string, number, boolean, or null used to describe the scoring engine or its provenance (has no effect on calculations).
+\item[\PFAc version:] An optional integer to use in model-version bookkeeping.
+\item[\PFAc metadata:] A JSON object mapping strings to strings; used to describe the scoring engine or its provenance.
 \item[\PFAc options:] A JSON object of JSON objects, arrays, strings, numbers, booleans, or nulls used to control execution.  The set of possible options and their representation is restricted:: see \hyperlink{hsec:options}{see Sec.~\ref{sec:options}}.
 \end{allowedfields}
 
@@ -222,6 +223,8 @@ This example implements a small decision tree.  Input data are records with thre
                       "value": {"string": "TEST"},
                       "pass": {"string": "no-yes"},
                       "fail": {"string": "no-no"}}}}}},
+\end{json}
+\begin{json}
  "action":
    {"model.tree.simpleWalk": [
      "input",
@@ -338,6 +341,33 @@ For the ``emit'' method, the {\PFAc emit} function is a globally accessible func
 For the ``fold'' method, the {\PFAc tally} is available to expressions as a read-only symbol that can be accessed in an expression as the JSON string {\PFAc "tally"} (see \hyperlink{hsec:symbol-ref}{Sec.~\ref{sec:symbol-ref}}).  The {\PFAc tally} symbol's scope is limited to the {\PFAc action} routine: it is not accessible in user-defined functions unless explicitly passed.  The {\PFAc tally} symbol's data type is specified by the {\PFAc output} top-level field.  The top-level field named {\PFAc zero} must also have {\PFAc output} type.
 
 The means by which input values are provided to the scoring engine, output values are retrieved, and the {\PFAc emit} function is set or changed are all unspecified.  A PFA system may change the {\PFAc emit} function at any time, even while an {\PFAc action} is being processed (though we do not recommend this).  However, the {\PFAc emit} function must be defined and callable at all times during the {\PFAc begin}, {\PFAc action}, and {\PFAc end} phases of the scoring engine's lifecycle.
+
+\hypertarget{hsec:predefs}{}
+\subsection{Predefined symbols}
+\label{sec:predefs}
+
+A small set of symbols are already defined when a {\PFAc begin}, {\PFAc action}, or {\PFAc end} method starts.  These symbols cannot be changed by the method; it is as though the method is executed in a sealed scope within the scope in which the predefined symbols are defined (\hyperlink{hsec:symbol-scope}{see Sec.~\ref{sec:symbol-scope}}).
+
+\noindent The predefined symbols in the {\PFAc begin} method are the following.
+\begin{itemize}
+\item {\PFAc name} (string): If the {\PFAc name} top-level field is present, this is that string; otherwise, it is the name that the host system has assigned.
+\item {\PFAc version} (int): If the {\PFAc version} top-level field is present, this symbol is defined and is equal to the top-level field; otherwise, it is not defined.
+\item {\PFAc metadata} (map of string): If the {\PFAc metadata} top-level field is present, this symbol is that string-to-string map; otherwise, it is an empty string-to-string map.
+\end{itemize}
+
+\noindent The predefined symbols in the {\PFAc action} method are the following.
+\begin{itemize}
+\item {\PFAc input} (type defined by top-level field {\PFAc input}): The input datum on which the {\PFAc action} method acts.
+\item {\PFAc tally} (type defined by top-level field {\PFAc output}): If the {\PFAc method} is ``fold'', this is the result of applying all actions to date for this scoring engine instance; otherwise, it is not defined.
+\item {\PFAc name}, {\PFAc version}, {\PFAc metadata}: As above.
+\item {\PFAc actionsStarted} (long): The number of times this scoring engine instance has {\it started} to process an input record.  It is always greater than or equal to 1 and it includes action attempts that have failed due to exceptions.
+\item {\PFAc actionsFinished} (long): The number of times this scoring engine instance has {\it successfully finished} processing an input record.  It is always greater than or equal to 0 and it does not include action attempts that have failed due to exceptions.
+\end{itemize}
+
+\noindent The predefined symbols in the {\PFAc end} method are the following.
+\begin{itemize}
+\item {\PFAc tally}, {\PFAc name}, {\PFAc version}, {\PFAc metadata}, {\PFAc actionsStarted}, {\PFAc actionsFinished}: As above.
+\end{itemize}
 
 \hypertarget{hsec:input-output}{}
 \subsection{Input and output type specification}
@@ -943,9 +973,20 @@ Named functions are referenced with the ``fcnref'' special form, and anonymous f
 The ``fcnref'' special form has the following syntax.
 \begin{center}
 \begin{minipage}{0.9\linewidth}
-\mbox{\PFAc \{"fcnref":$\!$ name\} \vspace{0.2 cm} \\} \vspace{0.2 cm} \\
+\mbox{\PFAc \{"fcn":$\!$ name\} \vspace{0.2 cm} \\} \vspace{0.2 cm} \\
 \rm \begin{tabular}{p{0.01\linewidth} l p{0.8\linewidth}}
 & \PFAc name \rm & string, the name of the function \\
+\end{tabular}
+\end{minipage}
+\end{center}
+or
+\begin{center}
+\begin{minipage}{0.9\linewidth}
+\mbox{\PFAc \{"fcn":$\!$ name, "fill":$\!$ \{param1:$\!$ value1, param2:$\!$ value2, \ldots\}\} \vspace{0.2 cm} \\} \vspace{0.2 cm} \\
+\rm \begin{tabular}{p{0.01\linewidth} l p{0.8\linewidth}}
+& \PFAc name \rm & string, the name of the function \\
+& \PFAc param\# \rm & string, the name of a parameter of the function \\
+& \PFAc value\# \rm & expression, an expression to evaluate and pass to param\# \\
 \end{tabular}
 \end{minipage}
 \end{center}
@@ -953,13 +994,17 @@ The ``fcnref'' special form has the following syntax.
 
 The {\PFAc name} string must be an exact name of the function, not an expression that can be evaluated at runtime.
 
+If the {\PFAc fill} field is used, the form represents a new function with fewer parameters than the referenced function, in which one or more of the referenced function's fields are filled by an expression.  The expression is evaluated every time the new function is called (relevant if it has any side-effects).  Since the new function has fewer parameters than the referenced function, it has a different type than the referenced function.  This form is usually used to supply default arguments to a general function.
+
+Only non-generic functions with a single signature that does not reference other functions can be represented by a ``fcnref'' form.  Generic parameters or function parameters are only allowed if they are filled (hidden) by a {\PFAc fill} field.  Note that return types may not be generic, either.  If you wish to reference a general function, wrap it in an inline ``fcndef'', which is non-generic, single-signature, and hs no explicit function arguments because it is a user function.
+
 \begin{example}
 Here is a complete PFA document that increments and returns a counter every time it is pinged (the scoring engine is executed with {\PFAc null} input).
 \begin{json}
 {"input": "null",
  "output": "int",
  "action": [
-     {"cell": "counter", "to": {"fcnref": "u.increment"}},
+     {"cell": "counter", "to": {"fcn": "u.increment"}},
      {"cell": "counter"}],
  "cells":
      {"counter": {"type": "int", "init": 0, "shared": true}},
@@ -1293,16 +1338,13 @@ The {\PFAc INDEXES} must not be empty, and the first item must be a literal stri
 
 \subsubsection{Creating or changing pool values: the ``pool-to'' special form}
 
-The ``pool-to'' special form is similar to ``cell-to'', except that a {\PFAc path} is always required and {\PFAc init} is required if and only if {\PFAc to} specifies a function.
-\begin{json}
-{"pool": NAME, "path": INDEXES, "to": VALUE}
-\end{json}
+The ``pool-to'' special form is similar to ``cell-to'', except that the {\PFAc path} is always required and an {\PFAc init} is required to handle the case in which the desired pool element is missing.
 \begin{json}
 {"pool": NAME, "path": INDEXES, "to": FUNCTION, "init": VALUE}
 \end{json}
-Unlike a cell, a pool object might not exist at runtime.  If it does not exist, the {\PFAc FUNCTION} that maps an old value to a new value cannot be applied, so the value specified by {\PFAc init} is used instead.  The {\PFAc VALUE} specified by {\PFAc init} must have the type of the element at the end of the {\PFAc path}.  The ``pool-to'' form changes the value of the pool element in-place (like ``cell-to'') and returns the new value of the pool element.
+Unlike a cell, a pool element might not exist at runtime.  If it does not exist, the element is created with initial value {\PFAc VALUE} and then the {\PFAc to} replacement or function is applied.  The {\PFAc VALUE} specified by {\PFAc init} must have the type of a pool element.  The ``pool-to'' form changes the value of the pool element in-place (like ``cell-to'') and returns the new value of the pool element.
 
-The same concurrency issues apply to shared pools as to shared cells, except that {\PFAc init} is used if a specified object does not exist.  The check for existence and update are both in the same atomic operation.  The granularity of the writers lock is on a single object in the pool, not the whole pool and not a part of the object.
+The same concurrency issues apply to shared pools as to shared cells.  The check for existence and update or the check for existence, creation, and update are all performed in one atomic operation.  The granularity of the writers lock is on a single pool element, not the whole pool and not a part of the element.
 
 Some PFA systems may implement shared cells and pools with a networked database.  If so, they can take advantage of the {\PFAc path} in the ``cell'' special form or the ``pool'' special form to only transfer the relevant subelement of the cell or pool over the network, rather than sending the whole data structure and extracting the subelement afterward.
 
@@ -1465,7 +1507,7 @@ The ``forkey-forval'' special form iterates over key-value pairs of a map.  It h
 {"forkey": NAME1, "forval": NAME2, "in": MAP-EXPRESSION,
  "do": EXPRESSION-OR-EXPRESSIONS}
 \end{json}
-where {\PFAc NAME1} is a string naming a new symbol that iterates through map keys, {\PFAc NAME2} is a string naming a new symbol that iterates through map values, {\PFAc MAP-EXPRESSION} is a single expression whose type is a {\bf map}, and the {\PFAc do} expression or expressions is the body of the loop.
+where {\PFAc NAME1} is a string naming a new symbol that iterates through map keys, {\PFAc NAME2} is a string naming a new symbol that iterates through map values, {\PFAc MAP-EXPRESSION} is a single expression whose type is a {\bf map}, the {\PFAc do} expression or expressions is the body of the loop, and the return value of the ``forkey-forval'' form is {\PFAc null}.
 
 The symbols declared by the {\PFAc forkey} and {\PFAc forval} clauses can be referenced only in the body of the loop.  The {\PFAc MAP-EXPRESSION} is sealed-from-above and sealed-within.  If the return type of the {\PFAc MAP-EXPRESSION} is a map of {\PFAtp X}, the symbol declared by {\PFAc forval} has type {\PFAtp X}.  The symbol declared by {\PFAc forkey} has type {\bf string}.
 
@@ -1585,7 +1627,9 @@ or
 \begin{json}
 {"error": STRING, "code": INTEGER}
 \end{json}
-The {\PFAc STRING} is the error message, and if a {\PFAc code} is provided, it provides a safer way to identify specific errors than a human-readable message.  The ``error'' form return type is {\bf null}.  Even though the ``error'' form can never return normally, this return type might be used to determine the type of an enclosing form, depending on its position.
+The {\PFAc STRING} is the error message, and if a {\PFAc code} is provided, it provides a safer way to identify specific errors than a human-readable message.
+
+The ``error'' form has no return type: specifically, its return type is a type that can never be instantiated, called a bottom type.  The \hyperlink{hsec:narrowest-supertype}{narrowest supertype} of the bottom type with {\PFAtp X} is {\PFAtp X}, and thus if an if statement has a ``then'' branch that ends in a value and an ``else'' branch that ends in an error, the type of the if statement is the type of the value.  The same is true of ``cond'' forms, ``cast'' blocks, and anything else that branches the program flow.  If place at a point that does not branch the program flow (e.g.\ at the end of a ``do'' form), then the type is converted into {\bf null}.
 
 \hypertarget{hsec:logs}{}
 \subsubsection{Log messages: the ``log'' special form}
@@ -1674,7 +1718,7 @@ Avro defines a \href{http://avro.apache.org/docs/1.7.6/spec.html#order}{sort ord
 \subsection{Logical operators}
 
 \subsubsection{Logical and (\&\&)}
-\libfcn{&&}
+\libfcn{\&\&}
 
 \subsubsection{Logical or (||)}
 \libfcn{||}
@@ -1792,9 +1836,44 @@ Constants such as $\pi$ and $e$ are represented as stateless functions with no a
 \subsubsection{Copy sign (m.copysign)}
 \libfcn{m.copysign}
 
-\subsection{Linear algebra}
+\subsection{Special functions}
 
-{\bf TODO:} Define linear algebra functions.  In addition to the standard operations on numerically indexed vectors and matrices, there should be ways to manipulate vectors and matrices whose rows and columns are named with strings (maps, rather than arrays).
+\subsubsection{Error function (m.special.erf)}
+\libfcn{m.special.erf}
+
+\pagebreak
+
+\section{Linear algebra library}
+
+\subsubsection{Generalized unary operator for scaling (la.map)}
+\libfcn{la.map}
+
+\subsubsection{Generalized binary operator for addition (la.zipmap)}
+\libfcn{la.zipmap}
+
+\subsubsection{Vector and matrix dot product (la.dot)}
+\libfcn{la.dot}
+
+\subsubsection{Transpose (la.transpose)}
+\libfcn{la.transpose}
+
+\subsubsection{Inverse and pseudo-inverse (la.inverse)}
+\libfcn{la.inverse}
+
+\subsubsection{Trace (la.trace)}
+\libfcn{la.trace}
+
+\subsubsection{Determinant (la.det)}
+\libfcn{la.det}
+
+\subsubsection{Check for symmetry (la.symmetric)}
+\libfcn{la.symmetric}
+
+\subsubsection{Real eigenbasis of symmetric matrix (la.eigenBasis)}
+\libfcn{la.eigenBasis}
+
+\subsubsection{Truncate rows (la.truncate)}
+\libfcn{la.truncate}
 
 \pagebreak
 
@@ -1838,7 +1917,7 @@ Constants such as $\pi$ and $e$ are represented as stateless functions with no a
 
 \pagebreak
 
-\section{String manipulation}
+\section{String manipulation library}
 
 Strings are immutable, so none of the following functions modifies a string in-place.  Some return a modified version of the original string.
 
@@ -1918,13 +1997,33 @@ Search and replace functions in the basic string library do not use regular expr
 \subsubsection{Translate characters (s.translate)}
 \libfcn{s.translate}
 
-\subsection{Regular Expressions}
+\pagebreak
+
+\section{Regular expression library}
 
 {\bf TODO:} Define regular expression functions.  Regular expressions should use the Perl-compatible (PCRE) syntax.  Perhaps there should be some basic stemming, too (similar to PMML 4.2).
 
 \pagebreak
 
-\section{Array Manipulation}
+\section{Parsing library}
+
+\subsection{Parsing numbers}
+
+\subsubsection{32-bit integers (parse.int)}
+\libfcn{parse.int}
+
+\subsubsection{64-bit integers (parse.long)}
+\libfcn{parse.long}
+
+\subsubsection{Single-precision floating point (parse.float)}
+\libfcn{parse.float}
+
+\subsubsection{Double-precision floating point (parse.double)}
+\libfcn{parse.double}
+
+\pagebreak
+
+\section{Array manipulation library}
 
 Arrays are immutable, so none of the following functions modifies an array in-place.  Some return a modified version of the original array.
 
@@ -2204,23 +2303,38 @@ Records are immutable, so none of the following functions modifies a record in-p
 
 \pagebreak
 
-\section{Missing data handling}
+\hypertarget{hsec:impute}{}
+\section{Impute library (missing data handling)}
+\label{sec:impute}
 
 Some methods for dealing with missing data are inseparable from the statistical model in question, such as adjustment factors for clustering or surrogate predicates for decision trees.  Those that can be separated have been collected here.
 
 ``To impute'' means to \href{http://en.wikipedia.org/wiki/Imputation_(statistics)}{replace missing data with substituted values}.
 
-\hypertarget{hsec:impute}{}
-\subsection{Impute library}
-\label{sec:impute}
+\subsection{Missing values as null}
 
-\subsubsection{Skip record (impute.errorOnNull)}
+\subsubsection{Skip record or halt processing (impute.errorOnNull)}
 \libfcn{impute.errorOnNull}
 
 \subsubsection{Replace with default (impute.defaultOnNull)}
 \libfcn{impute.defaultOnNull}
 
-{\bf TODO:} Define more imputers.
+\subsection{Floating point missing values}
+
+\subsubsection{Check for not-a-number (impute.isnan)}
+\libfcn{impute.isnan}
+
+\subsubsection{Check for infinity (impute.isinf)}
+\libfcn{impute.isinf}
+
+\subsubsection{Ensure a finite number (impute.isnum)}
+\libfcn{impute.isnum}
+
+\subsubsection{Skip record or halt processing (impute.errorOnNonNum)}
+\libfcn{impute.errorOnNonNum}
+
+\subsubsection{Replace with default (impute.defaultOnNonNum)}
+\libfcn{impute.defaultOnNonNum}
 
 \pagebreak
 
@@ -2284,7 +2398,7 @@ This library contains methods for characterizing a dataset empirically.  These a
 
 \pagebreak
 
-\section{Data mining models}
+\section{Data mining libraries}
 
 This library contains methods of analyzing data using trained models.  Many of these are usually the outputs of machine learning algorithms.
 
@@ -2311,6 +2425,15 @@ This library contains methods of analyzing data using trained models.  Many of t
 
 \subsection{Closest N clusters or N-nearest neighbrs (model.cluster.closestN)}
 \libfcn{model.cluster.closestN}
+
+\subsection{Random seeds for online clustering (model.cluster.randomSeeds)}
+\libfcn{model.cluster.randomSeeds}
+
+\subsection{Online clustering with k-means (model.cluster.kmeansIteration)}
+\libfcn{model.cluster.kmeansIteration}
+
+\subsection{Update cluster using the mean of data points (model.cluster.updateMean)}
+\libfcn{model.cluster.updateMean}
 
 \subsection{Regression}
 
