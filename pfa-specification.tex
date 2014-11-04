@@ -39,7 +39,7 @@
 
 \title{PFA: Portable Format for Analytics (version 0.5)}
 \author{Jim Pivarski}
-\date{August 28, 2014}
+\date{\today}
 
 \input{libfcns}
 
@@ -1631,6 +1631,36 @@ The {\PFAc STRING} is the error message, and if a {\PFAc code} is provided, it p
 
 The ``error'' form has no return type: specifically, its return type is a type that can never be instantiated, called a bottom type.  The \hyperlink{hsec:narrowest-supertype}{narrowest supertype} of the bottom type with {\PFAtp X} is {\PFAtp X}, and thus if an if statement has a ``then'' branch that ends in a value and an ``else'' branch that ends in an error, the type of the if statement is the type of the value.  The same is true of ``cond'' forms, ``cast'' blocks, and anything else that branches the program flow.  If place at a point that does not branch the program flow (e.g.\ at the end of a ``do'' form), then the type is converted into {\bf null}.
 
+{\bf FIXME: the ``code'' will either be dropped or all library errors will be given codes as well.}
+
+\hypertarget{hsec:try-form}{}
+\subsubsection{Turning exceptions into missing values: the ``try'' special form}
+\label{sec:try-form}
+
+A running scoring engine should only encounter two types of errors: a runtime error in a library call or a user-defined error.  Sometimes, it is better to treat exceptional cases as missing values than non-local exits.  The ``try'' special form evaluates an expression or array of expressions, catches errors, and either returns the result of the calculation or {\PFAc null} to indicate a missing value.  It has the following syntax.
+\begin{json}
+{"try": EXPRESSION-OR-EXPRESSIONS}
+\end{json}
+or
+\begin{json}
+{"try": EXPRESSION-OR-EXPRESSIONS, "filter": ARRAY-OF-STRINGS}
+\end{json}
+
+The return type of the ``try'' form is a union of ``null'' and the type of the last expression in the block.  Thus, if the {\PFAc EXPRESSION-OR-EXPRESSIONS} calculates a numerical result (e.g.\ ``double''), the try returns a possibly missing numerical result (e.g.\ [``double'', ``null'']).  This missing value may be returned directly or wrapped in an ``ifnotnull'' form to build a traditional try-catch block: the ``ifnotnull'' would perform the catch logic.
+
+\begin{example}
+Example of a traditional try-catch block.
+\begin{json}
+{"ifnotnull": {result: {"try": TRY-LOGIC}},
+ "then": result,
+ "else": CATCH-LOGIC}
+\end{json}
+\end{example}
+
+If a ``filter'' is provided, only the specified error messages would be caught--- the rest are passed through.
+
+{\bf FIXME: if library errors are given codes, then ``filter'' should accept strings or integers and use both for filtering.}
+
 \hypertarget{hsec:logs}{}
 \subsubsection{Log messages: the ``log'' special form}
 \label{sec:logs}
@@ -1962,6 +1992,9 @@ Search and replace functions in the basic string library do not use regular expr
 \subsubsection{Split into an array of strings (s.split)}
 \libfcn{s.split}
 
+\subsubsection{Format a number as a string (s.number)}
+\libfcn{s.number}
+
 \subsection{Conversions to or from other strings}
 
 \subsubsection{Concatenate two strings (s.concat)}
@@ -2186,7 +2219,7 @@ The functions listed here provide the Cartesian product of the following feature
 \subsection{Set or set-like functions}
 \label{sec:set-like}
 
-PFA does not have a set datatype, but arrays can be interpreted as sets with the following functions.
+PFA does not have a set datatype, but arrays can be interpreted as sets with the following functions, which provide access and update times that scale with the length of the array.  To represent sets using constant-time hashtables, see the corresponding functions in \hyperlink{hsec:set-like-map}{Sec.~\ref{sec:set-like-map}}.
 
 \subsubsection{Distinct items (a.distinct)}
 \libfcn{a.distinct}
@@ -2197,8 +2230,8 @@ PFA does not have a set datatype, but arrays can be interpreted as sets with the
 \subsubsection{Union (a.union)}
 \libfcn{a.union}
 
-\subsubsection{Intersection (a.intersect)}
-\libfcn{a.intersect}
+\subsubsection{Intersection (a.intersection)}
+\libfcn{a.intersection}
 
 \subsubsection{Set difference (a.diff)}
 \libfcn{a.diff}
@@ -2216,32 +2249,41 @@ PFA does not have a set datatype, but arrays can be interpreted as sets with the
 
 These are the standard functors found in most functional programming contexts.
 
-\subsubsection{Map array items with function (a.map)}
+\subsubsection{Transform array items with function (a.map)}
 \libfcn{a.map}
 
-\subsubsection{Map array items, providing access to the index (a.mapIndex)}
-\libfcn{a.mapIndex}
+\subsubsection{Transform array items, providing access to the index (a.mapWithIndex)}
+\libfcn{a.mapWithIndex}
 
-\subsubsection{Filter array items with function (a.filter)}
+\subsubsection{Filter array items with a function (a.filter)}
 \libfcn{a.filter}
 
-\subsubsection{Filter and map (a.filtermap)}
-\libfcn{a.filtermap}
+\subsubsection{Filter array items, providing access to the index (a.filterWithIndex)}
+\libfcn{a.filterWithIndex}
 
-\subsubsection{Map and flatten (a.flatmap)}
-\libfcn{a.flatmap}
+\subsubsection{Filter and map (a.filterMap)}
+\libfcn{a.filterMap}
+
+\subsubsection{Filter and map, providing access to the index (a.filterMapWithIndex)}
+\libfcn{a.filterMapWithIndex}
+
+\subsubsection{Map and flatten (a.flatMap)}
+\libfcn{a.flatMap}
+
+\subsubsection{Map and flatten, providing access to the index (a.flatMapWithIndex)}
+\libfcn{a.flatMapWithIndex}
 
 \subsubsection{Reduce array items to a single value (a.reduce)}
 \libfcn{a.reduce}
 
-\subsubsection{Right-to-left reduce (a.reduceright)}
-\libfcn{a.reduceright}
+\subsubsection{Right-to-left reduce (a.reduceRight)}
+\libfcn{a.reduceRight}
 
 \subsubsection{Fold array items to another type (a.fold)}
 \libfcn{a.fold}
 
-\subsubsection{Right-to-left fold (a.foldright)}
-\libfcn{a.foldright}
+\subsubsection{Right-to-left fold (a.foldRight)}
+\libfcn{a.foldRight}
 
 \subsubsection{Take items until predicate is false (a.takeWhile)}
 \libfcn{a.takeWhile}
@@ -2259,6 +2301,9 @@ These are the standard functors found in most functional programming contexts.
 
 \subsubsection{Pairwise check of two arrays (a.corresponds)}
 \libfcn{a.corresponds}
+
+\subsubsection{Pairwise check, providing access to the index (a.correspondsWithIndex)}
+\libfcn{a.correspondsWithIndex}
 
 \subsection{Restructuring}
 
@@ -2279,27 +2324,205 @@ These are the standard functors found in most functional programming contexts.
 
 \pagebreak
 
-\section{Manipulation of other data structures}
-
-\subsection{Map}
+\section{Map manipulation library}
 
 Maps are immutable, so none of the following functions modifies a map in-place.  Some return a modified version of the original map.
 
-{\bf TODO:} Define map manipulation functions.
+\subsection{Basic access}
 
-\subsection{Record}
+\subsubsection{Length (map.len)}
+\libfcn{map.len}
 
-Records are immutable, so none of the following functions modifies a record in-place.  Some return a modified version of the original record.
+\subsubsection{Extract the keys (map.keys)}
+\libfcn{map.keys}
 
-{\bf TODO:} Define record manipulation functions.
+\subsubsection{Extract the values (map.values)}
+\libfcn{map.values}
+
+\subsection{Search and replace}
+
+\subsubsection{Contains key (map.containsKey)}
+\libfcn{map.containsKey}
+
+\subsubsection{Contains value (map.containsValue)}
+\libfcn{map.containsValue}
+
+\subsection{Manipulation}
+
+\subsubsection{Insert a key-value pair (map.add)}
+\libfcn{map.add}
+
+\subsubsection{Remove a key (map.remove)}
+\libfcn{map.remove}
+
+\subsubsection{Keep only certain keys (map.only)}
+\libfcn{map.only}
+
+\subsubsection{Keep all except certain keys (map.except)}
+\libfcn{map.except}
+
+\subsubsection{Add or replace keys with an overlay map (map.update)}
+\libfcn{map.update}
+
+\subsubsection{Split map into an array of single-key maps (map.split)}
+\libfcn{map.split}
+
+\subsubsection{Join an array of maps into one map (map.join)}
+\libfcn{map.join}
+
+\hypertarget{hsec:set-like-map}{}
+\subsection{Set or set-like functions}
+\label{sec:set-like-map}
+
+PFA does not have a set datatype, but maps can be interpreted as sets with the following functions, which provide some constant-time access times.  For a simpler implementation, see the corresponding sections in \hyperlink{hsec:set-like}{Sec.~\ref{sec:set-like}}.
+
+\subsubsection{Convert an array to a map-set (map.toset)}
+\libfcn{map.toset}
+
+\subsubsection{Convert a map to an array-set (map.fromset)}
+\libfcn{map.fromset}
+
+\subsubsection{Determine if an object is in the set (map.in)}
+\libfcn{map.in}
+
+\subsubsection{Union (map.union)}
+\libfcn{map.union}
+
+\subsubsection{Intersection (map.intersection)}
+\libfcn{map.intersection}
+
+\subsubsection{Set difference (map.diff)}
+\libfcn{map.diff}
+
+\subsubsection{Symmetric set difference (map.symdiff)}
+\libfcn{map.symdiff}
+
+\subsubsection{Subset check (map.subset)}
+\libfcn{map.subset}
+
+\subsubsection{Disjointness check (map.disjoint)}
+\libfcn{map.disjoint}
+
+\subsection{Functional programming}
+
+\subsubsection{Transform map items with a function (map.map)}
+\libfcn{map.map}
+
+\subsubsection{Transform map items, providing access to the key (map.mapWithKey)}
+\libfcn{map.mapWithKey}
+
+\subsubsection{Filter map items with a function (map.filter)}
+\libfcn{map.filter}
+
+\subsubsection{Filter map items, providing access to the key (map.filterWithKey)}
+\libfcn{map.filterWithKey}
+
+\subsubsection{Filter and map (map.filterMap)}
+\libfcn{map.filterMap}
+
+\subsubsection{Filter and map, providing access to the keys (map.filterMapWithKey)}
+\libfcn{map.filterMapWithKey}
+
+\subsubsection{Map and flatten, providing access to the keys (map.flatMapWithKey)}
+\libfcn{map.flatMapWithKey}
+
+\subsection{Functional tests}
+
+\subsubsection{Pairwise check of two maps (map.corresponds)}
+\libfcn{map.corresponds}
+
+\subsubsection{Pairwise check, providing access to the keys (map.correspondsWithKey)}
+\libfcn{map.correspondsWithKey}
+
+\pagebreak
+\section{Bytes manipulation library}
+
+\subsection{Test validity}
+
+\subsubsection{Verify ASCII format (bytes.isAscii)}
+\libfcn{bytes.isAscii}
+
+\subsubsection{Verify LATIN-1 format (bytes.isLatin1)}
+\libfcn{bytes.isLatin1}
+
+\subsubsection{Verify UTF-8 format (bytes.isUtf8)}
+\libfcn{bytes.isUtf8}
+
+\subsubsection{Verify UTF-16 format (bytes.isUtf16)}
+\libfcn{bytes.isUtf16}
+
+\subsubsection{Verify UTF-16 big endian format (bytes.isUtf16be)}
+\libfcn{bytes.isUtf16be}
+
+\subsubsection{Verify UTF-16 little endian format (bytes.isUtf16le)}
+\libfcn{bytes.isUtf16le}
+
+\subsection{Decode bytes to strings}
+
+\subsubsection{Decode from ASCII format (bytes.decodeAscii)}
+\libfcn{bytes.decodeAscii}
+
+\subsubsection{Decode from LATIN-1 format (bytes.decodeLatin1)}
+\libfcn{bytes.decodeLatin1}
+
+\subsubsection{Decode from UTF-8 format (bytes.decodeUtf8)}
+\libfcn{bytes.decodeUtf8}
+
+\subsubsection{Decode from UTF-16 format (bytes.decodeUtf16)}
+\libfcn{bytes.decodeUtf16}
+
+\subsubsection{Decode from UTF-16 big endian format (bytes.decodeUtf16be)}
+\libfcn{bytes.decodeUtf16be}
+
+\subsubsection{Decode from UTF-16 little endian format (bytes.decodeUtf16le)}
+\libfcn{bytes.decodeUtf16le}
+
+\subsection{Encode strings to bytes}
+
+\subsubsection{Encode to ASCII format (bytes.encodeAscii)}
+\libfcn{bytes.encodeAscii}
+
+\subsubsection{Encode to LATIN-1 format (bytes.encodeLatin1)}
+\libfcn{bytes.encodeLatin1}
+
+\subsubsection{Encode to UTF-8 format (bytes.encodeUtf8)}
+\libfcn{bytes.encodeUtf8}
+
+\subsubsection{Encode to UTF-16 format (bytes.encodeUtf16)}
+\libfcn{bytes.encodeUtf16}
+
+\subsubsection{Encode to UTF-16 big endian format (bytes.encodeUtf16be)}
+\libfcn{bytes.encodeUtf16be}
+
+\subsubsection{Encode to UTF-16 little endian format (bytes.encodeUtf16le)}
+\libfcn{bytes.encodeUtf16le}
+
+\subsection{Base64 encoding}
+
+\subsubsection{Encode bytes as a base64 string (bytes.toBase64)}
+\libfcn{bytes.toBase64}
+
+\subsubsection{Decode base64 string to bytes (bytes.fromBase64)}
+\libfcn{bytes.fromBase64}
+
+\pagebreak
+\section{Manipulation of other data structures}
+
+\subsection{Fixed}
+
+\subsubsection{Convert to bytes (fixed.toBytes)}
+\libfcn{fixed.toBytes}
 
 \subsection{Enum}
 
-{\bf TODO:} Define enum manipulation functions.
+\subsubsection{String representation (enum.toString)}
+\libfcn{enum.toString}
 
-\subsection{Bytes and fixed}
+\subsubsection{Integer representation (enum.toInt)}
+\libfcn{enum.toInt}
 
-{\bf TODO:} Define bytes and fixed manipulation functions.
+\subsubsection{Number of symbols (enum.numSymbols)}
+\libfcn{enum.numSymbols}
 
 \pagebreak
 
