@@ -159,7 +159,8 @@ A PFA document is a serialized JSON object representing an executable scoring en
 \item[\PFAc action:] An \hyperlink{hsec:expressions}{expression} or JSON array of \hyperlink{hsec:expressions}{expressions} that are executed for each input datum in the active phase of the scoring engine's run (\hyperlink{hsec:phases}{see Sec.~\ref{sec:phases}}).
 \item[\PFAc end:] An \hyperlink{hsec:expressions}{expression} or JSON array of \hyperlink{hsec:expressions}{expressions} that are executed in the end phase of the scoring engine's run (\hyperlink{hsec:phases}{see Sec.~\ref{sec:phases}}).
 \item[\PFAc fcns:] A JSON object whose member values are \hyperlink{hsec:fcndef}{function definitions}, defining routines that may be called by expressions in {\PFAc begin}, {\PFAc action}, {\PFAc end}, or by expressions in other functions.
-\item[\PFAc zero:] Embedded JSON data whose type must match the {\PFAc output} type of the engine.  This is only used by the ``fold'' method to initialize the fold aggregation.  If {\PFAc method} is ``map'' or ``emit'', this field is ignored.
+\item[\PFAc zero:] Embedded JSON data whose type must match the {\PFAc output} type of the engine.  This must be present in the ``fold'' {\PFAc method} initialize the fold aggregation, and it must not be present in the ``map'' or ``emit'' {\PFAc method}.
+\item[\PFAc merge:] An \hyperlink{hsec:expressions}{expression} or JSON array of \hyperlink{hsec:expressions}{expressions} that may be executed if the scoring engine container needs to combine partial results from independent ``fold'' engines.  It must be present with the ``fold'' {\PFAc method} and it must not be present with the ``map'' or ``emit'' {\PFAc method}.
 \item[\PFAc cells:] A JSON object whose member values specify statically allocated, named, typed units of persistent state or embedded data (\hyperlink{hsec:state}{see Sec.~\ref{sec:state}}).  The format of this JSON object is restricted: \hyperlink{hsec:cells-pools}{see Sec.~\ref{sec:cells-pools}}.
 \item[\PFAc pools:] A JSON object whose member values specify dynamically allocated namespaces of typed persistent state (\hyperlink{hsec:state}{see Sec.~\ref{sec:state}}).  The format of this JSON object is restricted: \hyperlink{hsec:cells-pools}{see Sec.~\ref{sec:cells-pools}}.
 \item[\PFAc randseed:] An integer which, if present, sets the seed for pseudorandom number generation (\hyperlink{hsec:method}{see Sec.~\ref{sec:random}}).
@@ -329,7 +330,7 @@ PFA defines the following three methods for calling the {\PFAc action} routine o
 \item[``emit'':] The {\PFAc action} routine is given an {\PFAc input} value and an {\PFAc emit} callback function, and the functional return value is ignored.  The scoring engine returns results to the host system by calling {\PFAc emit}.  It can call {\PFAc emit} any number of times, and thus the output dataset may be smaller or larger than the input dataset.  For example, a filter would call {\PFAc emit} zero or one times for each input.
 \end{allowedfields}
 \begin{allowedfields}
-\item[``fold'':] The {\PFAc action} routine is given an {\PFAc input} value and a {\PFAc tally} value, which it uses to construct and return an output.  The first time {\PFAc action} is invoked, {\PFAc tally} is equal to {\PFAc zero} (the top-level field).  On the $N^{\mbox{\scriptsize th}}$ time {\PFAc action} is invoked, {\PFAc tally} is equal to the $(N - 1)^{\mbox{\scriptsize th}}$ return value.  Thus, a ``fold'' scoring engine is an aggregator: transformed inputs may be counted, summed, maximized, or otherwise accumulated in the {\PFAc tally}.  The aggregate of the entire input dataset is the last return value of {\PFAc action}, though the host system may make use of partial sums as well.
+\item[``fold'':] The {\PFAc action} routine is given an {\PFAc input} value and a {\PFAc tally} value, which it uses to construct and return an output.  The first time {\PFAc action} is invoked, {\PFAc tally} is equal to {\PFAc zero} (the top-level field).  On the $N^{\mbox{\scriptsize th}}$ time {\PFAc action} is invoked, {\PFAc tally} is equal to the $(N - 1)^{\mbox{\scriptsize th}}$ return value.  Thus, a ``fold'' scoring engine is an aggregator: transformed inputs may be counted, summed, maximized, or otherwise accumulated in the {\PFAc tally}.  The aggregate of the entire dataset seen by one scoring engine instance is the last return value of {\PFAc action}.  The host system may then combine partial results from these instances using the {\PFAc merge} method.  The {\PFAc merge} method must be present for ``fold'' scoring engines, though it might not be used.
 \end{allowedfields}
 
 For all three methods, the {\PFAc input} is available to expressions as a read-only symbol that can be accessed in an expression as the JSON string {\PFAc "input"} (see \hyperlink{hsec:symbol-ref}{Sec.~\ref{sec:symbol-ref}}).  The {\PFAc input} symbol's scope is limited to the {\PFAc action} routine: it is not accessible in user-defined functions unless explicitly passed.  The {\PFAc input} symbol's data type is specified by the top-level field named {\PFAc input}.
@@ -339,6 +340,8 @@ For the ``map'' and ``fold'' methods, the data type of the last expression in th
 For the ``emit'' method, the {\PFAc emit} function is a globally accessible function.  It may be \hyperlink{hsec:function-call}{called} or \hyperlink{hsec:fcnref}{referenced} without qualification by any user-defined function or even in the {\PFAc begin} and {\PFAc end} routines.
 
 For the ``fold'' method, the {\PFAc tally} is available to expressions as a read-only symbol that can be accessed in an expression as the JSON string {\PFAc "tally"} (see \hyperlink{hsec:symbol-ref}{Sec.~\ref{sec:symbol-ref}}).  The {\PFAc tally} symbol's scope is limited to the {\PFAc action} routine: it is not accessible in user-defined functions unless explicitly passed.  The {\PFAc tally} symbol's data type is specified by the {\PFAc output} top-level field.  The top-level field named {\PFAc zero} must also have {\PFAc output} type.
+
+In the {\PFAc merge} method, available only to ``fold'' engines, the symbols {\PFAc tallyOne} and {\PFAc tallyTwo} are read-only symbols that can be accessed in the expression.  They have {\PFAc output} type, and usually come from independent runs of the scoring engine on subsamples.  Just as calling a scoring engine's {\PFAc action} method replaces its {\PFAc tally} with the {\PFAc action} output, calling a scoring engine's {\PFAc merge} method replaces its {\PFAc tally} with the {\PFAc merge} result.
 
 The means by which input values are provided to the scoring engine, output values are retrieved, and the {\PFAc emit} function is set or changed are all unspecified.  A PFA system may change the {\PFAc emit} function at any time, even while an {\PFAc action} is being processed (though we do not recommend this).  However, the {\PFAc emit} function must be defined and callable at all times during the {\PFAc begin}, {\PFAc action}, and {\PFAc end} phases of the scoring engine's lifecycle.
 
@@ -351,6 +354,7 @@ A small set of symbols are already defined when a {\PFAc begin}, {\PFAc action},
 \noindent The predefined symbols in the {\PFAc begin} method are the following.
 \begin{itemize}
 \item {\PFAc name} (string): If the {\PFAc name} top-level field is present, this is that string; otherwise, it is the name that the host system has assigned.
+\item {\PFAc instance} (int): The 0-based instance number of the scoring engine.  For example, if $N$ engines are generated from a PFA document, they will be numbered from $0$ to $N-1$, inclusive.
 \item {\PFAc version} (int): If the {\PFAc version} top-level field is present, this symbol is defined and is equal to the top-level field; otherwise, it is not defined.
 \item {\PFAc metadata} (map of string): If the {\PFAc metadata} top-level field is present, this symbol is that string-to-string map; otherwise, it is an empty string-to-string map.
 \end{itemize}
@@ -359,14 +363,14 @@ A small set of symbols are already defined when a {\PFAc begin}, {\PFAc action},
 \begin{itemize}
 \item {\PFAc input} (type defined by top-level field {\PFAc input}): The input datum on which the {\PFAc action} method acts.
 \item {\PFAc tally} (type defined by top-level field {\PFAc output}): If the {\PFAc method} is ``fold'', this is the result of applying all actions to date for this scoring engine instance; otherwise, it is not defined.
-\item {\PFAc name}, {\PFAc version}, {\PFAc metadata}: As above.
+\item {\PFAc name}, {\PFAc instance}, {\PFAc version}, {\PFAc metadata}: As above.
 \item {\PFAc actionsStarted} (long): The number of times this scoring engine instance has {\it started} to process an input record.  It is always greater than or equal to 1 and it includes action attempts that have failed due to exceptions.
 \item {\PFAc actionsFinished} (long): The number of times this scoring engine instance has {\it successfully finished} processing an input record.  It is always greater than or equal to 0 and it does not include action attempts that have failed due to exceptions.
 \end{itemize}
 
 \noindent The predefined symbols in the {\PFAc end} method are the following.
 \begin{itemize}
-\item {\PFAc tally}, {\PFAc name}, {\PFAc version}, {\PFAc metadata}, {\PFAc actionsStarted}, {\PFAc actionsFinished}: As above.
+\item {\PFAc tally}, {\PFAc name}, {\PFAc instance}, {\PFAc version}, {\PFAc metadata}, {\PFAc actionsStarted}, {\PFAc actionsFinished}: As above.
 \end{itemize}
 
 \hypertarget{hsec:input-output}{}
@@ -2056,6 +2060,24 @@ Search and replace functions in the basic string library do not use regular expr
 
 \pagebreak
 
+\section{Casting library}
+
+\subsection{Casting numbers}
+
+\subsubsection{32-bit integers (cast.int)}
+\libfcn{cast.int}
+
+\subsubsection{64-bit integers (cast.long)}
+\libfcn{cast.long}
+
+\subsubsection{Single-precision floating point (cast.float)}
+\libfcn{cast.float}
+
+\subsubsection{Double-precision floating point (cast.double)}
+\libfcn{cast.double}
+
+\pagebreak
+
 \section{Array manipulation library}
 
 Arrays are immutable, so none of the following functions modifies an array in-place.  Some return a modified version of the original array.
@@ -2603,6 +2625,15 @@ This library contains methods for characterizing a dataset empirically.  These a
 
 \subsubsection{Make many forecasts from a Holt-Winters state (stat.sample.forecastHoltWinters)}
 \libfcn{stat.sample.forecastHoltWinters}
+
+\subsubsection{Fill a histogram (stat.sample.fillHistogram)}
+\libfcn{stat.sample.fillHistogram}
+
+\subsubsection{Fill a two-dimensional histogram (stat.sample.fillHistogram2d)}
+\libfcn{stat.sample.fillHistogram2d}
+
+\subsubsection{Maintain a top-N list (stat.sample.topN)}
+\libfcn{stat.sample.topN}
 
 {\bf TODO:} aggregations like min/max (exclude nan/inf?), sum, product, set/multiset.  Is there any way to do median or medoid(?)
 
