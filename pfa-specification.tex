@@ -37,7 +37,7 @@
 
 \renewcommand{\arraystretch}{1.4}
 
-\title{PFA: Portable Format for Analytics (version 0.5)}
+\title{PFA: Portable Format for Analytics (version 0.6)}
 \author{Jim Pivarski}
 \date{\today}
 
@@ -1872,17 +1872,38 @@ Constants such as $\pi$ and $e$ are represented as stateless functions with no a
 
 \subsection{Special functions}
 
-\subsubsection{Error function (m.special.erf)}
+\subsubsection{Error Function (m.special.erf)}
 \libfcn{m.special.erf}
+
+\subsubsection{Complimentary Error Function (m.special.erfc)}
+\libfcn{m.special.erfc}
+
+\subsubsection{Natural Log of the Gamma Function (m.special.lnGamma)}
+\libfcn{m.special.lnGamma}
+
+\subsubsection{Natural Log of the Beta Function (m.special.lnBeta)}
+\libfcn{m.special.lnBeta}
+
+\subsubsection{Binomial Coefficient (m.special.nChooseK)}
+\libfcn{m.special.nChooseK}
 
 \pagebreak
 
 \section{Linear algebra library}
 
-\subsubsection{Generalized unary operator for scaling (la.map)}
+\subsubsection{Unary scaling of vectors or matrices (la.scale)}
+\libfcn{la.scale}
+
+\subsubsection{Generalized unary operator (la.map)}
 \libfcn{la.map}
 
-\subsubsection{Generalized binary operator for addition (la.zipmap)}
+\subsubsection{Addition of vectors or matrices (la.add)}
+\libfcn{la.add}
+
+\subsubsection{Subtraction of vectors or matrices (la.sub)}
+\libfcn{la.sub}
+
+\subsubsection{Generalized binary operator (la.zipmap)}
 \libfcn{la.zipmap}
 
 \subsubsection{Vector and matrix dot product (la.dot)}
@@ -1948,6 +1969,36 @@ Constants such as $\pi$ and $e$ are represented as stateless functions with no a
 
 \subsection{General binary metric (metric.binarySimilarity)}
 \libfcn{metric.binarySimilarity}
+
+\pagebreak
+
+\section{Random number library}
+
+All pseudorandom functions are seeded by the top-level field {\PFAc randseed}.  If absent, the return values of these functions are unpredictable.  If present, they are reproducible for scoring engines generated from the same PFA file on the same PFA implementation.  Different PFA implementations may use different random number generators, so reproducibility among implementations is not guaranteed.
+
+\subsection{Random integer (rand.int)}
+\libfcn{rand.int}
+
+\subsection{Random integer (rand.long)}
+\libfcn{rand.long}
+
+\subsection{Random integer (rand.float)}
+\libfcn{rand.float}
+
+\subsection{Random integer (rand.double)}
+\libfcn{rand.double}
+
+\subsection{Random string (rand.string)}
+\libfcn{rand.string}
+
+\subsection{Random bytes (rand.bytes)}
+\libfcn{rand.bytes}
+
+\subsection{Type-4 UUID (rand.uuid)}
+\libfcn{rand.uuid}
+
+\subsection{Gaussian deviates (rand.gaussian)}
+\libfcn{rand.gaussian}
 
 \pagebreak
 
@@ -2036,9 +2087,58 @@ Search and replace functions in the basic string library do not use regular expr
 
 \pagebreak
 
-\section{Regular expression library}
+\section{Regular expressions and text pre-procssing}
 
-{\bf TODO:} Define regular expression functions.  Regular expressions should use the Perl-compatible (PCRE) syntax.  Perhaps there should be some basic stemming, too (similar to PMML 4.2).
+\subsection{Regular Expression functions}
+
+The regular expression syntax follows the POSIX extended standard (like {\tt grep -e} in Linux and UNIX).
+
+\subsubsection{Check for existence of a pattern (re.contains)}
+\libfcn{re.contains}
+
+\subsubsection{Count occurrences of a pattern (re.count)}
+\libfcn{re.count}
+
+\subsubsection{Find the first index where a pattern appears (re.index)}
+\libfcn{re.index}
+
+\subsubsection{Find the last index where a pattern appears (re.rindex)}
+\libfcn{re.rIndex}
+
+\subsubsection{Find all indexes that match a pattern (re.indexAll)}
+\libfcn{re.indexAll}
+
+\subsubsection{Get first set of matching groups (re.groups)}
+\libfcn{re.groups}
+
+\subsubsection{Get all sets of matching groups (re.groupsAll)}
+\libfcn{re.groupsAll}
+
+\subsubsection{Find the first instance of a pattern (re.findFirst)}
+\libfcn{re.findFirst}
+
+\subsubsection{Find all instances of a pattern (re.findAll)}
+\libfcn{re.findAll}
+
+\subsubsection{Find the first instance of a pattern, with groups (re.findGroupsFirst)}
+\libfcn{re.findGroupsFirst}
+
+\subsubsection{Find all instances of a pattern, with groups (re.findGroupsAll)}
+\libfcn{re.findGroupsAll}
+
+\subsubsection{Replace the first instance of a pattern (re.replaceFirst)}
+\libfcn{re.replaceFirst}
+
+\subsubsection{Replace the last instance of a pattern (re.replaceLast)}
+\libfcn{re.replaceLast}
+
+\subsubsection{Replace all instances of a pattern (re.replaceAll)}
+\libfcn{re.replaceAll}
+
+\subsubsection{Split a string by a pattern (re.split)}
+\libfcn{re.split}
+
+{\bf TODO:} add text pre-processing functions
 
 \pagebreak
 
@@ -2075,6 +2175,21 @@ Search and replace functions in the basic string library do not use regular expr
 
 \subsubsection{Double-precision floating point (cast.double)}
 \libfcn{cast.double}
+
+\subsubsection{Fan a variable out to an array of booleans (cast.fanoutBoolean)}
+\libfcn{cast.fanoutBoolean}
+
+\subsubsection{Fan a variable out to an array of ints (cast.fanoutInt)}
+\libfcn{cast.fanoutInt}
+
+\subsubsection{Fan a variable out to an array of longs (cast.fanoutLong)}
+\libfcn{cast.fanoutLong}
+
+\subsubsection{Fan a variable out to an array of floats (cast.fanoutFloat)}
+\libfcn{cast.fanoutFloat}
+
+\subsubsection{Fan a variable out to an array of doubles (cast.fanoutDouble)}
+\libfcn{cast.fanoutDouble}
 
 \pagebreak
 
@@ -2547,6 +2662,88 @@ PFA does not have a set datatype, but maps can be interpreted as sets with the f
 \libfcn{enum.numSymbols}
 
 \pagebreak
+\section{Date/time handling}
+
+PFA does not have a special data type for time (because there is no such type in Avro), so times are represented as the floating-point number of seconds since the beginning of 1970 in UTC.  For whole-numbered seconds, this corresponds to the UNIX timestamp.  Double precision (IEEE 64-bit representation), provides microsecond resolution until May 30, 2514.
+
+\subsubsection{Year from timestamp (time.year)}
+\libfcn{time.year}
+
+\subsection{Extracting conventional time units from timestamp}
+
+Time units within a second (e.g.\ millisecond past the second or microsecond past the second) can be obtained using the modulo function: {\PFAc \{"*", [\{"\%":$\!$ ["timestamp",$\!$ 1.0]\}, 1000]\}} for milliseconds.
+
+\subsubsection{Month of year from timestamp (time.monthOfYear)}
+\libfcn{time.monthOfYear}
+
+\subsubsection{Day of year from timestamp (time.dayOfYear)}
+\libfcn{time.dayOfYear}
+
+\subsubsection{Day of month from timestamp (time.dayOfMonth)}
+\libfcn{time.dayOfMonth}
+
+\subsubsection{Day of week from timestamp (time.dayOfWeek)}
+\libfcn{time.dayOfWeek}
+
+\subsubsection{Hour of day from timestamp (time.hourOfDay)}
+\libfcn{time.hourOfDay}
+
+\subsubsection{Minutes past the hour from timestamp (time.minuteOfHour)}
+\libfcn{time.minuteOfHour}
+
+\subsubsection{Seconds past the minute from timestamp (time.secondOfMinute)}
+\libfcn{time.secondOfMinute}
+
+\subsection{Constructing timestamp from conventional units}
+
+\subsubsection{Make timestamp (time.makeTimestamp)}
+\libfcn{time.makeTimestamp}
+
+\subsection{Querying time intervals}
+
+Since the timestamp is a simple number on a continuous range, one can use greater than or less than to determine if it falls within an absolute interval (e.g.\ between 3 and 5 PM on July 2, 2015).  Often, one wants to know if a timestamp falls within a repeating interval, such as between 3 and 5 PM of {\it any day.}  The following functions provide this kind of access.  (Note: if the interval is non-sensical, such as the 70th minute of an hour, the function returns false, rather than raising an exception.)
+
+\subsubsection{Seconds of minute range (time.isSecondOfMinute)}
+\libfcn{time.isSecondOfMinute}
+
+\subsubsection{Minutes of hour range (time.isMinuteOfHour)}
+\libfcn{time.isMinuteOfHour}
+
+\subsubsection{Hour of day range (time.isHourOfDay)}
+\libfcn{time.isHourOfDay}
+
+\subsubsection{Day of week range (time.isDayOfWeek)}
+\libfcn{time.isDayOfWeek}
+
+\subsubsection{Day of month range (time.isDayOfMonth)}
+\libfcn{time.isDayOfMonth}
+
+\subsubsection{Month of year range (time.isMonthOfYear)}
+\libfcn{time.isMonthOfYear}
+
+\subsubsection{Day of year range (time.isDayOfYear)}
+\libfcn{time.isDayOfYear}
+
+\subsubsection{Weekend range (time.isWeekend)}
+\libfcn{time.isWeekend}
+
+\subsubsection{Working hours range (time.isWorkHours)}
+\libfcn{time.isWorkHours}
+
+\subsubsection{Non-working hours (time.isNonWorkHours)}
+\libfcn{time.isNonWorkHours}
+
+\subsection{Applying time zone corrections}
+
+The functions in this group apply time zone corrections.  Currently, only fixed offsets of a known number of hours are available, but this function group can be extended with a tzdata database to include time zone by city or by abbreviation lookup.
+
+\subsubsection{Convert to local time (time.fromUTCToLocal)}
+\libfcn{time.fromUTCToLocal}
+
+\subsubsection{Convert to UTC (time.fromLocalToUTC)}
+\libfcn{time.fromLocalToUTC}
+
+\pagebreak
 
 \hypertarget{hsec:impute}{}
 \section{Impute library (missing data handling)}
@@ -2587,12 +2784,133 @@ Some methods for dealing with missing data are inseparable from the statistical 
 
 This library contains methods for calculating properties of probability distributions, many of which are used by descriptive statistics and data mining models.
 
-\subsection{Probability distributions}
+\subsection{Uniform distribution}
+\subsubsection{Probability density function (prob.dist.uniformPDF)}
+\libfcn{prob.dist.uniformPDF}
+\subsubsection{Cumulative distribution function (prob.dist.uniformCDF)}
+\libfcn{prob.dist.uniformCDF}
+\subsubsection{Quantile function (prob.dist.uniformQF)}
+\libfcn{prob.dist.uniformQF}
 
-\subsubsection{Gaussian log-likelihood (prob.dist.gaussianLL)}
+\subsection{Exponential distribution}
+\subsubsection{Probability density function (prob.dist.exponentialPDF)}
+\libfcn{prob.dist.exponentialPDF}
+\subsubsection{Cumulative distribution function (prob.dist.exponentialCDF)}
+\libfcn{prob.dist.exponentialCDF}
+\subsubsection{Quantile function (prob.dist.exponentialQF)}
+\libfcn{prob.dist.exponentialQF}
+
+\subsection{Gaussian (normal) distribution}
+\subsubsection{Probability density function (prob.dist.gaussianLL)}
 \libfcn{prob.dist.gaussianLL}
+\subsubsection{Cumulative distribution function (prob.dist.gaussianCDF)}
+\libfcn{prob.dist.gaussianCDF}
+\subsubsection{Quantile function (prob.dist.gaussianQF)}
+\libfcn{prob.dist.gaussianQF}
 
-{\bf TODO:} Poisson log-likelihood, CDFs, PDFs, etc.
+\subsection{Lognormal distribution}
+\subsubsection{Probability density function (prob.dist.lognormalPDF)}
+\libfcn{prob.dist.lognormalPDF}
+\subsubsection{Cumulative distribution function (prob.dist.lognormalCDF)}
+\libfcn{prob.dist.lognormalCDF}
+\subsubsection{Quantile function (prob.dist.lognormalQF)}
+\libfcn{prob.dist.lognormalQF}
+
+\subsection{Cauchy distribution}
+\subsubsection{Probability density function (prob.dist.cauchyPDF)}
+\libfcn{prob.dist.cauchyPDF}
+\subsubsection{Cumulative distribution function (prob.dist.cauchyCDF)}
+\libfcn{prob.dist.cauchyCDF}
+\subsubsection{Quantile function (prob.dist.cauchyQF)}
+\libfcn{prob.dist.cauchyQF}
+
+\subsection{Binomial distribution}
+\subsubsection{Probability density function (prob.dist.binomialPDF)}
+\libfcn{prob.dist.binomialPDF}
+\subsubsection{Cumulative distribution function (prob.dist.binomialCDF)}
+\libfcn{prob.dist.binomialCDF}
+\subsubsection{Quantile function (prob.dist.binomialQF)}
+\libfcn{prob.dist.binomialQF}
+
+\subsection{Negative Binomial}
+\subsubsection{Probability density function (prob.dist.negativebinomialPDF)}
+\libfcn{prob.dist.negativeBinomialPDF}
+\subsubsection{Cumulative distribution function (prob.dist.negativebinomialCDF)}
+\libfcn{prob.dist.negativeBinomialCDF}
+\subsubsection{Quantile function (prob.dist.negativebinomialQF)}
+\libfcn{prob.dist.negativeBinomialQF}
+
+\subsection{Poisson distribution}
+\subsubsection{Probability density function (prob.dist.poissonPDF)}
+\libfcn{prob.dist.poissonPDF}
+\subsubsection{Cumulative distribution function (prob.dist.poissonCDF)}
+\libfcn{prob.dist.poissonCDF}
+\subsubsection{Quantile function (prob.dist.poissonQF)}
+\libfcn{prob.dist.poissonQF}
+
+\subsection{Student's t distribution}
+\subsubsection{Probability density function (prob.dist.tPDF)}
+\libfcn{prob.dist.tPDF}
+\subsubsection{Cumulative distribution function (prob.dist.tCDF)}
+\libfcn{prob.dist.tCDF}
+\subsubsection{Quantile function (prob.dist.tQF)}
+\libfcn{prob.dist.tQF}
+
+\subsection{F distribution}
+\subsubsection{Probability density function (prob.dist.fPDF)}
+\libfcn{prob.dist.fPDF}
+\subsubsection{Cumulative distribution function (prob.dist.fCDF)}
+\libfcn{prob.dist.fCDF}
+\subsubsection{Quantile function (prob.dist.fQF)}
+\libfcn{prob.dist.fQF}
+
+\subsection{Chi-square distribution}
+\subsubsection{Probability density function (prob.dist.chi2PDF)}
+\libfcn{prob.dist.chi2PDF}
+\subsubsection{Cumulative distribution function (prob.dist.chi2CDF)}
+\libfcn{prob.dist.chi2CDF}
+\subsubsection{Quantile function (prob.dist.chi2QF)}
+\libfcn{prob.dist.chi2QF}
+
+\subsection{Beta distribution}
+\subsubsection{Probability density function (prob.dist.betaPDF)}
+\libfcn{prob.dist.betaPDF}
+\subsubsection{Cumulative distribution function (prob.dist.betaCDF)}
+\libfcn{prob.dist.betaCDF}
+\subsubsection{Quantile function (prob.dist.betaQF)}
+\libfcn{prob.dist.betaQF}
+
+\subsection{Gamma distribution}
+\subsubsection{Probability density function (prob.dist.gammaPDF)}
+\libfcn{prob.dist.gammaPDF}
+\subsubsection{Cumulative distribution function (prob.dist.gammaCDF)}
+\libfcn{prob.dist.gammaCDF}
+\subsubsection{Quantile function (prob.dist.gammaQF)}
+\libfcn{prob.dist.gammaQF}
+
+\subsection{Geometric distribution}
+\subsubsection{Probability density function (prob.dist.geometricPDF)}
+\libfcn{prob.dist.geometricPDF}
+\subsubsection{Cumulative distribution function (prob.dist.geometricCDF)}
+\libfcn{prob.dist.geometricCDF}
+\subsubsection{Quantile function (prob.dist.geometricQF)}
+\libfcn{prob.dist.geometricQF}
+
+\subsection{Hypergeometric distribution}
+\subsubsection{Probability density function (prob.dist.hypergeometricPDF)}
+\libfcn{prob.dist.hypergeometricPDF}
+\subsubsection{Cumulative distribution function (prob.dist.hypergeometricCDF)}
+\libfcn{prob.dist.hypergeometricCDF}
+\subsubsection{Quantile function (prob.dist.hypergeometricQF)}
+\libfcn{prob.dist.hypergeometricQF}
+
+\subsection{Weibull distribution}
+\subsubsection{Probability density function (prob.dist.weibullPDF)}
+\libfcn{prob.dist.weibullPDF}
+\subsubsection{Cumulative distribution function (prob.dist.weibullCDF)}
+\libfcn{prob.dist.weibullCDF}
+\subsubsection{Quantile function (prob.dist.weibullQF)}
+\libfcn{prob.dist.weibullQF}
 
 \pagebreak
 
@@ -2656,6 +2974,37 @@ This library contains methods for characterizing a dataset empirically.  These a
 
 This library contains methods of analyzing data using trained models.  Many of these are usually the outputs of machine learning algorithms.
 
+\subsection{Regression}
+
+\subsubsection{Apply the result of a linear regression (model.reg.linear)}
+\libfcn{model.reg.linear}
+
+\subsubsection{Normalization functions for logistic regression (model.reg.norm.*)}
+\libfcn{model.reg.norm.softmax}
+\libfcn{model.reg.norm.logit}
+\libfcn{model.reg.norm.probit}
+\libfcn{model.reg.norm.cloglog}
+\libfcn{model.reg.norm.loglog}
+\libfcn{model.reg.norm.cauchit}
+
+\subsubsection{Compute residual of a fit (model.reg.residual)}
+\libfcn{model.reg.residual}
+
+\subsubsection{Compute the pull of a fit (model.reg.pull)}
+\libfcn{model.reg.pull}
+
+\subsubsection{Compute the Mahalanobis of a fit (model.reg.mahalanobis)}
+\libfcn{model.reg.mahalanobis}
+
+\subsubsection{Update a cumulative $\chi^2$ calculation (model.reg.updateChi2)}
+\libfcn{model.reg.updateChi2}
+
+\subsubsection{Compute the reduced $\chi^2$ (model.reg.reducedChi2)}
+\libfcn{model.reg.reducedChi2}
+
+\subsubsection{Compute the $\chi^2$ probability (model.reg.chi2Prob)}
+\libfcn{model.reg.chi2Prob}
+
 \subsection{Decision and regression Trees}
 
 \subsubsection{Simple test function for a tree node (model.tree.simpleTest)}
@@ -2689,9 +3038,16 @@ This library contains methods of analyzing data using trained models.  Many of t
 \subsection{Update cluster using the mean of data points (model.cluster.updateMean)}
 \libfcn{model.cluster.updateMean}
 
-\subsection{Regression}
+\subsection{Nearest neighbor models}
 
-{\bf TODO:} Define regression functions.  The fit function could be one of a few special cases (linear, polynomial, logistic) or a completely arbitrary user-defined function.
+\subsection{K nearest points (model.neighbor.nearestK)}
+\libfcn{model.neighbor.nearestK}
+
+\subsection{All points within R (model.neighbor.ballR)}
+\libfcn{model.neighbor.ballR}
+
+\subsection{Mean of a sample of points, with weights (model.neighbor.mean)}
+\libfcn{model.neighbor.mean}
 
 \subsection{Neural networks}
 
