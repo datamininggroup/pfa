@@ -152,21 +152,53 @@ A PFA document is a serialized JSON object representing an executable scoring en
 
 \begin{allowedfields}
 \item[\PFAc name:] A string used to identify the scoring engine.
+\end{allowedfields}
+\begin{allowedfields}
 \item[\PFAc method:] A string that may be ``map'', ``emit'', or ``fold'' (\hyperlink{hsec:method}{see Sec.~\ref{sec:method}}).  If absent, the default value is ``map''.
+\end{allowedfields}
+\begin{allowedfields}
 \item[\PFAc input:] An Avro schema representing the data type of data provided to the scoring engine (\hyperlink{hsec:input-output}{see Sec.~\ref{sec:input-output}}).
+\end{allowedfields}
+\begin{allowedfields}
 \item[\PFAc output:] An Avro schema representing the data type of data produced by the scoring engine (\hyperlink{hsec:input-output}{see Sec.~\ref{sec:input-output}}).  The way that output is returned to the host system depends on the {\PFAc method}.
+\end{allowedfields}
+\begin{allowedfields}
 \item[\PFAc begin:] An \hyperlink{hsec:expressions}{expression} or JSON array of \hyperlink{hsec:expressions}{expressions} that are executed in the begin phase of the scoring engine's run (\hyperlink{hsec:phases}{see Sec.~\ref{sec:phases}}).
+\end{allowedfields}
+\begin{allowedfields}
 \item[\PFAc action:] An \hyperlink{hsec:expressions}{expression} or JSON array of \hyperlink{hsec:expressions}{expressions} that are executed for each input datum in the active phase of the scoring engine's run (\hyperlink{hsec:phases}{see Sec.~\ref{sec:phases}}).
+\end{allowedfields}
+\begin{allowedfields}
 \item[\PFAc end:] An \hyperlink{hsec:expressions}{expression} or JSON array of \hyperlink{hsec:expressions}{expressions} that are executed in the end phase of the scoring engine's run (\hyperlink{hsec:phases}{see Sec.~\ref{sec:phases}}).
+\end{allowedfields}
+\begin{allowedfields}
 \item[\PFAc fcns:] A JSON object whose member values are \hyperlink{hsec:fcndef}{function definitions}, defining routines that may be called by expressions in {\PFAc begin}, {\PFAc action}, {\PFAc end}, or by expressions in other functions.
+\end{allowedfields}
+\begin{allowedfields}
 \item[\PFAc zero:] Embedded JSON data whose type must match the {\PFAc output} type of the engine.  This must be present in the ``fold'' {\PFAc method} initialize the fold aggregation, and it must not be present in the ``map'' or ``emit'' {\PFAc method}.
+\end{allowedfields}
+\begin{allowedfields}
 \item[\PFAc merge:] An \hyperlink{hsec:expressions}{expression} or JSON array of \hyperlink{hsec:expressions}{expressions} that may be executed if the scoring engine container needs to combine partial results from independent ``fold'' engines.  It must be present with the ``fold'' {\PFAc method} and it must not be present with the ``map'' or ``emit'' {\PFAc method}.
+\end{allowedfields}
+\begin{allowedfields}
 \item[\PFAc cells:] A JSON object whose member values specify statically allocated, named, typed units of persistent state or embedded data (\hyperlink{hsec:state}{see Sec.~\ref{sec:state}}).  The format of this JSON object is restricted: \hyperlink{hsec:cells-pools}{see Sec.~\ref{sec:cells-pools}}.
+\end{allowedfields}
+\begin{allowedfields}
 \item[\PFAc pools:] A JSON object whose member values specify dynamically allocated namespaces of typed persistent state (\hyperlink{hsec:state}{see Sec.~\ref{sec:state}}).  The format of this JSON object is restricted: \hyperlink{hsec:cells-pools}{see Sec.~\ref{sec:cells-pools}}.
+\end{allowedfields}
+\begin{allowedfields}
 \item[\PFAc randseed:] An integer which, if present, sets the seed for pseudorandom number generation (\hyperlink{hsec:method}{see Sec.~\ref{sec:random}}).
+\end{allowedfields}
+\begin{allowedfields}
 \item[\PFAc doc:] A string used to describe the scoring engine or its provenance (has no effect on calculations).
+\end{allowedfields}
+\begin{allowedfields}
 \item[\PFAc version:] An optional integer to use in model-version bookkeeping.
+\end{allowedfields}
+\begin{allowedfields}
 \item[\PFAc metadata:] A JSON object mapping strings to strings; used to describe the scoring engine or its provenance.
+\end{allowedfields}
+\begin{allowedfields}
 \item[\PFAc options:] A JSON object of JSON objects, arrays, strings, numbers, booleans, or nulls used to control execution.  The set of possible options and their representation is restricted:: see \hyperlink{hsec:options}{see Sec.~\ref{sec:options}}.
 \end{allowedfields}
 
@@ -246,17 +278,19 @@ The {\PFAc cells} and {\PFAc pools} top-level fields, if present, are JSON objec
 A cell-specification is a JSON object with the following fields.
 \begin{allowedfields}
 \item[\PFAc type:] {\it (required)} An Avro schema representing the data type of this cell.
-\item[\PFAc init:] {\it (required)} Embedded JSON whose type must match {\PFAc type}.  This is the initial value of the cell (or constant value if it is never modified).
+\item[\PFAc init:] {\it (required)} Embedded JSON whose type must match {\PFAc type} if {\PFAc source} is not provided (see below).  This is the initial value of the cell (or constant value if it is never modified).
 \item[\PFAc shared:] An optional boolean specifying whether this cell is thread-local to one scoring engine or shared among a battery of similar engines (\hyperlink{hsec:concurrent}{see Sec.~\ref{sec:concurrent}}).  The default is {\PFAc false}.
 \item[\PFAc rollback:] An optional boolean specifying whether this cell should be rolled back to the state it had at the beginning of an {\PFAc action} if an \hyperlink{hsec:exceptions}{exception} occurs during the {\PFAc action}.  The default is {\PFAc false}, and {\PFAc shared} and {\PFAc rollback} are mutually incompatible: they cannot both be {\PFAc true}.
+\item[\PFAc source:] An optional string specifying the source of the cell initialization data: ``embedded'' (the default) indicates that the data is contained in the {\PFAc init} field as embedded JSON, ``json'' indicates that {\PFAc init} is a URL string pointing to the location of the data as a JSON file, and ``avro'' indicates that {\PFAc init} is a URL string pointing to the location of the data as a binary Avro file.  The data, once retrieved must have a type that matches {\PFAc type}.
 \end{allowedfields}
 
 A pool-specification is a JSON object with the following fields.
 \begin{allowedfields}
 \item[\PFAc type:] {\it (required)} An Avro schema representing the data type of this pool.
-\item[\PFAc init:] JSON object whose member values are embedded JSON that must match {\PFAc type}.  Unlike a cell, a pool may be empty on initialization, in which case {\PFAc init} is either unspecified or {\PFAc \{\}}.
+\item[\PFAc init:] JSON object whose member values are embedded JSON that must match {\PFAc type} if {\PFAc source} is not provided (see below).  Unlike a cell, a pool may be empty on initialization, in which case {\PFAc init} is either unspecified or {\PFAc \{\}}.
 \item[\PFAc shared:] An optional boolean specifying whether this pool is thread-local to one scoring engine or shared among a battery of similar engines (\hyperlink{hsec:concurrent}{see Sec.~\ref{sec:concurrent}}).  The default is {\PFAc false}.
 \item[\PFAc rollback:] An optional boolean specifying whether this pool should be rolled back to the state it had at the beginning of an {\PFAc action} if an \hyperlink{hsec:exceptions}{exception} occurs during the {\PFAc action}.  The default is {\PFAc false}, and {\PFAc shared} and {\PFAc rollback} are mutually incompatible: they cannot both be {\PFAc true}.
+\item[\PFAc source:] An optional string specifying the source of the cell initialization data: ``embedded'' (the default) indicates that the data is contained in the {\PFAc init} field as embedded JSON, ``json'' indicates that {\PFAc init} is a URL string pointing to the location of the data as a JSON file, and ``avro'' indicates that {\PFAc init} is a URL string pointing to the location of the data as a binary Avro file.  The data, once retrieved must be a map with member values that match {\PFAc type}.
 \end{allowedfields}
 
 Cell and pool names must match the following pattern: {\PFAc [A-Za-z\_][A-Za-z0-9\_]*} (the first character must be a letter or underscore; subsequent characters, if they exist, may also be numbers).  Cells and pools do not share a namespace with each other or with symbols or functions.
@@ -1603,6 +1637,62 @@ If all of the {\PFAc EXPR1} \ldots\ {\PFAc EXPRN} expressions are not null, the 
 
 The ``ifnotnull'' form without an {\PFAc else} clause returns {\PFAc null}, but the form with an {\PFAc else} clause returns the \hyperlink{hsec:narrowest-supertype}{narrowest supertype} of the {\PFAc then} and {\PFAc else} clauses.
 
+\subsubsection{Extracting values from binary: the ``unpack'' special form}
+
+Sometimes inputs to a model are not provided as well-structured values but as a block of binary data.  The ``unpack'' special form interprets a {\bf bytes} object as a set of new variables that can be used in a block of expressions.  The syntax is
+\begin{json}
+{"unpack": BYTES-EXPRESSION, "format": {SYM1: FORMAT1, ... SYMN: FORMATN},
+ "then": EXPRESSION-OR-EXPRESSIONS}
+\end{json}
+to simply split the flow (returning {\PFAc null}) or
+\begin{json}
+{"unpack": BYTES-EXPRESSION, "format": {SYM1: FORMAT1, ... SYMN: FORMATN},
+ "then": EXPRESSION-OR-EXPRESSIONS, "else": EXPRESSION-OR-EXPRESSIONS}
+\end{json}
+to provide for the case in which the {\PFAc FORMAT} does not match the {\PFAc BYTES-EXPRESSION}.  In both cases, {\PFAc BYTES-EXPRESSION} is an expression whose return value is {\bf bytes}, {\PFAc SYM1} \ldots\ {\PFAc SYMN} are as-yet undefined symbols, {\PFAc FORMAT1} \ldots \ {\PFAc FORMATN} are format-specifiers, described below, and {\PFAc EXPRESSION-OR-EXPRESSIONS} are expressions or JSON arrays of expressions.  The latter case returns the result of the {\PFAc then} clause or the {\PFAc else} clause, whose type is the \hyperlink{hsec:narrowest-supertype}{narrowest supertype} of the two.
+
+Format specifiers are JSON strings that satisfy one of the following regular expressions, where {\PFAc \textbackslash E} is {\PFAc (<|>|!|little|big|network)?}, {\PFAc \textbackslash U} is {\PFAc unsigned}, and {\PFAc \textbackslash s} is any whitespace character.  If an endianness is not provided, big-endian is assumed.
+
+\noindent \begin{longtable}{p{0.55\linewidth} p{0.22\linewidth} p{0.15\linewidth}}
+{\PFAc FORMAT} & {\bf Result} & {\bf PFA Type} \\\hline
+{\PFAc \textbackslash s*pad\textbackslash s*} & skips one byte & {\bf null} \\
+{\PFAc \textbackslash s*boolean\textbackslash s*} & interprets one byte as true if nonzero & {\bf boolean} \\
+{\PFAc \textbackslash s*(byte|int8)\textbackslash s*} & one byte as signed integer & {\bf int} \\
+{\PFAc \textbackslash s*\textbackslash U\textbackslash s*(byte|int8)\textbackslash s*} & one byte as positive integer & {\bf int} \\
+{\PFAc \textbackslash s*\textbackslash E\textbackslash s*(short|int16)\textbackslash s*} & two bytes as signed integer & {\bf int} \\
+{\PFAc \textbackslash s*\textbackslash E\textbackslash s*(\textbackslash U\textbackslash s*short|\textbackslash U\textbackslash s*int16)\textbackslash s*} & two bytes as positive integer & {\bf int} \\
+{\PFAc \textbackslash s*\textbackslash E\textbackslash s*(int|int32)\textbackslash s*} & four bytes as signed integer & {\bf int} \\
+{\PFAc \textbackslash s*\textbackslash E\textbackslash s*(\textbackslash U\textbackslash s*int|\textbackslash U\textbackslash s*int32)\textbackslash s*} & four bytes as positive integer & {\bf long} \\
+{\PFAc \textbackslash s*\textbackslash E\textbackslash s*(long|long\textbackslash s+long|int64)\textbackslash s*} & eight bytes as signed integer & {\bf long} \\
+{\PFAc \textbackslash s*\textbackslash E\textbackslash s*(\textbackslash U\textbackslash s*long|\textbackslash U\textbackslash s*long\textbackslash s+long|\textbackslash U\textbackslash s*int64)\textbackslash s*} & eight bytes as positive integer & {\bf double} \\
+{\PFAc \textbackslash s*\textbackslash E\textbackslash s*(float|float32)\textbackslash s*} & four bytes as \href{http://dx.doi.org/10.1109%2FIEEESTD.2008.4610935}{IEEE 754} floating point number & {\bf float} \\
+{\PFAc \textbackslash s*\textbackslash E\textbackslash s*(double|float64)\textbackslash s*} & eight bytes as \href{http://dx.doi.org/10.1109%2FIEEESTD.2008.4610935}{IEEE 754} floating point number & {\bf double} \\
+{\PFAc \textbackslash s*raw\textbackslash s*[0-9}+\textbackslash s*] & extract fixed number of bytes & {\bf bytes} \\
+{\PFAc \textbackslash s*null\textbackslash s*?terminated\textbackslash s*} & extract bytes until terminated by zero & {\bf bytes} \\
+ & (excluding terminus) &  \\
+{\PFAc \textbackslash s*length\textbackslash s*?prefixed\textbackslash s*} & interpret first byte as a size, then extract that many bytes & {\bf bytes} \\
+ & (excluding size byte) & \\
+\end{longtable}
+
+If the fixed-width format specifiers and variable-width pattern specifiers (null-terminated and length-prefixed) does not use exactly the number of bytes provided in the {\PFAc BYTES-EXPRESSION}, the {\PFAc then} clause will not be evaluated.  If an {\PFAc else} clause is present, this is the clause that would be evaluated in this case.
+
+\subsubsection{Encoding values in binary: the ``pack'' special form}
+
+The ``pack'' special form does the opposite of the ``unpack'' form: it encodes a set of values into a byte array.  It has this syntax:
+\begin{json}
+{"pack": [{FORMAT1: EXPRESSION1}, ... {FORMATN: EXPRESSIONN}]}
+\end{json}
+where {\PFAc FORMAT1} \ldots\ {\PFAc FORMATN} are format specifiers and {\PFAc EXPRESSION1} \ldots\ {\PFAc EXPRESSIONN} are expressions whose types must correspond to the format specifiers.
+
+The ``pack'' special form has the same format specifiers as ``unpack'' except for one additional specifier:
+
+\noindent \begin{longtable}{p{0.55\linewidth} p{0.22\linewidth} p{0.15\linewidth}}
+{\PFAc FORMAT} & {\bf Result} & {\bf PFA Type} \\\hline
+{\PFAc \textbackslash s*raw\textbackslash s*} & any number of bytes & {\bf bytes} \\
+\end{longtable}
+
+The return type of the ``pack'' special form is {\bf bytes}.
+
 \subsection{Miscellaneous special forms}
 
 \hypertarget{hsec:inline-doc}{}
@@ -1976,29 +2066,46 @@ Constants such as $\pi$ and $e$ are represented as stateless functions with no a
 
 All pseudorandom functions are seeded by the top-level field {\PFAc randseed}.  If absent, the return values of these functions are unpredictable.  If present, they are reproducible for scoring engines generated from the same PFA file on the same PFA implementation.  Different PFA implementations may use different random number generators, so reproducibility among implementations is not guaranteed.
 
-\subsection{Random integer (rand.int)}
+\subsection{Uniform random deviates of basic types}
+
+\subsubsection{Random integer (rand.int)}
 \libfcn{rand.int}
 
-\subsection{Random integer (rand.long)}
+\subsubsection{Random integer (rand.long)}
 \libfcn{rand.long}
 
-\subsection{Random integer (rand.float)}
+\subsubsection{Random integer (rand.float)}
 \libfcn{rand.float}
 
-\subsection{Random integer (rand.double)}
+\subsubsection{Random integer (rand.double)}
 \libfcn{rand.double}
 
-\subsection{Random string (rand.string)}
+\subsubsection{Random string (rand.string)}
 \libfcn{rand.string}
 
-\subsection{Random bytes (rand.bytes)}
+\subsubsection{Random bytes (rand.bytes)}
 \libfcn{rand.bytes}
 
-\subsection{Type-4 UUID (rand.uuid)}
+\subsection{Common statistical distributions}
+
+\subsubsection{Gaussian deviates (rand.gaussian)}
+\libfcn{rand.gaussian}
+
+\subsection{Common utility types}
+
+\subsubsection{Type-4 UUID (rand.uuid)}
 \libfcn{rand.uuid}
 
-\subsection{Gaussian deviates (rand.gaussian)}
-\libfcn{rand.gaussian}
+\subsection{Selecting arbitrary objects from a bag}
+
+\subsubsection{Random object from a bag (rand.choice)}
+\libfcn{rand.choice}
+
+\subsubsection{Random set of objects with replacement (rand.choices)}
+\libfcn{rand.choices}
+
+\subsubsection{Random set of objects without replacement (rand.sample)}
+\libfcn{rand.sample}
 
 \pagebreak
 
@@ -2049,6 +2156,9 @@ Search and replace functions in the basic string library do not use regular expr
 
 \subsubsection{Format a number as a string (s.number)}
 \libfcn{s.number}
+
+\subsubsection{Format a positive integer as hexidecimal (s.hex)}
+\libfcn{s.hex}
 
 \subsection{Conversions to or from other strings}
 
@@ -2103,37 +2213,37 @@ The regular expression syntax follows the POSIX extended standard (like {\tt gre
 \libfcn{re.index}
 
 \subsubsection{Find the last index where a pattern appears (re.rindex)}
-\libfcn{re.rIndex}
+\libfcn{re.rindex}
 
-\subsubsection{Find all indexes that match a pattern (re.indexAll)}
-\libfcn{re.indexAll}
+\subsubsection{Find all indexes that match a pattern (re.indexall)}
+\libfcn{re.indexall}
 
 \subsubsection{Get first set of matching groups (re.groups)}
 \libfcn{re.groups}
 
-\subsubsection{Get all sets of matching groups (re.groupsAll)}
-\libfcn{re.groupsAll}
+\subsubsection{Get all sets of matching groups (re.groupsall)}
+\libfcn{re.groupsall}
 
-\subsubsection{Find the first instance of a pattern (re.findFirst)}
-\libfcn{re.findFirst}
+\subsubsection{Find the first instance of a pattern (re.findfirst)}
+\libfcn{re.findfirst}
 
-\subsubsection{Find all instances of a pattern (re.findAll)}
-\libfcn{re.findAll}
+\subsubsection{Find all instances of a pattern (re.findall)}
+\libfcn{re.findall}
 
-\subsubsection{Find the first instance of a pattern, with groups (re.findGroupsFirst)}
-\libfcn{re.findGroupsFirst}
+\subsubsection{Find the first instance of a pattern, with groups (re.findgroupsfirst)}
+\libfcn{re.findgroupsfirst}
 
-\subsubsection{Find all instances of a pattern, with groups (re.findGroupsAll)}
-\libfcn{re.findGroupsAll}
+\subsubsection{Find all instances of a pattern, with groups (re.findgroupsall)}
+\libfcn{re.findgroupsall}
 
-\subsubsection{Replace the first instance of a pattern (re.replaceFirst)}
-\libfcn{re.replaceFirst}
+\subsubsection{Replace the first instance of a pattern (re.replacefirst)}
+\libfcn{re.replacefirst}
 
-\subsubsection{Replace the last instance of a pattern (re.replaceLast)}
-\libfcn{re.replaceLast}
+\subsubsection{Replace the last instance of a pattern (re.replacelast)}
+\libfcn{re.replacelast}
 
-\subsubsection{Replace all instances of a pattern (re.replaceAll)}
-\libfcn{re.replaceAll}
+\subsubsection{Replace all instances of a pattern (re.replaceall)}
+\libfcn{re.replaceall}
 
 \subsubsection{Split a string by a pattern (re.split)}
 \libfcn{re.split}
@@ -2163,6 +2273,12 @@ The regular expression syntax follows the POSIX extended standard (like {\tt gre
 \section{Casting library}
 
 \subsection{Casting numbers}
+
+\subsubsection{Signed integers with wrap-around (cast.signed)}
+\libfcn{cast.signed}
+
+\subsubsection{Unsigned integers with wrap-around (cast.unsigned)}
+\libfcn{cast.unsigned}
 
 \subsubsection{32-bit integers (cast.int)}
 \libfcn{cast.int}
@@ -2574,6 +2690,17 @@ PFA does not have a set datatype, but maps can be interpreted as sets with the f
 \pagebreak
 \section{Bytes manipulation library}
 
+\subsection{Basic access}
+
+\subsubsection{Length (bytes.len)}
+\libfcn{bytes.len}
+
+\subsubsection{Extract subsequence (bytes.subseq)}
+\libfcn{bytes.subseq}
+
+\subsubsection{Modify subsequence (bytes.subseqto)}
+\libfcn{bytes.subseqto}
+
 \subsection{Test validity}
 
 \subsubsection{Verify ASCII format (bytes.isAscii)}
@@ -2649,6 +2776,9 @@ PFA does not have a set datatype, but maps can be interpreted as sets with the f
 
 \subsubsection{Convert to bytes (fixed.toBytes)}
 \libfcn{fixed.toBytes}
+
+\subsubsection{Convert from bytes (fixed.fromBytes)}
+\libfcn{fixed.fromBytes}
 
 \subsection{Enum}
 
@@ -2777,6 +2907,22 @@ Some methods for dealing with missing data are inseparable from the statistical 
 
 \subsubsection{Replace with default (impute.defaultOnNonNum)}
 \libfcn{impute.defaultOnNonNum}
+
+\pagebreak
+
+\section{Interpolation library}
+
+\subsection{Nearest point, vector, or abstract type (interp.nearest)}
+\libfcn{interp.nearest}
+
+\subsection{Linear interpolation between two nearest 1-dim points (interp.linear)}
+\libfcn{interp.linear}
+
+\subsection{Linear interpolation with flat endpoints (interp.linearFlat)}
+\libfcn{interp.linearFlat}
+
+\subsection{Linear interpolation with missing values after endpoints (interp.linearMissing)}
+\libfcn{interp.linearMissing}
 
 \pagebreak
 
