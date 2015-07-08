@@ -37,7 +37,7 @@
 
 \renewcommand{\arraystretch}{1.4}
 
-\title{PFA: Portable Format for Analytics (version 0.6)}
+\title{PFA: Portable Format for Analytics (version 0.7)}
 \author{Jim Pivarski}
 \date{\today}
 
@@ -1641,12 +1641,12 @@ The ``ifnotnull'' form without an {\PFAc else} clause returns {\PFAc null}, but 
 
 Sometimes inputs to a model are not provided as well-structured values but as a block of binary data.  The ``unpack'' special form interprets a {\bf bytes} object as a set of new variables that can be used in a block of expressions.  The syntax is
 \begin{json}
-{"unpack": BYTES-EXPRESSION, "format": {SYM1: FORMAT1, ... SYMN: FORMATN},
+{"unpack": BYTES-EXPRESSION, "format": [{SYM1: FORMAT1}, ... {SYMN: FORMATN}],
  "then": EXPRESSION-OR-EXPRESSIONS}
 \end{json}
 to simply split the flow (returning {\PFAc null}) or
 \begin{json}
-{"unpack": BYTES-EXPRESSION, "format": {SYM1: FORMAT1, ... SYMN: FORMATN},
+{"unpack": BYTES-EXPRESSION, "format": [{SYM1: FORMAT1}, ... {SYMN: FORMATN}],
  "then": EXPRESSION-OR-EXPRESSIONS, "else": EXPRESSION-OR-EXPRESSIONS}
 \end{json}
 to provide for the case in which the {\PFAc FORMAT} does not match the {\PFAc BYTES-EXPRESSION}.  In both cases, {\PFAc BYTES-EXPRESSION} is an expression whose return value is {\bf bytes}, {\PFAc SYM1} \ldots\ {\PFAc SYMN} are as-yet undefined symbols, {\PFAc FORMAT1} \ldots \ {\PFAc FORMATN} are format-specifiers, described below, and {\PFAc EXPRESSION-OR-EXPRESSIONS} are expressions or JSON arrays of expressions.  The latter case returns the result of the {\PFAc then} clause or the {\PFAc else} clause, whose type is the \hyperlink{hsec:narrowest-supertype}{narrowest supertype} of the two.
@@ -1977,6 +1977,17 @@ Constants such as $\pi$ and $e$ are represented as stateless functions with no a
 \subsubsection{Binomial Coefficient (m.special.nChooseK)}
 \libfcn{m.special.nChooseK}
 
+\subsection{Link or activation functions}
+\libfcn{m.link.softmax}
+\libfcn{m.link.logit}
+\libfcn{m.link.probit}
+\libfcn{m.link.cloglog}
+\libfcn{m.link.loglog}
+\libfcn{m.link.cauchit}
+\libfcn{m.link.tanh}
+\libfcn{m.link.softplus}
+\libfcn{m.link.relu}
+
 \pagebreak
 
 \section{Linear algebra library}
@@ -2106,6 +2117,9 @@ All pseudorandom functions are seeded by the top-level field {\PFAc randseed}.  
 
 \subsubsection{Random set of objects without replacement (rand.sample)}
 \libfcn{rand.sample}
+
+\subsubsection{Random objects with a specified probability distribution (rand.histogram)}
+\libfcn{rand.histogram}
 
 \pagebreak
 
@@ -2456,6 +2470,9 @@ The functions listed here provide the Cartesian product of the following feature
 \subsubsection{Sum of logarithms (a.lnsum)}
 \libfcn{a.lnsum}
 
+\subsubsection{Log of the sum of exponentials without roundoff error (a.logsumexp)}
+\libfcn{a.logsumexp}
+
 \subsubsection{Arithmetic mean (a.mean)}
 \libfcn{a.mean}
 
@@ -2464,6 +2481,9 @@ The functions listed here provide the Cartesian product of the following feature
 
 \subsubsection{Median (a.median)}
 \libfcn{a.median}
+
+\subsubsection{Percentile in unit interval (a.ntile)}
+\libfcn{a.ntile}
 
 \subsubsection{Mode, or most common value (a.mode)}
 \libfcn{a.mode}
@@ -2796,12 +2816,12 @@ PFA does not have a set datatype, but maps can be interpreted as sets with the f
 
 PFA does not have a special data type for time (because there is no such type in Avro), so times are represented as the floating-point number of seconds since the beginning of 1970 in UTC.  For whole-numbered seconds, this corresponds to the UNIX timestamp.  Double precision (IEEE 64-bit representation), provides microsecond resolution until May 30, 2514.
 
-\subsubsection{Year from timestamp (time.year)}
-\libfcn{time.year}
-
 \subsection{Extracting conventional time units from timestamp}
 
 Time units within a second (e.g.\ millisecond past the second or microsecond past the second) can be obtained using the modulo function: {\PFAc \{"*", [\{"\%":$\!$ ["timestamp",$\!$ 1.0]\}, 1000]\}} for milliseconds.
+
+\subsubsection{Year from timestamp (time.year)}
+\libfcn{time.year}
 
 \subsubsection{Month of year from timestamp (time.monthOfYear)}
 \libfcn{time.monthOfYear}
@@ -3064,6 +3084,11 @@ This library contains methods for calculating properties of probability distribu
 
 This library contains methods for characterizing a dataset empirically.  These are generally more lightweight than data mining models.
 
+\subsection{Statistical tests}
+
+\subsubsection{Kolmogorov-Smirnov test of two distributions (test.kolmogorov)}
+\libfcn{test.kolmogorov}
+
 \subsection{Sample statistics}
 
 \subsubsection{Incremental count, mean, and/or variance (stat.sample.update)}
@@ -3125,13 +3150,8 @@ This library contains methods of analyzing data using trained models.  Many of t
 \subsubsection{Apply the result of a linear regression (model.reg.linear)}
 \libfcn{model.reg.linear}
 
-\subsubsection{Normalization functions for logistic regression (model.reg.norm.*)}
-\libfcn{model.reg.norm.softmax}
-\libfcn{model.reg.norm.logit}
-\libfcn{model.reg.norm.probit}
-\libfcn{model.reg.norm.cloglog}
-\libfcn{model.reg.norm.loglog}
-\libfcn{model.reg.norm.cauchit}
+\subsubsection{Propagate uncertainties through a linear regression (model.reg.linearVariance)}
+\libfcn{model.reg.linearVariance}
 
 \subsubsection{Compute residual of a fit (model.reg.residual)}
 \libfcn{model.reg.residual}
@@ -3165,39 +3185,54 @@ This library contains methods of analyzing data using trained models.  Many of t
 \subsubsection{Tree walk without explicit missing value handling (model.tree.simpleWalk)}
 \libfcn{model.tree.simpleWalk}
 
+\subsubsection{Tree walk with three branches: pass, fail, and missing (model.tree.missingWalk)}
+\libfcn{model.tree.missingWalk}
+
 {\bf TODO:} Define more tree methods, including the integrated missing value methods from PMML (weightedConfidence, aggregateNodes).  Some of those will require ScoreDistributions on the nodes.
 
 \subsection{Cluster models}
 
-\subsection{Closest cluster (model.cluster.closest)}
+\subsubsection{Closest cluster (model.cluster.closest)}
 \libfcn{model.cluster.closest}
 
-\subsection{Closest N clusters or N-nearest neighbrs (model.cluster.closestN)}
+\subsubsection{Closest N clusters or N-nearest neighbrs (model.cluster.closestN)}
 \libfcn{model.cluster.closestN}
 
-\subsection{Random seeds for online clustering (model.cluster.randomSeeds)}
+\subsubsection{Random seeds for online clustering (model.cluster.randomSeeds)}
 \libfcn{model.cluster.randomSeeds}
 
-\subsection{Online clustering with k-means (model.cluster.kmeansIteration)}
+\subsubsection{Online clustering with k-means (model.cluster.kmeansIteration)}
 \libfcn{model.cluster.kmeansIteration}
 
-\subsection{Update cluster using the mean of data points (model.cluster.updateMean)}
+\subsubsection{Update cluster using the mean of data points (model.cluster.updateMean)}
 \libfcn{model.cluster.updateMean}
 
 \subsection{Nearest neighbor models}
 
-\subsection{K nearest points (model.neighbor.nearestK)}
+\subsubsection{K nearest points (model.neighbor.nearestK)}
 \libfcn{model.neighbor.nearestK}
 
-\subsection{All points within R (model.neighbor.ballR)}
+\subsubsection{All points within R (model.neighbor.ballR)}
 \libfcn{model.neighbor.ballR}
 
-\subsection{Mean of a sample of points, with weights (model.neighbor.mean)}
+\subsubsection{Mean of a sample of points, with weights (model.neighbor.mean)}
 \libfcn{model.neighbor.mean}
+
+\subsection{Naive Bayes}
+
+\subsubsection{Bernoulli two-category likelihood (model.naive.bernoulli)}
+\libfcn{model.naive.bernoulli}
+
+\subsubsection{Multinomial multi-category likelihood (model.naive.multinomial)}
+\libfcn{model.naive.multinomial}
+
+\subsubsection{Gaussian continuous likelihood (model.naive.gaussian)}
+\libfcn{model.naive.gaussian}
 
 \subsection{Neural networks}
 
-{\bf TODO:} Define neural network functions.  Separate the functions for simple perceptrons from the functions for neural network topologies, so that they're interchangeable.  Backpropagation modifies a cell or pool in memory.
+\subsubsection{Feedforward neural network organized in layers (model.neural.simpleLayers)}
+\libfcn{model.neural.simpleLayers}
 
 \subsection{Support vector machines}
 
