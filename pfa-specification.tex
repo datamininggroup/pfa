@@ -37,7 +37,7 @@
 \renewcommand{\arraystretch}{1.4}
 
 \title{PFA: Portable Format for Analytics (version 0.8.0)}
-\author{Jim Pivarski}
+\author{Data Mining Group --- PFA Working Group}
 \date{\today}
 
 \input{libfcns}
@@ -2181,7 +2181,7 @@ All pseudorandom functions are seeded by the top-level field {\PFAc randseed}.  
 \subsection{Common utility types}
 
 \subsubsection{Type-4 UUID (rand.uuid4)}
-\hypertarget{rand.uuid}{\noindent \mbox{\hspace{0.015\linewidth}} {\bf Signature:} \mbox{\PFAc \{"rand.uuid":$\!$ []\} \fbox{\bf deprecated until PFA 0.9.0}\hspace{0.25 cm}use rand.uuid4 instead \vspace{0.2 cm} \\} \vspace{0.2 cm} \\ \rm \begin{tabular}{p{0.01\linewidth} l p{0.8\linewidth}} & {\it (returns)} & string \\ \end{tabular} \vspace{0.3 cm} \\ \mbox{\hspace{0.015\linewidth}} {\bf Description:} Return a random (type 4) UUID with IETF variant (8). \vspace{0.2 cm} \\ \mbox{\hspace{0.015\linewidth}} {\bf Parameters:} \vspace{0.2 cm} \\ \begin{tabular}{p{0.01\linewidth} l p{0.8\linewidth}}  & {\it (return value)} \rm & The return value is a string with the form {\PFAc xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx} where {\PFAc x} are random, lowercase hexidecimal digits (0-9a-f), 4 is the version, and 8 is the IETF variant. \\ \end{tabular} \vspace{0.2 cm} \\ }
+\hypertarget{rand.uuid}{\noindent \mbox{\hspace{0.015\linewidth}} {\bf Signature:} \mbox{\PFAc \{"rand.uuid":$\!$ []\} \fbox{\bf deprecated; exists until PFA 0.9.0}\hspace{0.25 cm}use rand.uuid4 instead \vspace{0.2 cm} \\} \vspace{0.2 cm} \\ \rm \begin{tabular}{p{0.01\linewidth} l p{0.8\linewidth}} & {\it (returns)} & string \\ \end{tabular} \vspace{0.3 cm} \\ \mbox{\hspace{0.015\linewidth}} {\bf Description:} Return a random (type 4) UUID with IETF variant (8). \vspace{0.2 cm} \\ \mbox{\hspace{0.015\linewidth}} {\bf Parameters:} \vspace{0.2 cm} \\ \begin{tabular}{p{0.01\linewidth} l p{0.8\linewidth}}  & {\it (return value)} \rm & The return value is a string with the form {\PFAc xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx} where {\PFAc x} are random, lowercase hexidecimal digits (0-9a-f), 4 is the version, and 8 is the IETF variant. \\ \end{tabular} \vspace{0.2 cm} \\ }
 \hypertarget{rand.uuid4}{\noindent \mbox{\hspace{0.015\linewidth}} {\bf Signature:} \mbox{\PFAc \{"rand.uuid4":$\!$ []\}  \vspace{0.2 cm} \\} \vspace{0.2 cm} \\ \rm \begin{tabular}{p{0.01\linewidth} l p{0.8\linewidth}} & {\it (returns)} & string \\ \end{tabular} \vspace{0.3 cm} \\ \mbox{\hspace{0.015\linewidth}} {\bf Description:} Return a random (type 4) UUID with IETF variant (8). \vspace{0.2 cm} \\ \mbox{\hspace{0.015\linewidth}} {\bf Parameters:} \vspace{0.2 cm} \\ \begin{tabular}{p{0.01\linewidth} l p{0.8\linewidth}}  & {\it (return value)} \rm & The return value is a string with the form {\PFAc xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx} where {\PFAc x} are random, lowercase hexidecimal digits (0-9a-f), 4 is the version, and 8 is the IETF variant. \\ \end{tabular} \vspace{0.2 cm} \\ }
 
 \subsection{Selecting arbitrary objects from a bag}
