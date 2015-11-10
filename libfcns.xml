@@ -1,5 +1,5 @@
 <PFASpecification>
-  <version>0.8.0</version>
+  <version>0.8.1</version>
   <libfcns>
     <fcn name="+">
       <sig>
@@ -1108,6 +1108,7 @@
         <detail>Matrices supplied as maps may be computed using sparse methods.</detail>
         <error code="24050">In the array signature, if the dimensions of <p>x</p> do not correspond to the dimension(s) of <p>y</p>, this function raises a &quot;misaligned matrices&quot; error.</error>
         <error code="24051">If <p>x</p> or <p>y</p> has fewer than 1 row or fewer than 1 column, this function raises a &quot;too few rows/cols&quot; error.</error>
+        <error code="24052">If <p>x</p> or <p>y</p> contains any non-finite values, this function raises a &quot;contains non-finite value&quot; error.</error>
       </doc>
     </fcn>
 
@@ -1209,6 +1210,7 @@
         <ret>A matrix in which each row (first level of array or map hierarchy) is a normalized eigenvector of <p>x</p> divided by the square root of the corresponding eigenvalue (The sign is chosen such that the first component is positive.).  If provided as an array, the rows are in decreasing order of eigenvalue (increasing order of inverse square root eigenvalue).  If provided as a map, the rows are keyed by string representations of integers starting with <c>&quot;0&quot;</c>, and increasing row keys are in decreasing order of eigenvalue.</ret>
         <detail>If <p>x</p> is the covariance matrix of a zero-mean dataset, the matrix that this function returns would transform the dataset to one with unit variances and zero covariances.</detail>
         <detail>If <p>x</p> is not symmetric or not exactly symmetric, it will first be symmetrized (<m>(x + x^T)/2</m>).  For example, a matrix represented by only the upper triangle (other elements are zero or missing from the map) becomes a symmetric matrix with the upper triangle unchanged.</detail>
+        <nondeterministic type="unstable"/>
         <error code="24110">If the matrix has fewer than 1 row or fewer than 1 column, this function raises a &quot;too few rows/cols&quot; error.</error>
         <error code="24111">If <p>x</p> is an array with ragged columns (arrays of different lengths), this function raises a &quot;ragged columns&quot; error.</error>
         <error code="24112">If <p>x</p> is not a square matrix, this function raises a &quot;non-square matrix&quot; error.</error>
@@ -1453,7 +1455,9 @@
         <param name="missingWeight">Optional missing-value weights: a vector with the same dimension as <p>x</p> and <p>y</p> that determines the normalized contribution of missing values in the sum.  If not provided, missing-value weights of 1.0 are assumed.</param>
         <ret>With <m>I(x_i,y_i)</m> = 0 if component <m>i</m> of <p>x</p> or <p>y</p> is missing, 1 otherwise, this function returns <m>((\sum_i I(x_i,y_i) \mbox{similarity}(x_i,y_i)^p)(\sum_i q_i)/(\sum_i I(x_i,y_i) q_i))^{1/p}</m> where <m>q_i</m> are components of the missing-value weights.  Without missing values, it is <m>(\sum_i \mbox{similarity}(x_i,y_i)^p)^{1/p}</m>.</ret>
         <error code="28070">Raises &quot;dimensions of vectors do not match&quot; if all vectors do not have the same dimension.</error>
+        <error code="28071">Raises &quot;Minkowski parameter p must be positive&quot; if <p>p</p> is less than or equal to zero.</error>
         <detail>If all values are missing, the function returns <c>NaN</c>.</detail>
+        <detail>If <p>p</p> is positive infinity, this function is equivalent to <f>metric.chebyshev</f>.</detail>
       </doc>
     </fcn>
 
@@ -1886,12 +1890,32 @@
       </doc>
     </fcn>
 
-    <fcn name="s.number">
+    <fcn name="s.int">
       <sig>
         <par name="x">long</par>
         <ret>string</ret>
       </sig>
       <sig>
+        <par name="x">long</par>
+        <par name="width">int</par>
+        <par name="zeroPad">boolean</par>
+        <ret>string</ret>
+      </sig>
+      <doc>
+        <desc>Format an integer as a decimal string.</desc>
+        <param name="x">The integer.</param>
+        <param name="width">Width of the string.  If negative, left-justify.  If omitted, the string will be as wide as it needs to be to provide enough precision.</param>
+        <param name="zeroPad">If true, pad the integer with zeros to fill up to <p>width</p>.</param>
+        <error code="39240">If <p>width</p> is negative and <p>zeroPad</p> is <c>true</c>, a &quot;negative width cannot be used with zero-padding&quot; error is raised.</error>
+      </doc>
+    </fcn>
+
+    <fcn name="s.number">
+      <sig contingency="use s.int for integers" death="0.9.0" deprecation="0.7.2">
+        <par name="x">long</par>
+        <ret>string</ret>
+      </sig>
+      <sig contingency="use s.int for integers" death="0.9.0" deprecation="0.7.2">
         <par name="x">long</par>
         <par name="width">int</par>
         <par name="zeroPad">boolean</par>
@@ -1924,6 +1948,7 @@
         <detail>Exponents are represented by a lowercase &quot;e&quot; which is always followed by a sign, whether positive or negative, and an exponent of two or more digits (single-digit exponents are zero-padded).</detail>
         <detail>The base of a number is preceded by a &quot;-&quot; if negative, but not a &quot;+&quot; if positive.</detail>
         <detail>Special floating point values are represented in the following ways: negative zero as zero (no negative sign), not a number as &quot;nan&quot;, positive infinity as &quot;inf&quot;, and negative infinity as &quot;-inf&quot; (lowercase).  They follow the same precision and width rules as normal numbers, where applicable.</detail>
+        <nondeterministic type="unstable"/>
         <error code="39120">If <p>width</p> is negative and <p>zeroPad</p> is <c>true</c>, a &quot;negative width cannot be used with zero-padding&quot; error is raised.</error>
         <error code="39121">If <p>precision</p> is provided and is less than zero, a &quot;negative precision&quot; error is raised.</error>
       </doc>
@@ -2516,6 +2541,7 @@
         <param name="minimum">Inclusive minimum value of <p>x</p>.</param>
         <param name="maximum">Excluded maximum value of <p>x</p>.</param>
         <param name="outOfRange">If <c>true</c>, include an extra item in the output to represent values of <p>x</p> that are outside of the specified range.</param>
+        <error code="17060">If not all values in <p>dictionary</p> are unique, this function raises a &quot;non-distinct values in dictionary&quot; runtime error.</error>
       </doc>
     </fcn>
 
@@ -2544,6 +2570,7 @@
         <param name="minimum">Inclusive minimum value of <p>x</p>.</param>
         <param name="maximum">Excluded maximum value of <p>x</p>.</param>
         <param name="outOfRange">If <c>true</c>, include an extra item in the output to represent values of <p>x</p> that are outside of the specified range.</param>
+        <error code="17070">If not all values in <p>dictionary</p> are unique, this function raises a &quot;non-distinct values in dictionary&quot; runtime error.</error>
       </doc>
     </fcn>
 
@@ -2572,6 +2599,7 @@
         <param name="minimum">Inclusive minimum value of <p>x</p>.</param>
         <param name="maximum">Excluded maximum value of <p>x</p>.</param>
         <param name="outOfRange">If <c>true</c>, include an extra item in the output to represent values of <p>x</p> that are outside of the specified range.</param>
+        <error code="17080">If not all values in <p>dictionary</p> are unique, this function raises a &quot;non-distinct values in dictionary&quot; runtime error.</error>
       </doc>
     </fcn>
 
@@ -2600,6 +2628,7 @@
         <param name="minimum">Inclusive minimum value of <p>x</p>.</param>
         <param name="maximum">Excluded maximum value of <p>x</p>.</param>
         <param name="outOfRange">If <c>true</c>, include an extra item in the output to represent values of <p>x</p> that are outside of the specified range.</param>
+        <error code="17090">If not all values in <p>dictionary</p> are unique, this function raises a &quot;non-distinct values in dictionary&quot; runtime error.</error>
       </doc>
     </fcn>
 
@@ -2628,6 +2657,7 @@
         <param name="minimum">Inclusive minimum value of <p>x</p>.</param>
         <param name="maximum">Excluded maximum value of <p>x</p>.</param>
         <param name="outOfRange">If <c>true</c>, include an extra item in the output to represent values of <p>x</p> that are outside of the specified range.</param>
+        <error code="17100">If not all values in <p>dictionary</p> are unique, this function raises a &quot;non-distinct values in dictionary&quot; runtime error.</error>
       </doc>
     </fcn>
 
@@ -2650,7 +2680,8 @@
       <doc>
         <desc>Encode an arbitrary object as a JSON string.</desc>
         <detail>The form of this JSON string (spacing, order of keys in objects, etc.) is not guaranteed from one system to another.</detail>
-        <detail>Useful for building human-readable map keys.</detail>
+        <detail>Should exclude unnecessary whitespace.</detail>
+        <nondeterministic type="unstable"/>
       </doc>
     </fcn>
 
@@ -3231,6 +3262,8 @@
       <doc>
         <desc>Return the sum of numbers in <p>a</p>.</desc>
         <detail>Returns zero if the array is empty.</detail>
+        <error code="15400">If the array items have integer type and the final result is too large or small to be represented as an integer, an &quot;int overflow&quot; error is raised.</error>
+        <error code="15401">If the array items have long integer type and the final result is too large or small to be represented as a long integer, an &quot;long overflow&quot; error is raised.</error>
       </doc>
     </fcn>
 
@@ -3242,6 +3275,8 @@
       <doc>
         <desc>Return the product of numbers in <p>a</p>.</desc>
         <detail>Returns one if the array is empty.</detail>
+        <error code="15410">If the array items have integer type and the final result is too large or small to be represented as an integer, an &quot;int overflow&quot; error is raised.</error>
+        <error code="15411">If the array items have long integer type and the final result is too large or small to be represented as a long integer, an &quot;long overflow&quot; error is raised.</error>
       </doc>
     </fcn>
 
@@ -3300,6 +3335,7 @@
         <param name="a">Array of objects to be take the percentile of.</param>
         <param name="p">A double between 0 and 1.</param>
         <detail>If <p>a</p> has an even number of elements and is a <c>float</c> or <c>double</c>, this function will take the average of the two elements closest to the center of the sorted array.  For any other type, it returns the left (first) of the two elements closest to the center of the sorted array.  If <p>p</p> is exactly one (or greater), the max of the array is returned.  If <p>p</p> is zero (or less), the min of the array is returned.</detail><error code="15460">If <p>a</p> is empty, an &quot;empty array&quot; runtime error is raised.</error>
+        <error code="15461">If <p>p</p> is NaN, this function raises a &quot;p not a number&quot; error.</error>
       </doc>
     </fcn>
 
@@ -3316,7 +3352,7 @@
 
     <fcn name="a.logsumexp">
       <sig>
-        <par name="datum"><array>double</array></par>
+        <par name="a"><array>double</array></par>
         <ret>double</ret>
       </sig>
       <doc>
@@ -3332,6 +3368,7 @@
       </sig>
       <doc>
         <desc>Return an array with the same contents as <p>a</p> but with duplicates removed.</desc>
+        <detail>The order of the original array is preserved.</detail>
       </doc>
     </fcn>
 
@@ -3354,6 +3391,7 @@
       </sig>
       <doc>
         <desc>Return an array that represents the union of <p>a</p> and <p>b</p>, treated as sets (ignoring order and duplicates).</desc>
+        <detail>The order of the original arrays is preserved.</detail>
       </doc>
     </fcn>
 
@@ -3365,6 +3403,7 @@
       </sig>
       <doc>
         <desc>Return an array that represents the intersection of <p>a</p> and <p>b</p>, treated as sets (ignoring order and duplicates).</desc>
+        <detail>The order of the original arrays is preserved.</detail>
       </doc>
     </fcn>
 
@@ -3376,6 +3415,7 @@
       </sig>
       <doc>
         <desc>Return an array that represents the difference of <p>a</p> and <p>b</p>, treated as sets (ignoring order and duplicates).</desc>
+        <detail>The order of the original arrays is preserved.</detail>
       </doc>
     </fcn>
 
@@ -3388,6 +3428,7 @@
       <doc>
         <desc>Return an array that represents the symmetric difference of <p>a</p> and <p>b</p>, treated as sets (ignoring order and duplicates).</desc>
         <detail>The symmetric difference is (<p>a</p> diff <p>b</p>) union (<p>b</p> diff <p>a</p>).</detail>
+        <detail>The order of the original arrays is preserved.</detail>
       </doc>
     </fcn>
 
@@ -3814,12 +3855,10 @@
         <par name="a"><array><any label="A"/></array></par>
         <par name="size">int</par>
         <par name="step">int</par>
-        <par name="allowIncomplete">boolean</par>
         <ret><array><array><ref label="A"/></array></array></ret>
       </sig>
       <doc>
         <desc>Return an array of subsequences of <p>a</p> with length <p>size</p> that slide through <p>a</p> in steps of length <p>step</p> from left to right.</desc>
-        <detail>If <p>allowIncomplete</p> is <c>true</c>, the last window may be smaller than <p>size</p>.  If <c>false</c>, the last window may be skipped.</detail>
         <error code="15770">If <p>size</p> is non-positive, a &quot;size &lt; 1&quot; runtime error is raised.</error>
         <error code="15771">If <p>step</p> is non-positive, a &quot;step &lt; 1&quot; runtime error is raised.</error>
       </doc>
@@ -3832,7 +3871,7 @@
         <ret><array><array><ref label="A"/></array></array></ret>
       </sig>
       <doc>
-        <desc>Return the unique combinations of <p>a</p> with length <p>size</p>.</desc>
+        <desc>Return all combinations of elements of <p>a</p> with length <p>size</p>.</desc>
         <error code="15780">If <p>size</p> is non-positive, a &quot;size &lt; 1&quot; runtime error is raised.</error>
       </doc>
     </fcn>
@@ -3843,7 +3882,7 @@
         <ret><array><array><ref label="A"/></array></array></ret>
       </sig>
       <doc>
-        <desc>Return the permutations of <p>a</p>.</desc><detail>This function scales rapidly with the length of the array.  For reasonably large arrays, it will result in timeout exceptions.</detail>
+        <desc>Return all permutations of elements of <p>a</p>.</desc><detail>This function scales rapidly with the length of the array.  For reasonably large arrays, it will result in timeout exceptions.</detail>
       </doc>
     </fcn>
 
@@ -3889,6 +3928,7 @@
       </sig>
       <doc>
         <desc>Return the keys of a map (in no particular order).</desc>
+        <nondeterministic type="unordered"/>
       </doc>
     </fcn>
 
@@ -3899,6 +3939,7 @@
       </sig>
       <doc>
         <desc>Return the values of a map (in no particular order).</desc>
+        <nondeterministic type="unordered"/>
       </doc>
     </fcn>
 
@@ -4015,7 +4056,8 @@
         <ret><array><map><ref label="A"/></map></array></ret>
       </sig>
       <doc>
-        <desc>Split the map into an array of maps, each containing only one key-value pair.</desc>
+        <desc>Split the map into an array of maps, each containing only one key-value pair (in no particular order).</desc>
+        <nondeterministic type="unordered"/>
       </doc>
     </fcn>
 
@@ -4162,9 +4204,10 @@
         <ret><array><ref label="A"/></array></ret>
       </sig>
       <doc>
-        <desc>Convert a set of objects into an array of objects, where a set is represented as a map from serialized objects to objects.</desc>
+        <desc>Convert a set of objects into an array of objects (in no particular order), where a set is represented as a map from serialized objects to objects.</desc>
         <detail>The serialization format is base64-encoded Avro.</detail>
         <detail>This function does not verify that the serialized objects (keys) and objects (values) match: it considers only values, not keys.</detail>
+        <nondeterministic type="unordered"/>
       </doc>
     </fcn>
 
@@ -4744,6 +4787,7 @@
       </sig>
       <doc>
         <desc>Encode a string as utf-16 (byte order identified by optional byte-order mark) bytes.</desc>
+        <nondeterministic type="unstable"/>
         <error code="16180">Raises an &quot;invalid string&quot; error if the string cannot be converted.</error>
       </doc>
     </fcn>
@@ -4852,7 +4896,7 @@
       </sig>
       <doc>
         <desc>Get the four-digit year that the timestamp falls within.</desc>
-        <param name="ts">Number of seconds since 1970 in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param><error code="40000">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error>
+        <param name="ts">Number of seconds since the beginning (just after midnight) of Jan 1, 1970 C.E. in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param><detail>The earliest expressible date is the beginning (just after midnight) of Jan 1, 1 C.E. in UTC on the proleptic Gregorian calendar, which is a timestamp of -62135596800. The latest expressible date is the end (just before midnight) of Dec 31, 9999 C.E. in UTC on the Gregorian calendar, which is a timestamp of 253402300799.</detail><error code="40000">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error><error code="40001">Raises &quot;timestamp out of range&quot; if <p>ts</p> less than -62135596800 or greater than 253402300799.</error>
       </doc>
     </fcn>
 
@@ -4864,7 +4908,7 @@
       </sig>
       <doc>
         <desc>Get the month that the timestamp falls within, with 1 being January and 12 being December.</desc>
-        <param name="ts">Number of seconds since 1970 in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param><error code="40010">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error>
+        <param name="ts">Number of seconds since the beginning (just after midnight) of Jan 1, 1970 C.E. in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param><detail>The earliest expressible date is the beginning (just after midnight) of Jan 1, 1 C.E. in UTC on the proleptic Gregorian calendar, which is a timestamp of -62135596800. The latest expressible date is the end (just before midnight) of Dec 31, 9999 C.E. in UTC on the Gregorian calendar, which is a timestamp of 253402300799.</detail><error code="40010">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error><error code="40011">Raises &quot;timestamp out of range&quot; if <p>ts</p> less than -62135596800 or greater than 253402300799.</error>
       </doc>
     </fcn>
 
@@ -4876,7 +4920,7 @@
       </sig>
       <doc>
         <desc>Get the day of the year that the timestamp falls within, from 1 to 365 or 366 inclusive, depending on leap year.</desc>
-        <param name="ts">Number of seconds since 1970 in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param><error code="40020">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error>
+        <param name="ts">Number of seconds since the beginning (just after midnight) of Jan 1, 1970 C.E. in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param><detail>The earliest expressible date is the beginning (just after midnight) of Jan 1, 1 C.E. in UTC on the proleptic Gregorian calendar, which is a timestamp of -62135596800. The latest expressible date is the end (just before midnight) of Dec 31, 9999 C.E. in UTC on the Gregorian calendar, which is a timestamp of 253402300799.</detail><error code="40020">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error><error code="40021">Raises &quot;timestamp out of range&quot; if <p>ts</p> less than -62135596800 or greater than 253402300799.</error>
       </doc>
     </fcn>
 
@@ -4888,7 +4932,7 @@
       </sig>
       <doc>
         <desc>Get the day of the month that the timestamp falls within, a number from 1 to 28, 29, 30, or 31, inclusive, depending on month.</desc>
-        <param name="ts">Number of seconds since 1970 in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param><error code="40030">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error>
+        <param name="ts">Number of seconds since the beginning (just after midnight) of Jan 1, 1970 C.E. in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param><detail>The earliest expressible date is the beginning (just after midnight) of Jan 1, 1 C.E. in UTC on the proleptic Gregorian calendar, which is a timestamp of -62135596800. The latest expressible date is the end (just before midnight) of Dec 31, 9999 C.E. in UTC on the Gregorian calendar, which is a timestamp of 253402300799.</detail><error code="40030">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error><error code="40031">Raises &quot;timestamp out of range&quot; if <p>ts</p> less than -62135596800 or greater than 253402300799.</error>
       </doc>
     </fcn>
 
@@ -4900,7 +4944,7 @@
       </sig>
       <doc>
         <desc>Get the day of the week that the timestamp falls within, with 0 being Monday and 6 being Sunday.</desc>
-        <param name="ts">Number of seconds since 1970 in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param><error code="40040">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error>
+        <param name="ts">Number of seconds since the beginning (just after midnight) of Jan 1, 1970 C.E. in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param><detail>The earliest expressible date is the beginning (just after midnight) of Jan 1, 1 C.E. in UTC on the proleptic Gregorian calendar, which is a timestamp of -62135596800. The latest expressible date is the end (just before midnight) of Dec 31, 9999 C.E. in UTC on the Gregorian calendar, which is a timestamp of 253402300799.</detail><error code="40040">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error><error code="40041">Raises &quot;timestamp out of range&quot; if <p>ts</p> less than -62135596800 or greater than 253402300799.</error>
       </doc>
     </fcn>
 
@@ -4912,7 +4956,7 @@
       </sig>
       <doc>
         <desc>Get the hour of the day that the timestamp falls within, from 0 to 23 inclusive.</desc>
-        <param name="ts">Number of seconds since 1970 in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param><error code="40050">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error>
+        <param name="ts">Number of seconds since the beginning (just after midnight) of Jan 1, 1970 C.E. in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param><detail>The earliest expressible date is the beginning (just after midnight) of Jan 1, 1 C.E. in UTC on the proleptic Gregorian calendar, which is a timestamp of -62135596800. The latest expressible date is the end (just before midnight) of Dec 31, 9999 C.E. in UTC on the Gregorian calendar, which is a timestamp of 253402300799.</detail><error code="40050">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error><error code="40051">Raises &quot;timestamp out of range&quot; if <p>ts</p> less than -62135596800 or greater than 253402300799.</error>
       </doc>
     </fcn>
 
@@ -4924,7 +4968,7 @@
       </sig>
       <doc>
         <desc>Get the minute of the hour that the timestamp falls within, from 0 to 59 inclusive.</desc>
-        <param name="ts">Number of seconds since 1970 in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param><error code="40060">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error>
+        <param name="ts">Number of seconds since the beginning (just after midnight) of Jan 1, 1970 C.E. in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param><detail>The earliest expressible date is the beginning (just after midnight) of Jan 1, 1 C.E. in UTC on the proleptic Gregorian calendar, which is a timestamp of -62135596800. The latest expressible date is the end (just before midnight) of Dec 31, 9999 C.E. in UTC on the Gregorian calendar, which is a timestamp of 253402300799.</detail><error code="40060">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error><error code="40061">Raises &quot;timestamp out of range&quot; if <p>ts</p> less than -62135596800 or greater than 253402300799.</error>
       </doc>
     </fcn>
 
@@ -4936,7 +4980,7 @@
       </sig>
       <doc>
       <desc>Get the second of the minute that the timestamp falls within, from 0 to 59 inclusive.</desc>
-        <param name="ts">Number of seconds since 1970 in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param><error code="40070">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error>
+        <param name="ts">Number of seconds since the beginning (just after midnight) of Jan 1, 1970 C.E. in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param><detail>The earliest expressible date is the beginning (just after midnight) of Jan 1, 1 C.E. in UTC on the proleptic Gregorian calendar, which is a timestamp of -62135596800. The latest expressible date is the end (just before midnight) of Dec 31, 9999 C.E. in UTC on the Gregorian calendar, which is a timestamp of 253402300799.</detail><error code="40070">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error><error code="40071">Raises &quot;timestamp out of range&quot; if <p>ts</p> less than -62135596800 or greater than 253402300799.</error>
     </doc>
     </fcn>
 
@@ -4954,7 +4998,7 @@
       </sig>
       <doc>
         <desc>Given the date and time that this time occurs in, return the timestamp.</desc>
-        <param name="year">The four-digit year.</param>
+        <param name="year">The four-digit year, from 1 to 9999 inclusive.</param>
         <param name="month">The month of the year, from 1 to 12 inclusive.</param>
         <param name="day">The day of the month, from 1 to 28, 29, 30, or 31 inclusive, depending on month.</param>
         <param name="hour">The hour of the day, from 0 to 23 inclusive.</param>
@@ -4962,8 +5006,8 @@
         <param name="second">The second of the minute, from 0 to 59 inclusive.</param>
         <param name="millisecond">The millisecond of the second, from 0 to 999 inclusive.</param>
         <param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param>
-        <ret>The number of seconds since 1970 in UTC.</ret>
-        <error code="40080">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error>
+        <ret>The number of seconds since the beginning (just after midnight) of Jan 1, 1970 C.E. in UTC.</ret>
+        <detail>The earliest expressible date is the beginning (just after midnight) of Jan 1, 1 C.E. in UTC on the proleptic Gregorian calendar, which is a timestamp of -62135596800. The latest expressible date is the end (just before midnight) of Dec 31, 9999 C.E. in UTC on the Gregorian calendar, which is a timestamp of 253402300799.</detail><error code="40080">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error>
         <error code="40081">Raises &quot;timestamp undefined for given parameters&quot; if any one (or more) of the inputs have impossible values.</error>
       </doc>
     </fcn>
@@ -4978,11 +5022,11 @@
       </sig>
       <doc>
         <desc>Determines if a timestamp falls within a specified number of seconds in any minute.</desc>
-        <param name="ts">Number of seconds since 1970 in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param>
+        <param name="ts">Number of seconds since the beginning (just after midnight) of Jan 1, 1970 C.E. in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param>
         <param name="low">Minimum number of seconds (inclusive).</param>
         <param name="high">Maximum number of seconds (exclusive).</param>
         <error code="40090">Raises &quot;bad time range&quot; if low <m>\mathrm{low} \geq \mathrm{high}</m>.</error>
-        <error code="40091">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error>
+        <detail>The earliest expressible date is the beginning (just after midnight) of Jan 1, 1 C.E. in UTC on the proleptic Gregorian calendar, which is a timestamp of -62135596800. The latest expressible date is the end (just before midnight) of Dec 31, 9999 C.E. in UTC on the Gregorian calendar, which is a timestamp of 253402300799.</detail><error code="40091">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error><error code="40092">Raises &quot;timestamp out of range&quot; if <p>ts</p> less than -62135596800 or greater than 253402300799.</error>
     </doc>
     </fcn>
 
@@ -4996,11 +5040,11 @@
       </sig>
       <doc>
         <desc>Determines if a timestamp falls within a specified number of minutes in any hour.</desc>
-        <param name="ts">Number of seconds since 1970 in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param>
+        <param name="ts">Number of seconds since the beginning (just after midnight) of Jan 1, 1970 C.E. in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param>
         <param name="low">Minimum number of minutes (inclusive)</param>
         <param name="high">Maximum number of minutes (exclusive).</param>
         <error code="40100">Raises &quot;bad time range&quot; if low <m>\mathrm{low} \geq \mathrm{high}</m>.</error>
-        <error code="40101">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error>
+        <detail>The earliest expressible date is the beginning (just after midnight) of Jan 1, 1 C.E. in UTC on the proleptic Gregorian calendar, which is a timestamp of -62135596800. The latest expressible date is the end (just before midnight) of Dec 31, 9999 C.E. in UTC on the Gregorian calendar, which is a timestamp of 253402300799.</detail><error code="40101">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error><error code="40102">Raises &quot;timestamp out of range&quot; if <p>ts</p> less than -62135596800 or greater than 253402300799.</error>
       </doc>
     </fcn>
 
@@ -5014,11 +5058,11 @@
       </sig>
       <doc>
         <desc>Determines if a timestamp falls within a specified number of hours in any day.</desc>
-        <param name="ts">Number of seconds since 1970 in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param>
+        <param name="ts">Number of seconds since the beginning (just after midnight) of Jan 1, 1970 C.E. in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param>
         <param name="low">Minimum number of hours (inclusive).</param>
         <param name="high">Maximum number of hours (exclusive).</param>
         <error code="40110">Raises &quot;bad time range&quot; if low <m>\mathrm{low} \geq \mathrm{high}</m>.</error>
-        <error code="40111">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error>
+        <detail>The earliest expressible date is the beginning (just after midnight) of Jan 1, 1 C.E. in UTC on the proleptic Gregorian calendar, which is a timestamp of -62135596800. The latest expressible date is the end (just before midnight) of Dec 31, 9999 C.E. in UTC on the Gregorian calendar, which is a timestamp of 253402300799.</detail><error code="40111">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error><error code="40112">Raises &quot;timestamp out of range&quot; if <p>ts</p> less than -62135596800 or greater than 253402300799.</error>
       </doc>
     </fcn>
 
@@ -5032,11 +5076,11 @@
       </sig>
       <doc>
         <desc>Determines if a timestamp falls within a specified day of week range, with 0 being Monday and 6 being Sunday.</desc>
-        <param name="ts">Number of seconds since 1970 in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param>
+        <param name="ts">Number of seconds since the beginning (just after midnight) of Jan 1, 1970 C.E. in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param>
         <param name="low">Minimum day of the week (inclusive).</param>
         <param name="high">Maximum day of the week (exclusive).</param>
         <error code="40120">Raises &quot;bad time range&quot; if low <m>\mathrm{low} \geq \mathrm{high}</m>.</error>
-        <error code="40121">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error>
+        <detail>The earliest expressible date is the beginning (just after midnight) of Jan 1, 1 C.E. in UTC on the proleptic Gregorian calendar, which is a timestamp of -62135596800. The latest expressible date is the end (just before midnight) of Dec 31, 9999 C.E. in UTC on the Gregorian calendar, which is a timestamp of 253402300799.</detail><error code="40121">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error><error code="40122">Raises &quot;timestamp out of range&quot; if <p>ts</p> less than -62135596800 or greater than 253402300799.</error>
       </doc>
     </fcn>
 
@@ -5050,11 +5094,11 @@
       </sig>
       <doc>
         <desc>Determines if a timestamp falls within a specified day of month range, with 1 being the first of the month..</desc>
-        <param name="ts">Number of seconds since 1970 in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param>
+        <param name="ts">Number of seconds since the beginning (just after midnight) of Jan 1, 1970 C.E. in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param>
         <param name="low">Minimum day of the month (inclusive).</param>
         <param name="high">Maximum day of the month (exclusive).</param>
         <error code="40130">Raises &quot;bad time range&quot; if low <m>\mathrm{low} \geq \mathrm{high}</m>.</error>
-        <error code="40131">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error>
+        <detail>The earliest expressible date is the beginning (just after midnight) of Jan 1, 1 C.E. in UTC on the proleptic Gregorian calendar, which is a timestamp of -62135596800. The latest expressible date is the end (just before midnight) of Dec 31, 9999 C.E. in UTC on the Gregorian calendar, which is a timestamp of 253402300799.</detail><error code="40131">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error><error code="40132">Raises &quot;timestamp out of range&quot; if <p>ts</p> less than -62135596800 or greater than 253402300799.</error>
       </doc>
     </fcn>
 
@@ -5068,11 +5112,11 @@
       </sig>
       <doc>
         <desc>Determines if a timestamp falls within a specified month of year range, with 1 being January and 12 being December.</desc>
-        <param name="ts">Number of seconds since 1970 in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param>
+        <param name="ts">Number of seconds since the beginning (just after midnight) of Jan 1, 1970 C.E. in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param>
         <param name="low">Minimum month of the year (inclusive).</param>
         <param name="high">Maximum month of the year (exclusive).</param>
         <error code="40140">Raises &quot;bad time range&quot; if low <m>\mathrm{low} \geq \mathrm{high}</m>.</error>
-        <error code="40141">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error>
+        <detail>The earliest expressible date is the beginning (just after midnight) of Jan 1, 1 C.E. in UTC on the proleptic Gregorian calendar, which is a timestamp of -62135596800. The latest expressible date is the end (just before midnight) of Dec 31, 9999 C.E. in UTC on the Gregorian calendar, which is a timestamp of 253402300799.</detail><error code="40141">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error><error code="40142">Raises &quot;timestamp out of range&quot; if <p>ts</p> less than -62135596800 or greater than 253402300799.</error>
       </doc>
     </fcn>
 
@@ -5086,11 +5130,11 @@
       </sig>
       <doc>
         <desc>Determines if a timestamp falls within a specified day of year range, with 1 being the first of the year.</desc>
-        <param name="ts">Number of seconds since 1970 in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param>
+        <param name="ts">Number of seconds since the beginning (just after midnight) of Jan 1, 1970 C.E. in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param>
         <param name="low">Minimum day of year (inclusive).</param>
         <param name="high">Maximum day of year (exclusive).</param>
         <error code="40150">Raises &quot;bad time range&quot; if low <m>\mathrm{low} \geq \mathrm{high}</m>.</error>
-        <error code="40151">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error>
+        <detail>The earliest expressible date is the beginning (just after midnight) of Jan 1, 1 C.E. in UTC on the proleptic Gregorian calendar, which is a timestamp of -62135596800. The latest expressible date is the end (just before midnight) of Dec 31, 9999 C.E. in UTC on the Gregorian calendar, which is a timestamp of 253402300799.</detail><error code="40151">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error><error code="40152">Raises &quot;timestamp out of range&quot; if <p>ts</p> less than -62135596800 or greater than 253402300799.</error>
       </doc>
     </fcn>
 
@@ -5102,7 +5146,7 @@
       </sig>
       <doc>
         <desc>Returns <c>true</c> if the timestamp falls on a Saturday or Sunday, <c>false</c> otherwise.</desc>
-        <param name="ts">Number of seconds since 1970 in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param><error code="40160">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error>
+        <param name="ts">Number of seconds since the beginning (just after midnight) of Jan 1, 1970 C.E. in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param><detail>The earliest expressible date is the beginning (just after midnight) of Jan 1, 1 C.E. in UTC on the proleptic Gregorian calendar, which is a timestamp of -62135596800. The latest expressible date is the end (just before midnight) of Dec 31, 9999 C.E. in UTC on the Gregorian calendar, which is a timestamp of 253402300799.</detail><error code="40160">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error><error code="40161">Raises &quot;timestamp out of range&quot; if <p>ts</p> less than -62135596800 or greater than 253402300799.</error>
       </doc>
     </fcn>
 
@@ -5114,7 +5158,7 @@
       </sig>
       <doc>
         <desc>Returns <c>true</c> if the timestamp falls between 9 am (inclusive) and 5 pm (exclusive) on Monday through Friday, otherwise <c>false</c>.</desc>
-        <param name="ts">Number of seconds since 1970 in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param><error code="40170">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error>
+        <param name="ts">Number of seconds since the beginning (just after midnight) of Jan 1, 1970 C.E. in UTC.</param><param name="zone">Timezone name from the Olson timezone database, version 2015f (UTC if blank).</param><detail>The earliest expressible date is the beginning (just after midnight) of Jan 1, 1 C.E. in UTC on the proleptic Gregorian calendar, which is a timestamp of -62135596800. The latest expressible date is the end (just before midnight) of Dec 31, 9999 C.E. in UTC on the Gregorian calendar, which is a timestamp of 253402300799.</detail><error code="40170">Raises &quot;unrecognized timezone string&quot; if <p>zone</p> is not in the Olson 2015f database.</error><error code="40171">Raises &quot;timestamp out of range&quot; if <p>ts</p> less than -62135596800 or greater than 253402300799.</error>
       </doc>
     </fcn>
 
@@ -5233,9 +5277,9 @@
         <desc>Finds the bin that contains <p>x</p>, declared either as <p>numbins</p> between two endpoints or a bin <p>width</p> starting at some <p>origin</p>.</desc>
         <detail>Bins are inclusive on the low end and exclusive on the high end, so if <p>x</p> equal <p>low</p> or <p>origin</p>, the resulting bin is <c>0</c>, but if <p>x</p> is equal to <p>high</p>, it is out of range.</detail>
         <detail>If the first signature is used, the resulting bin must be between <c>0</c> (inclusive) and <p>numbins</p> (exclusive). If the second signature is used, the resulting bin may be any integer, including negative numbers.</detail>
-        <error code="22000">If <p>low</p> is greater or equal to <p>high</p>, raises &quot;bad histogram range&quot;</error>
+        <error code="22000">If <p>low</p> is greater or equal to <p>high</p> or <p>origin</p> is not finite, raises &quot;bad histogram range&quot;</error>
         <error code="22001">If <p>numbins</p> is less than <c>1</c> or <p>width</p> is less or equal to <c>0</c>, raises &quot;bad histogram scale&quot;</error>
-        <error code="22002">If the first signature is used, raises &quot;x out of range&quot; if <p>x</p> is less than <p>low</p> or greater or equal to <p>high</p>.</error>
+        <error code="22002">Raises &quot;x out of range&quot; if <p>x</p> is less than <p>low</p> or greater or equal to <p>high</p>.</error>
       </doc>
     </fcn>
 
@@ -5349,6 +5393,7 @@
         <param name="params">Alternate way of specifying the parameters of the distribution; this record could be created by <f>stat.sample.update</f>.</param>
         <ret>With <m>\mu</m> = <p>mu</p> or <pf>mean</pf> and <m>\sigma</m> = <p>sigma</p> or the square root of <pf>variance</pf>, this function returns <m>-(x - \mu)^2/(2 \sigma^2) - \log(\sigma \sqrt{2\pi})</m>.</ret>
         <error code="13000">Raises an &quot;invalid parameterization&quot; error if <p>sigma</p> or <pf>variance</pf> is negative or any argument is not finite.</error>
+        <error code="13001">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -5372,6 +5417,7 @@
         <param name="params">Alternate way of specifying the parameters of the distribution; this record could be created by <f>stat.sample.update</f>.</param>
         <ret>With <m>\mu</m> = <p>mu</p> or <pf>mean</pf> and <m>\sigma</m> = <p>sigma</p> or the square root of <pf>variance</pf>, this function returns <m>0.5 * ( 1.0 + \mathrm{Erf}(\frac{x - \mu}{\sigma \sqrt{2}}))</m>.</ret>
         <error code="13010">Raises an &quot;invalid parameterization&quot; error if <p>sigma</p> or <pf>variance</pf> is negative or any argument is not finite.</error>
+        <error code="13011">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -5412,6 +5458,7 @@
 
         <ret>With <m>lambda</m> and <m>x</m>, this function evaluates the probability density function at <m>x</m>.  The PDF implemented is <m>\lambda \mathrm{e}^{- \lambda x}</m>.</ret>
         <error code="13030">Raises &quot;invalid parameterization&quot; if <m>lambda &lt; 0</m> or any argument is not finite.</error>
+        <error code="13031">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -5427,6 +5474,7 @@
           <param name="lambda">Rate parameter.</param>
         <ret>With <m>lambda</m> and <m>x</m>, this function returns the value <m>p</m> where <m>p = F_{X}(x) = P(X \leq x)</m>. </ret> 
         <error code="13040">Raises &quot;invalid parameterization&quot; if <m>lambda &lt; 0</m> or any argument is not finite.</error>
+        <error code="13041">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -5459,6 +5507,7 @@
 
         <ret>With <m>dof</m> and <m>x</m>, this function evaluates the probability density function at <m>x</m>.  The PDF implemented is <m>\frac{1}{2^{\frac{\mathrm{df}}{2}} \Gamma(\frac{\mathrm{df}}{2})} x^{\frac{\mathrm{df}}{2}-1}\mathrm{e}^{-\frac{x}{2}}</m>.</ret> 
         <error code="13060">Raises &quot;invalid parameterization&quot; if <p>dof</p> &lt; 0 or any argument is not finite.</error>
+        <error code="13061">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -5474,6 +5523,7 @@
           <param name="dof">Degrees of freedom parameter.</param>
         <ret>With <m>x1</m>, <m>x1</m> and <m>x</m>, this function returns the value <m>p</m> where <m>p = F_{X}(x) = P(X \leq x)</m>. </ret> 
         <error code="13070">Raises &quot;invalid parameterization&quot; if <p>dof</p> &lt; 0 or any argument is not finite.</error>
+        <error code="13071">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -5503,7 +5553,6 @@
         <desc>Compute the density (PDF) of the poisson distribution parameterized by <p>lambda</p>.</desc>
           <param name="x">Value at which to compute the PDF.</param>
           <param name="lambda">Mean and variance parameter.</param>
-
         <ret>With <m>lambda</m> and <m>x</m>, this function evaluates the probability density function at <m>x</m>.  The PDF implemented is <m>\frac{\lambda^{x}}{x!} \mathrm{e}^{-\lambda}</m>.</ret> 
         <error code="13090">Raises &quot;invalid parameterization&quot; if <m>lambda &lt; 0</m> or any argument is not finite.</error>
       </doc>
@@ -5521,6 +5570,7 @@
           <param name="lambda">Mean and variance parameter.</param>
         <ret>With <m>lambda</m> and <m>x</m>, this function returns the value <m>p</m> where <m>p = F_{X}(x) = P(X \leq x)</m>. </ret> 
         <error code="13100">Raises &quot;invalid parameterization&quot; if <m>lambda &lt; 0</m> or any argument is not finite.</error>
+        <error code="13101">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -5555,6 +5605,7 @@
 
         <ret>With <m>shape</m>, <m>scale</m> and <m>x</m>, this function evaluates the probability density function at <m>x</m>.  The PDF implemented is <m>\frac{1}{s^{a} \Gamma(a)} x^{a - 1} \mathrm{e}^{-\frac{x}{s}}  </m>.</ret> 
         <error code="13120">Raises &quot;invalid parameterization&quot; if the <m>shape &lt; 0</m> OR if <m>scale &lt; 0</m> or any argument is not finite.</error>
+        <error code="13121">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -5572,6 +5623,7 @@
           <param name="scale">Scale parameter.</param>
         <ret>With <m>shape</m>, <m>scale</m> and <m>x</m>, this function returns the value <m>p</m> where <m>p = F_{X}(x)~= P(X~\leq~x)</m>. </ret> 
         <error code="13130">Raises &quot;invalid parameterization&quot; if the <m>shape &lt; 0</m> OR if <m>scale &lt; 0</m> or any argument is not finite.</error>
+        <error code="13131">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -5607,6 +5659,7 @@
           <param name="b">Second shape parameter.</param>
         <ret>With <m>a</m>, <m>b</m> and <m>x</m>, this function evaluates the probability density function at <m>x</m>.  The PDF implemented is <m>\frac{\Gamma(a + n)}{\Gamma(a)\Gamma(b)} x^{a-1}(1-x)^{b-1}</m>.</ret> 
         <error code="13150">Raises &quot;invalid parameterization&quot; if <m>a \leq 0</m> OR if <m>b \leq 0</m> or any argument is not finite.</error>
+        <error code="13151">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -5624,6 +5677,7 @@
           <param name="b">Second shape parameter.</param>
         <ret>With <m>a</m>, <m>b</m> and <m>x</m>, this function returns the value <m>p</m> where <m>p = F_{X}(x) = P(X \leq x)</m>. </ret> 
         <error code="13160">Raises &quot;invalid parameterization&quot; if <m>a \leq 0</m> OR if <m>b \leq 0</m> or any argument is not finite.</error>
+        <error code="13161">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -5660,6 +5714,7 @@
 
         <ret>With <m>location</m>, <m>scale</m> and <m>x</m>, this function evaluates the probability density function at <m>x</m>.  The PDF implemented is <m>\frac{1}{(\pi s (1 + (\frac{x - l}{s})^{2})) }</m>.</ret> 
         <error code="13180">Raises &quot;invalid parameterization&quot; if <m>scale \leq 0</m> or any argument is not finite.</error>
+        <error code="13181">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -5677,6 +5732,7 @@
           <param name="scale">Scale parameter.</param>
         <ret>With <m>location</m>, <m>scale</m> and <m>x</m>, this function returns the value <m>p</m> where <m>p = F_{X}(x) = P(X \leq x)</m>. </ret> 
         <error code="13190">Raises &quot;invalid parameterization&quot; if <m>scale \leq 0</m> or any argument is not finite.</error>
+        <error code="13191">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -5713,6 +5769,7 @@
 
         <ret>With <m>d1</m>, <m>d2</m> and <m>x</m>, this function evaluates the probability density function at <m>x</m>.  The PDF implemented is <m>\frac{\Gamma(\frac{d1 + d2}{2})}{\Gamma(\frac{d1}{2})\Gamma(\frac{d2}{2})} \frac{d1}{d2}^{\frac{d1}{2}-1}(1 + \frac{d1}{d2} x)^{-\frac{d1 + d2}{2}}</m>.</ret> 
         <error code="13210">Raises &quot;invalid parameterization&quot; if the <m>d1 \leq 0</m> OR if <m>d2 \leq 0</m> or any argument is not finite.</error>
+        <error code="13211">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -5730,6 +5787,7 @@
           <param name="d2">Denominator degrees of freedom parameter.</param>
         <ret>With <m>d1</m>, <m>d2</m> and <m>x</m>, this function returns the value <m>p</m> where <m>p = F_{X}(x) = P(X \leq x)</m>. </ret> 
         <error code="13220">Raises &quot;invalid parameterization&quot; if the <m>d1 \leq 0</m> OR if <m>d2 \leq 0</m> or any argument is not finite.</error>
+        <error code="13221">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -5766,6 +5824,7 @@
 
         <ret>With <m>meanlog</m>, <m>sdlog</m> and <m>x</m>, this function evaluates the probability density function at <m>x</m>.  The PDF implemented is <m>\frac{1}{\sqrt{2 \pi} \sigma x} \mathrm{e}^{-\frac{\mathrm{log}(x) - \mu}{2 \sigma^{2}}}</m>.</ret> 
         <error code="13240">Raises &quot;invalid parameterization&quot; if <m>sdlog \leq 0</m> or any argument is not finite.</error>
+        <error code="13241">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -5783,6 +5842,7 @@
           <param name="sdlog">Standard deviation of the distribution on the log scale.</param>
         <ret>With <m>meanlog</m>, <m>sdlog</m> and <m>x</m>, this function returns the value <m>p</m> where <m>p = F_{X}(x) = P(X \leq x)</m>. </ret> 
         <error code="13250">Raises &quot;invalid parameterization&quot; if <m>sdlog \leq 0</m> or any argument is not finite.</error>
+        <error code="13251">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -5816,6 +5876,7 @@
           <param name="dof">Degrees of freedom parameter.</param>
         <ret>With <m>dof</m> and <m>x</m>, this function evaluates the probability density function at <m>x</m>.  The PDF implemented is <m>\frac{\Gamma(\frac{\mathrm{df}+1}{2})}{\sqrt{\mathrm{df}\pi} \Gamma{\frac{\mathrm{df}}{2}}}(1 + x^{\frac{2}{n}})^{-\frac{\mathrm{df} + 1}{2}}</m>.</ret> 
         <error code="13270">Raises &quot;invalid parameterization&quot; if <m>df \leq 0</m> or any argument is not finite.</error>
+        <error code="13271">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -5831,6 +5892,7 @@
           <param name="dof">Degrees of freedom parameter.</param>
         <ret>With <m>dof</m> and <m>x</m>, this function returns the value <m>p</m> where <m>p = F_{X}(x) = P(X \leq x)</m>. </ret> 
         <error code="13280">Raises &quot;invalid parameterization&quot; if <m>df \leq 0</m> or any argument is not finite.</error>
+        <error code="13281">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -5865,6 +5927,7 @@
 
         <ret>With <m>size</m>, <m>prob</m> and <m>x</m>, this function evaluates the probability density function at <m>x</m>.  The PDF implemented is <m>\mathrm{choose}(n, x) p^{x} (1 - p)^{n - x}</m>.</ret> 
         <error code="13300">Raises &quot;invalid parameterization&quot; if <m>size &lt; 0</m> OR if <m>prob &lt; 0</m> OR if <m>prob &gt; 1</m> or any argument is not finite.</error>
+        <error code="13301">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -5882,6 +5945,7 @@
          <param name="prob">The probability of success in each trial.</param>
         <ret>With <m>size</m>, <m>prob</m> and <m>x</m>, this function returns the value <m>p</m> where <m>p = F_{X}(x) = P(X \leq x)</m>. </ret> 
         <error code="13310">Raises &quot;invalid parameterization&quot; if <m>size &lt; 0</m> OR if <m>prob &lt; 0</m> OR if <m>prob &gt; 1</m> or any argument is not finite.</error>
+        <error code="13311">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
      </doc>
     </fcn>
 
@@ -5917,6 +5981,7 @@
          <param name="max">Upper bound.</param>
         <ret>With <m>min</m>, <m>max</m> and <m>x</m>, this function evaluates the probability density function at <m>x</m>.  The PDF implemented is <m>\frac{1}{\mathrm{max} - \mathrm{min}}</m>.</ret> 
         <error code="13330">Raises &quot;invalid parameterization&quot; if <m>min \geq max</m> or any argument is not finite.</error>
+        <error code="13331">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -5934,6 +5999,7 @@
           <param name="max">Upper bound.</param>
         <ret>With <m>min</m>, <m>max</m> and <m>x</m>, this function returns the value <m>p</m> where <m>p = F_{X}(x) = P(X \leq x)</m>. </ret> 
         <error code="13340">Raises &quot;invalid parameterization&quot; if <m>min \geq max</m> or any argument is not finite.</error>
+        <error code="13341">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -5967,6 +6033,7 @@
           <param name="prob">Probability of success of each trial (p).</param>
         <ret>With <m>prob</m> and <m>x</m>, this function evaluates the probability density function at <m>x</m>.  The PDF implemented is <m>p (1 - p)^{x}</m>.</ret> 
         <error code="13360">Raises &quot;invalid parameterization&quot; if <m>\mathrm{prob} \leq 0</m> OR if <m>\mathrm{prob} &gt; 1</m> or any argument is not finite.</error>
+        <error code="13361">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -5982,6 +6049,7 @@
            <param name="prob">Probability of success of each trial.</param>
         <ret>With <m>prob</m> and <m>x</m>, this function returns the value <m>p</m> where <m>p = F_{X}(x) = P(X \leq x)</m>. </ret> 
         <error code="13370">Raises &quot;invalid parameterization&quot; if <m>\mathrm{prob} \leq 0</m> OR if <m>\mathrm{prob} &gt; 1</m> or any argument is not finite.</error>
+        <error code="13371">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -6036,6 +6104,7 @@
           <param name="k">The number of balls drawn from the urn.</param>
         <ret>With <m>m</m>, <m>n</m> and <m>k</m> at <m>x</m>, this function returns the value <m>p</m> where <m>p = F_{X}(x) = P(X \leq x)</m>. </ret> 
         <error code="13400">Raises &quot;invalid parameterization&quot; if <m>\mathrm{m} + \mathrm{n} &lt; \mathrm{k}</m>, <m>m &lt; 0</m>, <m>n &lt; 0</m>, <m>m + n = 0</m>, or <m>k &lt; 0</m>.</error>
+        <error code="13401">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -6073,6 +6142,7 @@
           <param name="scale">Scale parameter (b).</param>
          <ret>With <m>shape</m>, <m>scale</m>, this function evaluates the probability density function at <m>x</m>.  The PDF implemented is <m>\frac{a}{b}(\frac{x}{b})^{a - 1}\mathrm{e}^{-(\frac{x}{b})^{a}}</m>.</ret> 
          <error code="13420">Raises &quot;invalid parameterization&quot; if the <m>shape \leq 0</m> OR if <m>scale \leq 0</m> or any argument is not finite.</error>
+        <error code="13421">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -6090,6 +6160,7 @@
           <param name="scale">Scale parameter.</param>
         <ret>With <m>shape</m>, <m>scale</m> and <m>x</m>, this function returns the value <m>p</m> where <m>p = F_{X}(x) = P(X~\leq~x)</m>. </ret> 
         <error code="13430">Raises &quot;invalid parameterization&quot; if the <m>shape \leq 0</m> OR if <m>scale \leq 0</m> or any argument is not finite.</error>
+        <error code="13431">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -6125,6 +6196,7 @@
           <param name="prob">Probability of success in each trial (p).</param>
         <ret>With <m>size</m>, <m>prob</m> and <m>x</m>, this function evaluates the probability density function at <m>x</m>.  The PDF implemented is <m>\frac{\Gamma(x+n)}{\Gamma(n) x!} p^{n} (1-p)^{x}</m>.</ret> 
         <error code="13450">Raises &quot;invalid parameterization&quot; if <m>\mathrm{prob} &lt; 0</m>, if <m>\mathrm{prob} &gt; 1</m> or if <m>size &lt; 0</m> or any argument is not finite.</error>
+        <error code="13451">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -6142,6 +6214,7 @@
           <param name="prob">Probability of success in each trial.</param>
         <ret>With <m>size</m>, <m>prob</m> and <m>x</m>, this function returns the value <m>p</m> where <m>p = F_{X}(x) = P(X \leq x)</m>. </ret> 
         <error code="13460">Raises &quot;invalid parameterization&quot; if <m>\mathrm{prob} &lt; 0</m>, if <m>\mathrm{prob} &gt; 1</m>, or if <m>size &lt; 0</m> or any argument is not finite.</error>
+        <error code="13461">Raises &quot;invalid input&quot; if <p>x</p> is not finite.</error>
       </doc>
     </fcn>
 
@@ -6814,6 +6887,7 @@
         <param name="krigingWeight">If a number, the Gaussian Process is performed with the specified Kriging weight. If <c>null</c>, universal Kriging is performed.</param>
         <param name="kernel">A function to use as a kernel. For instance, <f>m.kernel.rbf</f> (radial basis function) with partially applied <c>gamma</c> is a squared exponential kernel.</param>
         <ret>Returns a scalar or vector prediction with the same type as <pf>to</pf>.</ret>
+        <nondeterministic type="unstable"/>
         <error code="31080">If <p>table</p> is empty, a &quot;table must have at least 1 entry&quot; error is raised.</error>
         <error code="31081">If <p>x</p> is an empty array, an &quot;x must have at least 1 feature&quot; error is raised.</error>
         <error code="31082">If any <pf>x</pf> in the <p>table</p> has a different length than the input parameter <p>x</p>, a &quot;table must have the same number of features as x&quot; error is raised.</error>
@@ -7395,7 +7469,7 @@
         <param name="datum">Vector of independent variables with <m>d</m> dimensions. The record form is for histograms built by <f>stat.sample.fillCounter</f>.</param>
         <param name="classModel">Array or map of <m>d</m> likelihoods of the presence of each independent variable for this class. </param>
         <ret>Returns the unscaled log-likelihood of <p>datum</p> for this class.</ret>
-        <error code="10020">Raises a &quot;probability in classModel cannot be less than 0 or greater than 1&quot; error if a value in <p>classModel</p> is less than zero or greater than one.</error>
+        <error code="10020">Raises a &quot;probability in classModel must be strictly between 0 and 1&quot; error if a value in <p>classModel</p> is not strictly between zero and one.</error>
       </doc>
     </fcn>
 
