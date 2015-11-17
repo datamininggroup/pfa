@@ -80,12 +80,13 @@ if __name__ == "__main__":
             elif trial.get("nondeterministic", None) is not None:
                 if outputFile is not None and trial["result"].startswith("UNKNOWN_"):
                     lineNumber = lookup[trial["result"]]
-                    if trial["nondeterministic"] == "pseudorandom":
-                        template[lineNumber] = template[lineNumber].replace(', "result": "' + trial["result"] + '"', "")
-                    elif "success" in result:
-                        template[lineNumber] = template[lineNumber].replace('"result": "' + trial["result"] + '"', '"result": ' + json.dumps(result["success"]))
+                    if "success" in result:
+                        if trial["nondeterministic"] == "pseudorandom":
+                            template[lineNumber] = template[lineNumber].replace(', "result": "' + trial["result"] + '"', "")
+                        else:
+                            template[lineNumber] = template[lineNumber].replace('"result": "' + trial["result"] + '"', '"result": ' + json.dumps(result["success"]))
                     else:
-                        template[lineNumber] = template[lineNumber].replace('"result": "' + trial["result"] + '"', '"error": ' + json.dumps(result["fail"]))
+                        template[lineNumber] = template[lineNumber].replace('"result": "' + trial["result"] + '", "nondeterministic": "' + trial["nondeterministic"] + '"', '"error": ' + json.dumps(result["fail"]))
                 else:
                     if trial["nondeterministic"] == "unordered":
                         if "success" in result:

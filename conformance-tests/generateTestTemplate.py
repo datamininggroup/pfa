@@ -1325,7 +1325,7 @@ errorConditions = {
     # a.ntile: If <p>a</p> is empty, an "empty array" runtime error is raised.
     15460: [{"value": {"a": []}, "domain": lambda a, p: True, "type": {"a": {"type": "array", "items": "int"}, "p": "double", None: "int"}}],
     # a.ntile: If <p>p</p> is NaN, this function raises a "p not a number" error.
-    15461: [{"value": {"p": float("nan")}, "domain": lambda a, p: True, "type": {"a": {"type": "array", "items": "int"}, "p": "double", None: "int"}}],
+    15461: [{"value": {"p": "nan"}, "domain": lambda a, p: True, "type": {"a": {"type": "array", "items": "int"}, "p": "double", None: "int"}}],
     # a.mode: If <p>a</p> is empty, an "empty array" runtime error is raised.
     15470: [{"value": {"a": []}, "domain": lambda a: True, "type": {"a": {"type": "array", "items": "int"}, None: "int"}}],
     # a.zipmap: Raises a "misaligned arrays" error if <p>a</p>, <p>b</p>, <p>c</p>, <p>d</p> do not all have the same length.
