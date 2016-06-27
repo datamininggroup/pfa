@@ -548,7 +548,7 @@
         <ret>double</ret>
       </sig>
       <doc>
-        <desc>Return <m>ln(x^2 + 1)</m>.</desc><detail>Avoids round-off or overflow errors in the intermediate steps.</detail>
+        <desc>Return <m>ln(x + 1)</m>.</desc><detail>Avoids round-off or overflow errors in the intermediate steps.</detail>
         <detail>The domain of this function is from -1 to infinity (exclusive).  Given -1, the result is negative infinity, and below -1, the result is <c>NaN</c>, not an exception (see IEEE 754).  Use <f>impute.ensureFinite</f> to produce errors from infinite or <c>NaN</c> values.&quot;</detail>
       </doc>
     </fcn>
