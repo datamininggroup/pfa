@@ -51,7 +51,7 @@
 
 This specification defines the syntax and semantics of the Portable Format for Analytics (PFA).
 
-PFA is a mini-language for mathematical calculations that is usually generated programmatically, rather than by hand.  A PFA document is a string of JSON-formatted text that describes an executable called a scoring engine.  Each engine has a well-defined input, a well-defined output, and functions for combining inputs to construct the output in an expression-centric syntax tree.  In addition, it has centralized facilities for maintaining state, with well-defined semantics for sharing state among scoring engines in a thread-safe way.  The specification defines a suite of mathematical and statistical functions for transforming data, but it does not define any means of communication with an operating system, file system, or network.  A PFA engine must be embedded in a larger system that has these capabilities, and thus an analytic workflow is decoupled into a part that manages data pipelines (such as Hadoop, Storm, or Akka), and a part that describes the algorithm to be performed on data (PFA).  
+PFA is a mini-language for mathematical calculations that is usually generated programmatically, rather than by hand.  A PFA document is a string of JSON-formatted text that describes an executable called a scoring engine.  Each engine has a well-defined input, a well-defined output, and functions for combining inputs to construct the output in an expression-centric syntax tree.  In addition, it has centralized facilities for maintaining state, with well-defined semantics for sharing state among scoring engines in a thread-safe way.  The specification defines a suite of mathematical and statistical functions for transforming data, but it does not define any means of communication with an operating system, file system, or network.  A PFA engine must be embedded in a larger system that has these capabilities, and thus an analytic workflow is decoupled into a part that manages data pipelines (such as Hadoop, Storm, or Akka), and a part that describes the algorithm to be performed on data (PFA).
 
 PFA is similar to the Predictive Model Markup Language (PMML), an XML-based specification for statistical models, but whereas PMML's focus is on statistical models in the abstract, PFA's focus is on the scoring procedure itself.  The same input given to two PFA-enabled systems must yield the same output, regardless of platform (e.g.\ a JVM in Hadoop, a client's web browser, a GPU kernel function, or even an IP core directly embedded in an integrated circuit).  Unlike PMML, the PFA specification defines the exact bit-for-bit behavior of any well-formed document, the semantics of data types and data structures, including behavior in concurrent systems, and all cases in which an exception should be raised.  Like PMML, PFA is a specification, not an implementation, it defines a suite of statistical algorithms for analyzing data, and it is usually generated programmatically, as the output of a machine learning algorithm, for instance.
 
@@ -359,11 +359,11 @@ The actions performed in the last three phases, {\PFAc begin}, {\PFAc action}, a
 
 The {\PFAc begin} and {\PFAc end} phases do not accept input and do not return output: they can only modify cells and pools, emit log messages, or raise exceptions.  A PFA system is not required to implement {\PFAc begin} and {\PFAc end}.  If a system that does not implement {\PFAc begin} encounters a document that has a {\PFAc begin} routine, it must fail with an error.  If a system that does not implement {\PFAc end} encounters a document that has an {\PFAc end} routine, it need not fail with an error, though it may.  This is because some PFA documents may use {\PFAc begin} to initialize essential data structures and the {\PFAc action} would only function properly if {\PFAc begin} has been executed, but the {\PFAc end} routine can only affect the state of a completed scoring engine whose interpretation is implementation-specific.  Moreover, some data pipelines do not even have a concept of completion, such as Storm.
 
-After all input data have been passed to the scoring engine and the last {\PFAc action} or {\PFAc end} routine has finished, the scoring engine is said to be completed.  This may be considered an eighth phase of the engine, though its behavior at this point is not defined by this specification.  A particular PFA system may extract aggregated results from a completed engine's state and it may even call functions defined in the document's {\PFAc fcn} field, but this is beyond the scope of the standard PFA lifecycle.  (Note: if the primary purpose of a scoring engine is to aggregate data, consider using the ``fold'' {\PFAc method} instead of extracting from the engine's internal state.)
+After all input data have been passed to the scoring engine and the last {\PFAc action} or {\PFAc end} routine has finished, the scoring engine is said to be completed.  This may be considered an eighth phase of the engine, though its behavior at this point is not defined by this specification.  A particular PFA system may extract aggregated results from a completed engine's state and it may continue to call functions defined in the document's {\PFAc fcn} field, but this is beyond the scope of the standard PFA lifecycle.  (Note: if the primary purpose of a scoring engine is to aggregate data, consider using the ``fold'' {\PFAc method} instead of extracting from the engine's internal state.)
 
 A completed scoring engine may be used to create a new PFA document, in which the final state of the cells and pools are used to define the {\PFAc cell} {\PFAc init} or {\PFAc pool} {\PFAc init} of the new document, such that a new scoring engine would start where the old one left off.  A PFA system may even re-use an old scoring engine as a new scoring engine (repeating phase 4 onward), but a re-used engine must behave exactly like a new engine with copied state, such that the re-use is an implementation detail and does not affect behavior.
 
-A PFA system may call functions defined in the document's {\PFAc fcn} field at any time, but if the function modifies state (a ``cell-to'', ``pool-to'', or ``pool-del'' special form is reachable in its call graph) and the engine is not complete, the function call must not be allowed because it could affect the engine's behavior.  A PFA system must not execute {\PFAc begin}, {\PFAc action}, or {\PFAc end} outside of its lifecycle.
+A PFA system may call functions defined in the document's {\PFAc fcn} field at any time after phase 4 is complete.  A PFA system must not execute {\PFAc begin}, {\PFAc action}, or {\PFAc end} outside of its lifecycle.
 
 \hypertarget{hsec:method}{}
 \subsection{Scoring method: map, emit, and fold}
@@ -1270,7 +1270,7 @@ and
 \begin{json}
 {"attr": "x", "path": [4, ["key"], ["field"]]}
 \end{json}
-and 
+and
 \begin{json}
 {"attr": {"attr": {"attr": "x", "path": [4]}, "path": [["key"]]}, "path": [["field"]]}
 \end{json}
@@ -1308,7 +1308,7 @@ If the {\PFAc "x.4.key.field"} subelement is a {\PFAc int}, following are equiva
 \begin{json}
 {"attr": "x", "path": [4, ["key"], ["field"]], "to": {"+": ["x.4.key.field", 1]}}
 \end{json}
-and 
+and
 \begin{json}
 {"attr": "x", "path": [4, ["key"], ["field"]], "to":
      {"params": [{"z": "int"}], "ret": "int", "do": {"+": ["z", 1]}}}
