@@ -548,7 +548,7 @@
         <ret>double</ret>
       </sig>
       <doc>
-        <desc>Return <m>ln(x + 1)</m>.</desc><detail>Avoids round-off or overflow errors in the intermediate steps.</detail>
+        <desc>Return <m>ln(x^2 + 1)</m>.</desc><detail>Avoids round-off or overflow errors in the intermediate steps.</detail>
         <detail>The domain of this function is from -1 to infinity (exclusive).  Given -1, the result is negative infinity, and below -1, the result is <c>NaN</c>, not an exception (see IEEE 754).  Use <f>impute.ensureFinite</f> to produce errors from infinite or <c>NaN</c> values.&quot;</detail>
       </doc>
     </fcn>
@@ -2091,7 +2091,7 @@
         <ret><array>int</array></ret>
       </sig>
       <doc>
-        <desc>Return the indices in <p>haystack</p> of the begining and end of the first match defined by <p>pattern</p>.</desc>
+        <desc>Return the indices in <p>haystack</p> of the begining and end of the first match defined by <p>pattern</p>. The regular expression follows the POSIX extended standard (like <p>grep -e</p> in Linux and UNIX).</desc>
         <error code="35000">If <p>pattern</p> is not a valid regular expression, a &quot;bad pattern&quot; error is raised.</error>
       </doc>
     </fcn>
@@ -2108,7 +2108,7 @@
         <ret>boolean</ret>
       </sig>
       <doc>
-        <desc>Return true if <p>pattern</p> matches anywhere within <p>haystack</p>, otherwise return false.</desc>
+        <desc>Return true if <p>pattern</p> matches anywhere within <p>haystack</p>, otherwise return false. The regular expression follows the POSIX extended standard (like <p>grep -e</p> in Linux and UNIX).</desc>
         <error code="35010">If <p>pattern</p> is not a valid regular expression, a &quot;bad pattern&quot; error is raised.</error>
       </doc>
     </fcn>
@@ -2125,7 +2125,7 @@
         <ret>int</ret>
       </sig>
       <doc>
-        <desc>Count the number of times <p>pattern</p> matches in <p>haystack</p>.</desc>
+        <desc>Count the number of times <p>pattern</p> matches in <p>haystack</p>. The regular expression follows the POSIX extended standard (like <p>grep -e</p> in Linux and UNIX).</desc>
         <error code="35020">If <p>pattern</p> is not a valid regular expression, a &quot;bad pattern&quot; error is raised.</error>
       </doc>
     </fcn>
@@ -2142,7 +2142,7 @@
         <ret><array>int</array></ret>
       </sig>
       <doc>
-        <desc>Return the location indices of the last <p>pattern</p> match in <p>haystack</p>.</desc>
+        <desc>Return the location indices of the last <p>pattern</p> match in <p>haystack</p>. The regular expression follows the POSIX extended standard (like <p>grep -e</p> in Linux and UNIX).</desc>
         <error code="35030">If <p>pattern</p> is not a valid regular expression, a &quot;bad pattern&quot; error is raised.</error>
       </doc>
     </fcn>
@@ -2159,7 +2159,7 @@
         <ret><array><array>int</array></array></ret>
       </sig>
       <doc>
-        <desc>Return the location indices of each <p>pattern</p> sub-match (group-match) in <p>haystack</p>.</desc>
+        <desc>Return the location indices of each <p>pattern</p> sub-match (group-match) in <p>haystack</p>. The regular expression follows the POSIX extended standard (like <p>grep -e</p> in Linux and UNIX).</desc>
         <error code="35040">If <p>pattern</p> is not a valid regular expression, a &quot;bad pattern&quot; error is raised.</error>
       </doc>
     </fcn>
@@ -2176,7 +2176,7 @@
         <ret><array><array>int</array></array></ret>
       </sig>
       <doc>
-        <desc>Return the location indices of every <p>pattern</p> match in <p>haystack</p>.</desc>
+        <desc>Return the location indices of every <p>pattern</p> match in <p>haystack</p>. The regular expression follows the POSIX extended standard (like <p>grep -e</p> in Linux and UNIX).</desc>
         <error code="35050">If <p>pattern</p> is not a valid regular expression, a &quot;bad pattern&quot; error is raised.</error>
       </doc>
     </fcn>
@@ -2193,7 +2193,7 @@
         <ret><array>bytes</array></ret>
       </sig>
       <doc>
-        <desc>Return an array containing each string that <p>pattern</p> matched in <p>haystack</p>.</desc>
+        <desc>Return an array containing each string that <p>pattern</p> matched in <p>haystack</p>. The regular expression follows the POSIX extended standard (like <p>grep -e</p> in Linux and UNIX).</desc>
         <error code="35060">If <p>pattern</p> is not a valid regular expression, a &quot;bad pattern&quot; error is raised.</error>
       </doc>
     </fcn>
@@ -2210,7 +2210,7 @@
         <ret><union>bytes</union><union>null</union></ret>
       </sig>
       <doc>
-       <desc>Return the first occurance of what <p>pattern</p> matched in <p>haystack</p>.</desc>
+       <desc>Return the first occurance of what <p>pattern</p> matched in <p>haystack</p>. The regular expression follows the POSIX extended standard (like <p>grep -e</p> in Linux and UNIX).</desc>
         <error code="35070">If <p>pattern</p> is not a valid regular expression, a &quot;bad pattern&quot; error is raised.</error>
      </doc>
     </fcn>
@@ -2227,7 +2227,7 @@
         <ret><array>bytes</array></ret>
       </sig>
       <doc>
-        <desc>Return an array of strings or bytes for each <p>pattern</p> sub-match (group-match) at the first occurance of <p>pattern</p> in <p>haystack</p>.</desc>
+        <desc>Return an array of strings or bytes for each <p>pattern</p> sub-match (group-match) at the first occurance of <p>pattern</p> in <p>haystack</p>. Regular expressions follow the POSIX extended standard (like <p>grep -e</p> in Linux and UNIX).</desc>
         <error code="35080">If <p>pattern</p> is not a valid regular expression, a &quot;bad pattern&quot; error is raised.</error>
       </doc>
     </fcn>
@@ -2244,7 +2244,7 @@
         <ret><array><array>bytes</array></array></ret>
       </sig>
       <doc>
-       <desc>Return an array of strings or bytes for each <p>pattern</p> sub-match (group-match) at every occurance of <p>pattern</p> in <p>haystack</p>.</desc>
+       <desc>Return an array of strings or bytes for each <p>pattern</p> sub-match (group-match) at every occurance of <p>pattern</p> in <p>haystack</p>. The regular expression follows the POSIX extended standard (like <p>grep -e</p> in Linux and UNIX).</desc>
         <error code="35090">If <p>pattern</p> is not a valid regular expression, a &quot;bad pattern&quot; error is raised.</error>
       </doc>
     </fcn>
@@ -2261,7 +2261,7 @@
         <ret><array><array><array>int</array></array></array></ret>
       </sig>
       <doc>
-        <desc>Return the location indices of each <p>pattern</p> sub-match (group-match) for each occurance of <p>pattern</p> in <p>haystack</p>.</desc>
+        <desc>Return the location indices of each <p>pattern</p> sub-match (group-match) for each occurance of <p>pattern</p> in <p>haystack</p>. The regular expression follows the POSIX extended standard (like <p>grep -e</p> in Linux and UNIX).</desc>
         <error code="35100">If <p>pattern</p> is not a valid regular expression, a &quot;bad pattern&quot; error is raised.</error>
       </doc>
     </fcn>
@@ -2280,7 +2280,7 @@
         <ret>bytes</ret>
       </sig>
       <doc>
-        <desc>Replace the first <p>pattern</p> match in <p>haystack</p> with <p>replacement</p>.</desc>
+        <desc>Replace the first <p>pattern</p> match in <p>haystack</p> with <p>replacement</p>. The regular expression follows the POSIX extended standard (like <p>grep -e</p> in Linux and UNIX).</desc>
         <error code="35110">If <p>pattern</p> is not a valid regular expression, a &quot;bad pattern&quot; error is raised.</error>
       </doc>
     </fcn>
@@ -2316,7 +2316,7 @@
         <ret><array>bytes</array></ret>
       </sig>
       <doc>
-        <desc>Break <p>haystack</p> into an array of strings or bytes on the separator defined by <p>pattern</p>.</desc>
+        <desc>Break <p>haystack</p> into an array of strings or bytes on the separator defined by <p>pattern</p>. The regular expression follows the POSIX extended standard (like <p>grep -e</p> in Linux and UNIX).</desc>
         <error code="35130">If <p>pattern</p> is not a valid regular expression, a &quot;bad pattern&quot; error is raised.</error>
       </doc>
     </fcn>
@@ -2335,7 +2335,7 @@
         <ret>bytes</ret>
       </sig>
       <doc>
-        <desc>Replace the all <p>pattern</p> matches in <p>haystack</p> with <p>replacement</p>.</desc>
+        <desc>Replace the all <p>pattern</p> matches in <p>haystack</p> with <p>replacement</p>. The regular expression follows the POSIX extended standard (like <p>grep -e</p> in Linux and UNIX).</desc>
         <error code="35140">If <p>pattern</p> is not a valid regular expression, a &quot;bad pattern&quot; error is raised.</error>
       </doc>
     </fcn>
